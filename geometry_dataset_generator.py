@@ -4,8 +4,8 @@ import argparse
 
 import pprint
 
-def generateBaseCurveFeature(dim, tag, type):
-    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
+def generateBaseCurveFeature(node, type):
+    node_tags, node_coords, node_params = node
     feature = {
         'type': type,
         'vert_indices': node_tags,
@@ -13,9 +13,9 @@ def generateBaseCurveFeature(dim, tag, type):
     }
     return feature
 
-def generateBaseSurfaceFeature(dim, tag, type):
-    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
-    elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
+def generateBaseSurfaceFeature(node, elem, type):
+    node_tags, node_coords, node_params = node
+    elem_types, elem_tags, elem_node_tags = elem
     feature = {
         'type': type,
         'vert_indices': node_tags,
@@ -26,37 +26,61 @@ def generateBaseSurfaceFeature(dim, tag, type):
 
 
 def generateLineFeature(dim, tag):
-    feature = generateBaseCurveFeature(dim, tag, 'Line')
+    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
+
+    feature = generateBaseCurveFeature((node_tags, node_coords, node_params), 'Line')
 
     #aqui eh feita a busca dos outros parametros
 
     return feature
 
 def generateCircleFeature(dim, tag):
-    feature = generateBaseCurveFeature(dim, tag, 'Circle')
+    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
+
+    feature = generateBaseCurveFeature((node_tags, node_coords, node_params), 'Circle')
+    
     return feature
 
 def generatePlaneFeature(dim, tag):
-    feature = generateBaseSurfaceFeature(dim, tag, 'Plane')
+    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
+    elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
+
+    feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Plane')
 
     #aqui eh feita a busca dos outros parametros
 
     return feature
 
 def generateCylinderFeature(dim, tag):
-    feature = generateBaseSurfaceFeature(dim, tag, 'Cylinder')
+    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
+    elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
+
+    feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Cylinder')
+
     return feature
 
 def generateConeFeature(dim, tag):
-    feature = generateBaseSurfaceFeature(dim, tag, 'Cone')
+    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
+    elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
+
+    feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Cone')
+
     return feature
 
 def generateSphereFeature(dim, tag):
-    feature = generateBaseSurfaceFeature(dim, tag, 'Sphere')
+    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
+    elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
+
+    feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Sphere')
+
     return feature
 
 def generateTorusFeature(dim, tag):
-    feature = generateBaseSurfaceFeature(dim, tag, 'Torus')
+    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
+    elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
+
+    feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Torus')
+
     return feature
 
 
