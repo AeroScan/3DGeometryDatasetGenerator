@@ -4,25 +4,32 @@ import argparse
 
 import pprint
 
+import yaml
+
 from tqdm import tqdm
+
+import numpy as np
+
 
 def generateBaseCurveFeature(node, type):
     node_tags, node_coords, node_params = node
     feature = {
         'type': type,
-        'vert_indices': node_tags,
-        'vert_parameters': node_params,
+        'vert_indices': node_tags.tolist(),
+        'vert_parameters': node_params.tolist(),
     }
     return feature
 
 def generateBaseSurfaceFeature(node, elem, type):
     node_tags, node_coords, node_params = node
     elem_types, elem_tags, elem_node_tags = elem
+    node_params = np.resize(node_params, (int(node_params.shape[0]/2), 2))
+    print(node_tags.tolist())
     feature = {
         'type': type,
-        'vert_indices': node_tags,
-        'vert_parameters': node_params,
-        'face_indices': elem_tags,
+        'vert_indices': node_tags.tolist(),
+        'vert_parameters': node_params.tolist(),
+        'face_indices': elem_tags[0].tolist(),
     }
     return feature
 
@@ -128,10 +135,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='3D Geometry Dataset Generator.')
     parser.add_argument('input', type=str, help='input file in CAD formats.')
-    parser.add_argument('output', type=str, help='output file in MESH formats.')
+    parser.add_argument('output', type=str, help='output file name for mesh and features.')
     parser.add_argument("-v", "--visualize", action="store_true", help='visualize mesh')
     parser.add_argument("-l", "--log", action="store_true", help='show log of results')
-    parser.add_argument('--mesh_size', type = float, default = 10, help='mesh size in meters.')
+    parser.add_argument('--mesh_size', type = float, default = 100, help='mesh size in meters.')
     args = vars(parser.parse_args())
 
     input_name = args['input']
@@ -178,8 +185,12 @@ if __name__ == '__main__':
             pp.pprint(f)
         print('---------- END LOG ----------')
 
-    gmsh.write(output_name)
+    gmsh.write(output_name + '.stl')
 
+    # pp = pprint.PrettyPrinter(indent=2)
+    # pp.pprint(features)
+    with open(output_name + '.yaml', 'w') as f:
+        yaml.safe_dump(features, f)
 
     gmsh.model.setVisibility(gmsh.model.getEntities(3), 0)
     gmsh.model.setColor(gmsh.model.getEntities(2), 249, 166, 2)

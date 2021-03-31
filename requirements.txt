@@ -1,3 +1,5 @@
 gmsh
 argparse
 tqdm
+pyyaml
+numpy
