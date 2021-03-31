@@ -1,4 +1,0 @@
-gmsh
-argparse
-pprint
-tqdm

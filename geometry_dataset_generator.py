@@ -4,6 +4,8 @@ import argparse
 
 import pprint
 
+from tqdm import tqdm
+
 def generateBaseCurveFeature(node, type):
     node_tags, node_coords, node_params = node
     feature = {
@@ -106,7 +108,8 @@ def processMM(dim_info):
         name, _ = info
         features[name] = []
 
-    for dim, tag in entities:
+    print("\nGenerating Features...")
+    for dim, tag in tqdm(entities):
         type = gmsh.model.getType(dim, tag)
 
         if dim in dim_info.keys() and type in dim_info[dim][1]:
@@ -128,24 +131,29 @@ if __name__ == '__main__':
     parser.add_argument('output', type=str, help='output file in MESH formats.')
     parser.add_argument("-v", "--visualize", action="store_true", help='visualize mesh')
     parser.add_argument("-l", "--log", action="store_true", help='show log of results')
+    parser.add_argument('--mesh_size', type = float, default = 10, help='mesh size in meters.')
     args = vars(parser.parse_args())
 
     input_name = args['input']
     output_name = args['output']
     visualize = args['visualize']
+    mesh_size = args['mesh_size']
     log = args['log']
 
-    gmsh.open(input_name)
+    gmsh.model.occ.importShapes(input_name)
+    #gmsh.model.occ.healShapes() ##Tratamento interessante para os shapes
+    gmsh.model.occ.synchronize()
 
     print('\nProcessing Model {} ({}D)'.format(gmsh.model.getCurrent(), str(gmsh.model.getDimension())))    
 
     entities = gmsh.model.getEntities()
 
-    gmsh.option.setNumber('Mesh.MeshSizeFromPoints', 10)
+    gmsh.option.setNumber("Mesh.MeshSizeMin", mesh_size)
+    gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
     gmsh.model.mesh.generate(2)
-    gmsh.model.mesh.refine()
+    #gmsh.model.mesh.refine()
     gmsh.model.mesh.optimize('', True)
-    
+
     dim_name_types = {
         1 : ('curves', ['Line', 'Cicle']),
         2 : ('surfaces', ['Plane', 'Cylinder', 'Cone', 'Sphere', 'Torus'])
@@ -170,12 +178,13 @@ if __name__ == '__main__':
             pp.pprint(f)
         print('---------- END LOG ----------')
 
+    gmsh.write(output_name)
+
 
     gmsh.model.setVisibility(gmsh.model.getEntities(3), 0)
     gmsh.model.setColor(gmsh.model.getEntities(2), 249, 166, 2)
     if visualize:
         gmsh.fltk.run()
 
-    gmsh.write(output_name)
 
     gmsh.finalize()
