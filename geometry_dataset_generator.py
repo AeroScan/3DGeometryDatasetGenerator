@@ -4,7 +4,7 @@ import argparse
 
 import pprint
 
-import yaml
+#import yaml
 
 from tqdm import tqdm
 
@@ -24,7 +24,6 @@ def generateBaseSurfaceFeature(node, elem, type):
     node_tags, node_coords, node_params = node
     elem_types, elem_tags, elem_node_tags = elem
     node_params = np.resize(node_params, (int(node_params.shape[0]/2), 2))
-    print(node_tags.tolist())
     feature = {
         'type': type,
         'vert_indices': node_tags.tolist(),
@@ -129,6 +128,60 @@ def processMM(dim_info):
             features[dim_info[dim][0]].append(feature)
     return model_composition, features
 
+def float2str(n, limit = 10):
+    if abs(n) >= 10**limit:
+        return ('%.' + str(limit) + 'e') % n
+    elif abs(n) <= 1/(10**limit):
+        return ('%.' + str(limit) + 'e') % n
+    else:
+        return str(n)
+
+def list2str(l, prefix, LINE_SIZE = 90):
+    l = '[' + ', '.join(float2str(x) for x in l) + ']'
+    text = ''
+    last_end = -1
+    last_com = 0
+    for i, elem in enumerate(l):
+        if elem == ',':
+            if i > (last_end + 1 + (LINE_SIZE - len(prefix))):
+                if last_end == -1:
+                    text += l[last_end+1:last_com+1]+'\n'
+                else:
+                    text += prefix + l[last_end+2:last_com+1]+'\n'
+                last_end = last_com
+            last_com = i
+    if last_end == -1:
+        text += l[last_end+1:len(l)]
+    else:
+        text += prefix + l[last_end+2:len(l)]
+    return text
+
+def generateFeaturesYAML(d):
+    result = ''
+    for key, value in d.items():
+        if len(value) == 0:
+            result += key + ': []\n'
+            continue
+        result += key + ':\n'
+        for d2 in value:
+            result += '- '
+            for key2, value2 in d2.items():
+                if result[-2:] != '- ':
+                    result += '  '
+                result += key2 + ': '
+                if type(value2) != list:
+                    result += value2 + '\n'
+                else:
+                    if len(value2) == 0:
+                        result += '[]\n'
+                    elif type(value2[0]) != list:
+                        result += list2str(value2, '    ') + '\n'
+                    else:
+                        result += '\n'
+                        for elem in value2:
+                            result += '  - ' + list2str(elem, '    ') + '\n'
+    return result
+
 
 if __name__ == '__main__':
     gmsh.initialize()
@@ -138,7 +191,7 @@ if __name__ == '__main__':
     parser.add_argument('output', type=str, help='output file name for mesh and features.')
     parser.add_argument("-v", "--visualize", action="store_true", help='visualize mesh')
     parser.add_argument("-l", "--log", action="store_true", help='show log of results')
-    parser.add_argument('--mesh_size', type = float, default = 100, help='mesh size in meters.')
+    parser.add_argument('--mesh_size', type = float, default = 5, help='mesh size in meters.')
     args = vars(parser.parse_args())
 
     input_name = args['input']
@@ -190,7 +243,8 @@ if __name__ == '__main__':
     # pp = pprint.PrettyPrinter(indent=2)
     # pp.pprint(features)
     with open(output_name + '.yaml', 'w') as f:
-        yaml.safe_dump(features, f)
+        features_yaml = generateFeaturesYAML(features)
+        f.write(features_yaml)
 
     gmsh.model.setVisibility(gmsh.model.getEntities(3), 0)
     gmsh.model.setColor(gmsh.model.getEntities(2), 249, 166, 2)
