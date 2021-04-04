@@ -170,7 +170,7 @@ def generateFeaturesYAML(d):
                     result += '  '
                 result += key2 + ': '
                 if type(value2) != list:
-                    result += value2 + '\n'
+                    result += str(value2) + '\n'
                 else:
                     if len(value2) == 0:
                         result += '[]\n'
@@ -215,7 +215,7 @@ if __name__ == '__main__':
     gmsh.model.mesh.optimize('', True)
 
     dim_name_types = {
-        1 : ('curves', ['Line', 'Cicle']),
+        1 : ('curves', ['Line', 'Circle']),
         2 : ('surfaces', ['Plane', 'Cylinder', 'Cone', 'Sphere', 'Torus'])
     }
     model_composition, features = processMM(dim_name_types)
