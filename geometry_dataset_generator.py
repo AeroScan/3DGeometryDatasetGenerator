@@ -260,6 +260,8 @@ def float2str(n, limit = 10):
         return ('%.' + str(limit) + 'e') % n
     elif abs(n) <= 1/(10**limit) and n != 0:
         return ('%.' + str(limit) + 'e') % n
+    elif n == -0.0:
+        return str(0.0)
     else:
         return str(n)
 
