@@ -9,7 +9,7 @@ from tqdm import tqdm
 import numpy as np
 
 from OCC.Core.GeomAbs import (GeomAbs_CurveType, GeomAbs_SurfaceType)
-from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
 from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
@@ -221,16 +221,16 @@ def processMM(shape, entities, dim_info):
                 shp = shape[d][i]
                 tag = entities[d][i]
 
-                if dim == 0:
+                if d == 0:
                     pass
-                elif dim == 1:
+                elif d == 1:
                     t1 = str(GeomAbs_CurveType(shp.GetType())).split('_')[-1]
-                elif dim == 2:
+                elif d == 2:
                     t1 = str(GeomAbs_SurfaceType(shp.GetType())).split('_')[-1]
-                elif dim == 3:
+                elif d == 3:
                     pass
                 else:
-                    print('Error:\tdimension >3.')
+                    print('Error:\tdimension> 3.')
                     continue
 
                 t2 = gmsh.model.getType(d, tag)
@@ -258,7 +258,7 @@ def processMM(shape, entities, dim_info):
 def float2str(n, limit = 10):
     if abs(n) >= 10**limit:
         return ('%.' + str(limit) + 'e') % n
-    elif abs(n) <= 1/(10**limit):
+    elif abs(n) <= 1/(10**limit) and n != 0:
         return ('%.' + str(limit) + 'e') % n
     else:
         return str(n)
@@ -320,7 +320,13 @@ def splitEntitiesByDim(entities):
 def splitShapeByDim(shape):
     print('\nSpliting Shape by Dim...')
     new_shape = [[], [], [], []]
-    for face in TopologyExplorer(shape).faces():
+    te = TopologyExplorer(shape)
+    #dimension 1
+    for edge in te.edges():
+        curv = BRepAdaptor_Curve(edge)
+        new_shape[1].append(curv)
+    #dimension 2
+    for face in te.faces():
         surf = BRepAdaptor_Surface(face, True)
         new_shape[2].append(surf)
     print('Done.')
