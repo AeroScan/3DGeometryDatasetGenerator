@@ -4,12 +4,15 @@ import argparse
 
 import pprint
 
-#import yaml
-
 from tqdm import tqdm
 
 import numpy as np
 
+from OCC.Core.GeomAbs import (GeomAbs_CurveType, GeomAbs_SurfaceType)
+from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+from OCC.Core.TopoDS import TopoDS_Face
+from OCC.Extend.DataExchange import read_step_file
+from OCC.Extend.TopologyUtils import TopologyExplorer
 
 def generateBaseCurveFeature(node, type):
     node_tags, node_coords, node_params = node
@@ -32,70 +35,167 @@ def generateBaseSurfaceFeature(node, elem, type):
     }
     return feature
 
+def gpXYZ2List(gp):
+    return [gp.X(), gp.Y(), gp.Z()]
 
-def generateLineFeature(dim, tag):
+def generateLineFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
 
     feature = generateBaseCurveFeature((node_tags, node_coords, node_params), 'Line')
 
-    #aqui eh feita a busca dos outros parametros
+    shape = shp.Line()
+
+    feature = {
+        'location': gpXYZ2List(shape.Location()),
+        'direction': gpXYZ2List(shape.Direction()),
+    }
 
     return feature
 
-def generateCircleFeature(dim, tag):
+def generateCircleFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
 
     feature = generateBaseCurveFeature((node_tags, node_coords, node_params), 'Circle')
     
+    shape = shp.Circle()
+
+    feature = {
+        'location': gpXYZ2List(shape.Location()),
+        'z_axis': gpXYZ2List(shape.Axis().Direction()),
+        'radius': shape.Radius(),
+        'x_axis': gpXYZ2List(shape.XAxis().Direction()),
+        'y_axis': gpXYZ2List(shape.YAxis().Direction()),
+    }
+
     return feature
 
-def generatePlaneFeature(dim, tag):
+def generateEllipseFeature(dim, shp, tag):
+    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
+
+    feature = generateBaseCurveFeature((node_tags, node_coords, node_params), 'Ellipse')
+    
+    shape = shp.Ellipse()
+
+    feature = {
+        'focus1': gpXYZ2List(shape.Focus1()),
+        'focus2': gpXYZ2List(shape.Focus2()),
+        'x_axis': gpXYZ2List(shape.XAxis().Direction()),
+        'y_axis': gpXYZ2List(shape.YAxis().Direction()),
+        'z_axis': gpXYZ2List(shape.Axis().Direction()),
+        'x_radius': shape.MajorRadius(),
+        'y_radius': shape.MinorRadius(),
+    }
+
+    return feature
+
+def generatePlaneFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
 
     feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Plane')
 
-    #aqui eh feita a busca dos outros parametros
+    shape = shp.Plane()
+
+    feature = {
+        'location': gpXYZ2List(shape.Location()),
+        'normal': gpXYZ2List(shape.Axis().Direction()),
+        'x_axis': gpXYZ2List(shape.XAxis().Direction()),
+        'y_axis': gpXYZ2List(shape.YAxis().Direction()),
+        'z_axis': gpXYZ2List(shape.Axis().Direction()),
+        'coefficients': list(shape.Coefficients()),
+    }
 
     return feature
 
-def generateCylinderFeature(dim, tag):
+def generateCylinderFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
 
     feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Cylinder')
 
+    shape = shp.Cylinder()
+
+    feature = {
+        'location': gpXYZ2List(shape.Location()),
+        'x_axis': gpXYZ2List(shape.XAxis().Direction()),
+        'y_axis': gpXYZ2List(shape.YAxis().Direction()),
+        'z_axis': gpXYZ2List(shape.Axis().Direction()),
+        'coefficients': list(shape.Coefficients()),
+        'radius': shape.Radius(),
+    }
+
     return feature
 
-def generateConeFeature(dim, tag):
+def generateConeFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
 
     feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Cone')
 
+    shape = shp.Cone()
+
+    feature = {
+        'location': gpXYZ2List(shape.Location()),
+        'x_axis': gpXYZ2List(shape.XAxis().Direction()),
+        'y_axis': gpXYZ2List(shape.YAxis().Direction()),
+        'z_axis': gpXYZ2List(shape.Axis().Direction()),
+        'coefficients': list(shape.Coefficients()),
+        'radius': shape.Radius(),
+        'angle': shape.SemiAngle(),
+        'apex': gpXYZ2List(shape.Apex()),
+    }
+
     return feature
 
-def generateSphereFeature(dim, tag):
+def generateSphereFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
 
     feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Sphere')
 
+    shape = shp.Sphere()
+
+    x_axis = np.array(gpXYZ2List(shape.XAxis().Direction()))
+    y_axis = np.array(gpXYZ2List(shape.YAxis().Direction()))
+    z_axis = np.cross(x_axis, y_axis)
+
+    feature = {
+        'location': gpXYZ2List(shape.Location()),
+        'x_axis': x_axis.tolist(),
+        'y_axis': y_axis.tolist(),
+        'z_axis': z_axis.tolist(),
+        'coefficients': list(shape.Coefficients()),
+        'radius': shape.Radius(),
+    }
+
     return feature
 
-def generateTorusFeature(dim, tag):
+def generateTorusFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
 
     feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Torus')
 
+    shape = shp.Torus()
+
+    feature = {
+        'location': gpXYZ2List(shape.Location()),
+        'x_axis': gpXYZ2List(shape.XAxis().Direction()),
+        'y_axis': gpXYZ2List(shape.YAxis().Direction()),
+        'z_axis': gpXYZ2List(shape.Axis().Direction()),
+        #'coefficients': list(shape.Coefficients()),
+        'max_radius': shape.MajorRadius(),
+        'min_radius': shape.MinorRadius(),
+    }
+
     return feature
 
 
-def generateFeature(dim, tag, type):
+def generateFeature(dim, shp, tag, type):
     generate_functions_dict = {
-        'circle': generateCircleFeature,
         'line': generateLineFeature,
+        'circle': generateCircleFeature,
+        'ellipse': generateEllipseFeature,
         'plane': generatePlaneFeature,
         'cylinder': generateCylinderFeature,
         'cone': generateConeFeature,
@@ -103,10 +203,10 @@ def generateFeature(dim, tag, type):
         'torus': generateTorusFeature,
     }
     if type.lower() in generate_functions_dict.keys():
-        return generate_functions_dict[type.lower()](dim, tag)
+        return generate_functions_dict[type.lower()](dim, shp, tag)
 
 
-def processMM(dim_info):
+def processMM(shape, entities, dim_info):
     model_composition = {}
     features = {}
 
@@ -115,17 +215,44 @@ def processMM(dim_info):
         features[name] = []
 
     print("\nGenerating Features...")
-    for dim, tag in tqdm(entities):
-        type = gmsh.model.getType(dim, tag)
+    for d in tqdm(range(0, len(entities))):
+        if d in dim_info.keys() and len(shape[d]) == len(entities[d]):
+            for i in range(0, len(shape[d])):
+                shp = shape[d][i]
+                tag = entities[d][i]
 
-        if dim in dim_info.keys() and type in dim_info[dim][1]:
-            if type not in model_composition.keys():
-                model_composition[type] = 1
-            else:
-                model_composition[type] += 1 
+                if dim == 0:
+                    pass
+                elif dim == 1:
+                    t1 = str(GeomAbs_CurveType(shp.GetType())).split('_')[-1]
+                elif dim == 2:
+                    t1 = str(GeomAbs_SurfaceType(shp.GetType())).split('_')[-1]
+                elif dim == 3:
+                    pass
+                else:
+                    print('Error:\tdimension >3.')
+                    continue
 
-            feature = generateFeature(dim, tag, type)
-            features[dim_info[dim][0]].append(feature)
+                t2 = gmsh.model.getType(d, tag)
+                
+                if t1 == t2:
+                    tp = t1
+                else:
+                    print('Error:\t{} != {}.'.format(t1,t2))
+                    continue
+
+                if tp in dim_info[d][1]:
+                    if tp not in model_composition.keys():
+                        model_composition[tp] = 1
+                    else:
+                        model_composition[tp] += 1 
+
+                    feature = generateFeature(d, shp, tag, tp)
+                    features[dim_info[dim][0]].append(feature)
+        else:
+            if d in dim_info.keys():
+                print('Error:\tdimension {} is not the same in model and mesh.'.format(d))
+    print('Done.\n')
     return model_composition, features
 
 def float2str(n, limit = 10):
@@ -180,8 +307,24 @@ def generateFeaturesYAML(d):
                         result += '\n'
                         for elem in value2:
                             result += '  - ' + list2str(elem, '    ') + '\n'
-    return result
+    return result    
 
+def splitEntitiesByDim(entities):
+    print('\nSpliting Entities by Dim...')
+    new_entities = [[], [], [], []]
+    for dim, tag in tqdm(entities):
+        new_entities[dim].append(tag)
+    print('Done.')
+    return new_entities
+
+def splitShapeByDim(shape):
+    print('\nSpliting Shape by Dim...')
+    new_shape = [[], [], [], []]
+    for face in TopologyExplorer(shape).faces():
+        surf = BRepAdaptor_Surface(face, True)
+        new_shape[2].append(surf)
+    print('Done.')
+    return new_shape
 
 if __name__ == '__main__':
     gmsh.initialize()
@@ -200,25 +343,34 @@ if __name__ == '__main__':
     mesh_size = args['mesh_size']
     log = args['log']
 
+    print('\nLoading with Pythonocc...')
+    shape = read_step_file(input_name)
+    print('Done.\n')
+
+    print('Loading with Gmsh')
     gmsh.model.occ.importShapes(input_name)
     #gmsh.model.occ.healShapes() ##Tratamento interessante para os shapes
     gmsh.model.occ.synchronize()
+    print('Done.')
 
     print('\nProcessing Model {} ({}D)'.format(gmsh.model.getCurrent(), str(gmsh.model.getDimension())))    
-
-    entities = gmsh.model.getEntities()
-
     gmsh.option.setNumber("Mesh.MeshSizeMin", mesh_size)
     gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
+    print('Generating Mesh...')
     gmsh.model.mesh.generate(2)
     #gmsh.model.mesh.refine()
     gmsh.model.mesh.optimize('', True)
+    print('Done.')
+
+    shape = splitShapeByDim(shape)
+
+    entities = splitEntitiesByDim(gmsh.model.getEntities())
 
     dim_name_types = {
-        1 : ('curves', ['Line', 'Circle']),
+        1 : ('curves', ['Line', 'Circle', 'Ellipse']),
         2 : ('surfaces', ['Plane', 'Cylinder', 'Cone', 'Sphere', 'Torus'])
     }
-    model_composition, features = processMM(dim_name_types)
+    model_composition, features = processMM(shape, entities, dim_name_types)
 
     if log:
         pp = pprint.PrettyPrinter(indent=2)
