@@ -18,6 +18,7 @@ def generateBaseCurveFeature(node, type):
     node_tags, node_coords, node_params = node
     feature = {
         'type': type,
+        'sharp': True,
         'vert_indices': node_tags.tolist(),
         'vert_parameters': node_params.tolist(),
     }
@@ -41,25 +42,27 @@ def gpXYZ2List(gp):
 def generateLineFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
 
-    feature = generateBaseCurveFeature((node_tags, node_coords, node_params), 'Line')
+    f1 = generateBaseCurveFeature((node_tags, node_coords, node_params), 'Line')
 
     shape = shp.Line()
 
-    feature = {
+    f2 = {
         'location': gpXYZ2List(shape.Location()),
         'direction': gpXYZ2List(shape.Direction()),
     }
+
+    feature = {**f1, **f2}
 
     return feature
 
 def generateCircleFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
 
-    feature = generateBaseCurveFeature((node_tags, node_coords, node_params), 'Circle')
+    f1 = generateBaseCurveFeature((node_tags, node_coords, node_params), 'Circle')
     
     shape = shp.Circle()
 
-    feature = {
+    f2 = {
         'location': gpXYZ2List(shape.Location()),
         'z_axis': gpXYZ2List(shape.Axis().Direction()),
         'radius': shape.Radius(),
@@ -67,16 +70,18 @@ def generateCircleFeature(dim, shp, tag):
         'y_axis': gpXYZ2List(shape.YAxis().Direction()),
     }
 
+    feature = {**f1, **f2}
+
     return feature
 
 def generateEllipseFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
 
-    feature = generateBaseCurveFeature((node_tags, node_coords, node_params), 'Ellipse')
+    f1 = generateBaseCurveFeature((node_tags, node_coords, node_params), 'Ellipse')
     
     shape = shp.Ellipse()
 
-    feature = {
+    f2 = {
         'focus1': gpXYZ2List(shape.Focus1()),
         'focus2': gpXYZ2List(shape.Focus2()),
         'x_axis': gpXYZ2List(shape.XAxis().Direction()),
@@ -86,17 +91,19 @@ def generateEllipseFeature(dim, shp, tag):
         'y_radius': shape.MinorRadius(),
     }
 
+    feature = {**f1, **f2}
+
     return feature
 
 def generatePlaneFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
 
-    feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Plane')
+    f1 = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Plane')
 
     shape = shp.Plane()
 
-    feature = {
+    f2 = {
         'location': gpXYZ2List(shape.Location()),
         'normal': gpXYZ2List(shape.Axis().Direction()),
         'x_axis': gpXYZ2List(shape.XAxis().Direction()),
@@ -105,17 +112,19 @@ def generatePlaneFeature(dim, shp, tag):
         'coefficients': list(shape.Coefficients()),
     }
 
+    feature = {**f1, **f2}
+
     return feature
 
 def generateCylinderFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
 
-    feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Cylinder')
+    f1 = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Cylinder')
 
     shape = shp.Cylinder()
 
-    feature = {
+    f2 = {
         'location': gpXYZ2List(shape.Location()),
         'x_axis': gpXYZ2List(shape.XAxis().Direction()),
         'y_axis': gpXYZ2List(shape.YAxis().Direction()),
@@ -123,6 +132,8 @@ def generateCylinderFeature(dim, shp, tag):
         'coefficients': list(shape.Coefficients()),
         'radius': shape.Radius(),
     }
+
+    feature = {**f1, **f2}
 
     return feature
 
@@ -130,20 +141,22 @@ def generateConeFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
 
-    feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Cone')
+    f1 = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Cone')
 
     shape = shp.Cone()
 
-    feature = {
+    f2 = {
         'location': gpXYZ2List(shape.Location()),
         'x_axis': gpXYZ2List(shape.XAxis().Direction()),
         'y_axis': gpXYZ2List(shape.YAxis().Direction()),
         'z_axis': gpXYZ2List(shape.Axis().Direction()),
         'coefficients': list(shape.Coefficients()),
-        'radius': shape.Radius(),
+        'radius': shape.RefRadius(),
         'angle': shape.SemiAngle(),
         'apex': gpXYZ2List(shape.Apex()),
     }
+
+    feature = {**f1, **f2}
 
     return feature
 
@@ -151,7 +164,7 @@ def generateSphereFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
 
-    feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Sphere')
+    f1 = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Sphere')
 
     shape = shp.Sphere()
 
@@ -159,7 +172,7 @@ def generateSphereFeature(dim, shp, tag):
     y_axis = np.array(gpXYZ2List(shape.YAxis().Direction()))
     z_axis = np.cross(x_axis, y_axis)
 
-    feature = {
+    f2 = {
         'location': gpXYZ2List(shape.Location()),
         'x_axis': x_axis.tolist(),
         'y_axis': y_axis.tolist(),
@@ -168,17 +181,19 @@ def generateSphereFeature(dim, shp, tag):
         'radius': shape.Radius(),
     }
 
+    feature = {**f1, **f2}
+
     return feature
 
 def generateTorusFeature(dim, shp, tag):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
 
-    feature = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Torus')
+    f1 = generateBaseSurfaceFeature((node_tags, node_coords, node_params), (elem_types, elem_tags, elem_node_tags), 'Torus')
 
     shape = shp.Torus()
 
-    feature = {
+    f2 = {
         'location': gpXYZ2List(shape.Location()),
         'x_axis': gpXYZ2List(shape.XAxis().Direction()),
         'y_axis': gpXYZ2List(shape.YAxis().Direction()),
@@ -187,6 +202,8 @@ def generateTorusFeature(dim, shp, tag):
         'max_radius': shape.MajorRadius(),
         'min_radius': shape.MinorRadius(),
     }
+
+    feature = {**f1, **f2}
 
     return feature
 
@@ -248,7 +265,7 @@ def processMM(shape, entities, dim_info):
                         model_composition[tp] += 1 
 
                     feature = generateFeature(d, shp, tag, tp)
-                    features[dim_info[dim][0]].append(feature)
+                    features[dim_info[d][0]].append(feature)
         else:
             if d in dim_info.keys():
                 print('Error:\tdimension {} is not the same in model and mesh.'.format(d))
@@ -324,11 +341,11 @@ def splitShapeByDim(shape):
     new_shape = [[], [], [], []]
     te = TopologyExplorer(shape)
     #dimension 1
-    for edge in te.edges():
+    for edge in tqdm(te.edges()):
         curv = BRepAdaptor_Curve(edge)
         new_shape[1].append(curv)
     #dimension 2
-    for face in te.faces():
+    for face in tqdm(te.faces()):
         surf = BRepAdaptor_Surface(face, True)
         new_shape[2].append(surf)
     print('Done.')
@@ -342,7 +359,7 @@ if __name__ == '__main__':
     parser.add_argument('output', type=str, help='output file name for mesh and features.')
     parser.add_argument("-v", "--visualize", action="store_true", help='visualize mesh')
     parser.add_argument("-l", "--log", action="store_true", help='show log of results')
-    parser.add_argument('--mesh_size', type = float, default = 5, help='mesh size in meters.')
+    parser.add_argument('--mesh_size', type = float, default = 5, help='mesh size.')
     args = vars(parser.parse_args())
 
     input_name = args['input']
@@ -366,7 +383,7 @@ if __name__ == '__main__':
     gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
     print('Generating Mesh...')
     gmsh.model.mesh.generate(2)
-    #gmsh.model.mesh.refine()
+    gmsh.model.mesh.refine()
     gmsh.model.mesh.optimize('', True)
     print('Done.')
 
