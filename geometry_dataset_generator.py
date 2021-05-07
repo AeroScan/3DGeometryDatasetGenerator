@@ -255,8 +255,9 @@ def processMM(shape, entities, dim_info):
                 if t1 == t2:
                     tp = t1
                 else:
+                    tp = t1
                     print('Error:\t{} != {}.'.format(t1,t2))
-                    continue
+                    print('Continuing...')
 
                 if tp in dim_info[d][1]:
                     if tp not in model_composition.keys():
