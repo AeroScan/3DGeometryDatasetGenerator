@@ -405,9 +405,7 @@ def generateFeatureByDim(shape, features):
         if tp in POSSIBLE_SURFACE_TYPES:
             feature = processShape2Feature(surf, tp, 2)
             features['surfaces'].append(feature)
-    print('Done.')
-    return features
-    
+    print('Done.')    
 
 def main():
     initial_time = time.time() / 60.0
