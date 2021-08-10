@@ -18,6 +18,9 @@ from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
 
+POSSIBLE_CURVE_TYPES = ['Line', 'Circle', 'Ellipse']
+POSSIBLE_SURFACE_TYPES = ['Plane', 'Cylinder', 'Cone', 'Sphere', 'Torus']
+
 def generateBaseCurveFeature(node, type):
     node_tags, node_coords, node_params = node
     feature = {
@@ -393,57 +396,23 @@ def generateFeatureByDim(shape):
     #dimension 1
     for edge in tqdm(te.edges()):
         curv = BRepAdaptor_Curve(edge) # guardar dict com parametros
-        tp = ''
-        try:
-            curv.Line()
-            tp = 'Line'
-        except RuntimeError:
-            try:
-                curv.Circle()
-                tp = 'Circle'
-            except RuntimeError:
-                try: 
-                    curv.Ellipse()
-                    tp = 'Ellipse'
-                except RuntimeError:
-                    pass
-        feature = processShape2Feature(curv, tp, 1)
-        features['curves'].append(feature)
+        tp = str(GeomAbs_CurveType(curv.GetType())).split('_')[-1]
+        if tp in POSSIBLE_CURVE_TYPES:
+            feature = processShape2Feature(curv, tp, 1)
+            features['curves'].append(feature)
     #dimension 2
     for face in tqdm(te.faces()):
         surf = BRepAdaptor_Surface(face, True)
-        tp = ''
-        try:
-            surf.Plane()
-            tp = 'Plane'
-        except RuntimeError:
-            try:
-                surf.Cylinder()
-                tp = 'Cylinder'
-            except RuntimeError:
-                try:
-                    surf.Cone()
-                    tp = 'Cone'
-                except RuntimeError:
-                    try:
-                        surf.Sphere()
-                        tp = 'Sphere'
-                    except RuntimeError:
-                        try:
-                            surf.Torus()
-                            tp = 'Torus'
-                        except RuntimeError:
-                            pass
-        feature = processShape2Feature(surf, tp, 2)
-        features['surfaces'].append(feature)
+        tp = str(GeomAbs_SurfaceType(surf.GetType())).split('_')[-1]
+        if tp in POSSIBLE_SURFACE_TYPES:
+            feature = processShape2Feature(surf, tp, 2)
+            features['surfaces'].append(feature)
     print('Done.')
     return features
     
 
 def main():
     initial_time = time.time() / 60.0
-
-    gmsh.initialize()
 
     parser = argparse.ArgumentParser(description='3D Geometry Dataset Generator.')
     parser.add_argument('input', type=str, help='input file in CAD formats.')
@@ -467,6 +436,8 @@ def main():
 
     del shape
     gc.collect()
+
+    gmsh.initialize()
 
     print('Loading with Gmsh')
     gmsh.model.occ.importShapes(input_name)
