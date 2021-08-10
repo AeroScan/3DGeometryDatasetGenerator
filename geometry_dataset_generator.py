@@ -385,10 +385,8 @@ def splitEntitiesByDim(entities):
 def processShape2Feature(shp, tp, dim):
     return generateFeature(dim, shp, -1, tp)    
 
-def generateFeatureByDim(shape):
+def generateFeatureByDim(shape, features):
     print('\nGenerating Features by Dim...')
-
-    features = {}
 
     features['curves'] = []
     features['surfaces'] = []
@@ -432,7 +430,8 @@ def main():
     shape = read_step_file(input_name)
     print('Done.\n')
 
-    features = generateFeatureByDim(shape) # feature without gmsh
+    features = {}
+    generateFeatureByDim(shape, features) # feature without gmsh
 
     del shape
     gc.collect()
