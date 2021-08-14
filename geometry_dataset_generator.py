@@ -18,8 +18,8 @@ from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
 
-POSSIBLE_CURVE_TYPES = ['Line', 'Circle', 'Ellipse']
-POSSIBLE_SURFACE_TYPES = ['Plane', 'Cylinder', 'Cone', 'Sphere', 'Torus']
+POSSIBLE_CURVE_TYPES = ['line', 'circle', 'ellipse']
+POSSIBLE_SURFACE_TYPES = ['plane', 'cylinder', 'cone', 'sphere', 'torus']
 
 def generateBaseCurveFeature(node, type):
     node_tags, node_coords, node_params = node
@@ -390,14 +390,14 @@ def generateFeatureByDim(shape, features):
     #dimension 1
     for edge in tqdm(te.edges()):
         curv = BRepAdaptor_Curve(edge)
-        tp = str(GeomAbs_CurveType(curv.GetType())).split('_')[-1]
+        tp = str(GeomAbs_CurveType(curv.GetType())).split('_')[-1].lower()
         if tp in POSSIBLE_CURVE_TYPES:
             feature = processShape2Feature(curv, tp, 1)
             features['curves'].append(feature)
     #dimension 2
     for face in tqdm(te.faces()):
         surf = BRepAdaptor_Surface(face, True)
-        tp = str(GeomAbs_SurfaceType(surf.GetType())).split('_')[-1]
+        tp = str(GeomAbs_SurfaceType(surf.GetType())).split('_')[-1].lower()
         if tp in POSSIBLE_SURFACE_TYPES:
             feature = processShape2Feature(surf, tp, 2)
             features['surfaces'].append(feature)
@@ -405,28 +405,30 @@ def generateFeatureByDim(shape, features):
 
 def mergeFeaturesOCCandGMSH(features, entities):
     print('\nMerging features PythonOCC and GMSH...')
-    for dim in tqdm(range(0, len(entities))):
+    for dim in range(0, len(entities)):
         if dim == 1:
             if len(features['curves']) != len(entities[dim]):
                 print('\nThere are a number of different curves.\n')
             for i in range(0, len(features['curves'])):
                 tag = entities[dim][i]
-                tp = gmsh.model.getType(dim, tag)
+                tp = gmsh.model.getType(dim, tag).lower()
 
-                feature = generateFeature(dim, tag, tp)
+                if tp in POSSIBLE_CURVE_TYPES:
+                    feature = generateFeature(dim, tag, tp)
 
-                features['curves'][i].update(feature)
+                    features['curves'][i].update(feature)
 
         elif dim == 2:
             if len(features['surfaces']) != len(entities[dim]):
                 print('\nThere are a number of different surfaces.\n')                         
-            for i in range(0, len(features['surfaces'])):
+            for i in tqdm(range(0, len(entities[dim]))):
                 tag = entities[dim][i]
-                tp = gmsh.model.getType(dim, tag)
+                tp = gmsh.model.getType(dim, tag).lower()
 
-                feature = generateFeature(dim, tag, tp)
+                if tp in POSSIBLE_SURFACE_TYPES:
+                    feature = generateFeature(dim, tag, tp)
 
-                features['surfaces'][i].update(feature)
+                    features['surfaces'][i].update(feature)
     print('Done.\n')
 
 
@@ -463,7 +465,7 @@ def main():
 
     print('\nLoading with Gmsh')
     gmsh.model.occ.importShapes(input_name)
-    #gmsh.model.occ.healShapes() ##Tratamento interessante para os shapes
+    # gmsh.model.occ.healShapes() ##Tratamento interessante para os shapes
     gmsh.model.occ.synchronize()
     print('Done.\n')
 
