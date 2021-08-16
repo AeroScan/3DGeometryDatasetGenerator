@@ -99,7 +99,7 @@ def generateEllipseFeature(dim, shp, tag):
         shape = shp.Ellipse()
 
         f = {
-            'type:': 'Ellipse',
+            'type': 'Ellipse',
             'focus1': gpXYZ2List(shape.Focus1()),
             'focus2': gpXYZ2List(shape.Focus2()),
             'x_axis': gpXYZ2List(shape.XAxis().Direction()),
@@ -150,7 +150,7 @@ def generateCylinderFeature(dim, shp, tag):
         shape = shp.Cylinder()
 
         f = {
-            'type:': 'Cylinder',
+            'type': 'Cylinder',
             'location': gpXYZ2List(shape.Location()),
             'x_axis': gpXYZ2List(shape.XAxis().Direction()),
             'y_axis': gpXYZ2List(shape.YAxis().Direction()),
@@ -355,6 +355,7 @@ def generateFeaturesYAML(d):
                 pass
     return result  
 
+@profile
 def splitEntitiesByDim(entities):
     print('\nSpliting Entities by Dim...')
     new_entities = [[], [], [], []]
@@ -381,6 +382,7 @@ def splitEntitiesByDim(entities):
 def processShape2Feature(shp, tp, dim):
     return generateFeature(dim, -1, tp, shp)    # tag=-1 to process PythonOCC only
 
+@profile
 def generateFeatureByDim(shape, features):
     print('\nGenerating Features by Dim...')
 
@@ -403,6 +405,7 @@ def generateFeatureByDim(shape, features):
             features['surfaces'].append(feature)
     print('Done.')    
 
+@profile
 def mergeFeaturesOCCandGMSH(features, entities):
     print('\nMerging features PythonOCC and GMSH...')
     for dim in range(0, len(entities)):
@@ -421,7 +424,7 @@ def mergeFeaturesOCCandGMSH(features, entities):
         elif dim == 2:
             if len(features['surfaces']) != len(entities[dim]):
                 print('\nThere are a number of different surfaces.\n')                         
-            for i in tqdm(range(0, len(entities[dim]))):
+            for i in tqdm(range(0, len(features['surfaces']))):
                 tag = entities[dim][i]
                 tp = gmsh.model.getType(dim, tag).lower()
 
@@ -431,6 +434,37 @@ def mergeFeaturesOCCandGMSH(features, entities):
                     features['surfaces'][i].update(feature)
     print('Done.\n')
 
+@profile
+def generateGMSH():
+    gmsh.model.mesh.generate(2)
+
+@profile
+def processGMSH(input_name, mesh_size):
+    gmsh.initialize()
+
+    print('\nLoading with Gmsh')
+    gmsh.model.occ.importShapes(input_name)
+    # gmsh.model.occ.healShapes() ##Tratamento interessante para os shapes
+    gmsh.model.occ.synchronize()
+    print('Done.\n')
+
+    print('\nProcessing Model {} ({}D)'.format(gmsh.model.getCurrent(), str(gmsh.model.getDimension())))    
+    gmsh.option.setNumber("Mesh.MeshSizeMin", mesh_size)
+    gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
+    print('\nGenerating Mesh...')
+    # gmsh.model.mesh.generate(2)
+    generateGMSH()
+    print('Generating Finish\n')
+    gmsh.model.mesh.refine()
+    print('Refine Finish\n')
+    gmsh.model.mesh.optimize('', True)
+    print('Done.\n')
+
+@profile
+def writeSTL(output_name):
+    print('\nWriting stl..')
+    gmsh.write(output_name + '.stl')
+    print('Done.\n')
 
 def main():
     initial_time = time.time() / 60.0
@@ -460,29 +494,31 @@ def main():
     del shape
     gc.collect()
 
-    # Begin Gmsh Process
-    gmsh.initialize()
+    processGMSH(input_name, mesh_size)
+    writeSTL(output_name)
+    # # Begin Gmsh Process
+    # gmsh.initialize()
 
-    print('\nLoading with Gmsh')
-    gmsh.model.occ.importShapes(input_name)
-    # gmsh.model.occ.healShapes() ##Tratamento interessante para os shapes
-    gmsh.model.occ.synchronize()
-    print('Done.\n')
+    # print('\nLoading with Gmsh')
+    # gmsh.model.occ.importShapes(input_name)
+    # # gmsh.model.occ.healShapes() ##Tratamento interessante para os shapes
+    # gmsh.model.occ.synchronize()
+    # print('Done.\n')
 
-    print('\nProcessing Model {} ({}D)'.format(gmsh.model.getCurrent(), str(gmsh.model.getDimension())))    
-    gmsh.option.setNumber("Mesh.MeshSizeMin", mesh_size)
-    gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
-    print('\nGenerating Mesh...')
-    gmsh.model.mesh.generate(2)
-    print('Generating Finish\n')
-    gmsh.model.mesh.refine()
-    print('Refine Finish\n')
-    gmsh.model.mesh.optimize('', True)
-    print('Done.\n')
+    # print('\nProcessing Model {} ({}D)'.format(gmsh.model.getCurrent(), str(gmsh.model.getDimension())))    
+    # gmsh.option.setNumber("Mesh.MeshSizeMin", mesh_size)
+    # gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
+    # print('\nGenerating Mesh...')
+    # gmsh.model.mesh.generate(2)
+    # print('Generating Finish\n')
+    # gmsh.model.mesh.refine()
+    # print('Refine Finish\n')
+    # gmsh.model.mesh.optimize('', True)
+    # print('Done.\n')
 
-    print('\nWriting stl..')
-    gmsh.write(output_name + '.stl')
-    print('Done.\n')
+    # print('\nWriting stl..')
+    # gmsh.write(output_name + '.stl')
+    # print('Done.\n')
 
     entities = splitEntitiesByDim(gmsh.model.getEntities())
 
