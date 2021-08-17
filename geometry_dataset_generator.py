@@ -21,12 +21,12 @@ from OCC.Extend.TopologyUtils import TopologyExplorer
 POSSIBLE_CURVE_TYPES = ['line', 'circle', 'ellipse']
 POSSIBLE_SURFACE_TYPES = ['plane', 'cylinder', 'cone', 'sphere', 'torus']
 
-def generateBaseCurveFeature(node, type):
+def generateBaseCurveFeature(node, tp):
     node_tags, node_coords, node_params = node
     feature = {
         'sharp': True,
-        'vert_indices': node_tags.tolist(),
-        'vert_parameters': node_params.tolist(),
+        'vert_indices': node_tags,
+        'vert_parameters': node_params,
     }
     return feature
 
@@ -35,9 +35,9 @@ def generateBaseSurfaceFeature(node, elem, type):
     elem_types, elem_tags, elem_node_tags = elem
     node_params = np.resize(node_params, (int(node_params.shape[0]/2), 2))
     feature = {
-        'vert_indices': node_tags.tolist(),
-        'vert_parameters': node_params.tolist(),
-        'face_indices': elem_tags[0].tolist(),
+        'vert_indices': node_tags,
+        'vert_parameters': node_params,
+        'face_indices': elem_tags[0],
     }
     return feature
 
@@ -326,6 +326,7 @@ def list2str(l, prefix, LINE_SIZE = 90):
         text += prefix + l[last_end+2:len(l)]
     return text
 
+@profile
 def generateFeaturesYAML(d):
     result = ''
     for key, value in d.items(): # key = curves / surfaces - value = todas primitivas
@@ -340,6 +341,8 @@ def generateFeaturesYAML(d):
                     if result[-2:] != '- ':
                         result += '  '
                     result += key2 + ': '
+                    if type(value2).__module__ == np.__name__:
+                        value2 = value2.tolist()
                     if type(value2) != list:
                         result += str(value2) + '\n'
                     else:
@@ -474,7 +477,7 @@ def main():
     parser.add_argument('output', type=str, help='output file name for mesh and features.')
     parser.add_argument("-v", "--visualize", action="store_true", help='visualize mesh')
     # parser.add_argument("-l", "--log", action="store_true", help='show log of results')
-    parser.add_argument('--mesh_size', type = float, default = 5, help='mesh size.')
+    parser.add_argument('--mesh_size', type = float, default = 20, help='mesh size.')
     args = vars(parser.parse_args())
 
     input_name = args['input']
