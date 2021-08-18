@@ -326,39 +326,34 @@ def list2str(l, prefix, LINE_SIZE = 90):
         text += prefix + l[last_end+2:len(l)]
     return text
 
-@profile
-def generateFeaturesYAML(d):
-    result = ''
-    for key, value in d.items(): # key = curves / surfaces - value = todas primitivas
-        if len(value) == 0:
-            result += key + ': []\n'
-            continue
-        result += key + ':\n'
-        for d2 in value:
-            try:
-                result += '- '
-                for key2, value2 in d2.items():
-                    if result[-2:] != '- ':
-                        result += '  '
-                    result += key2 + ': '
-                    if type(value2).__module__ == np.__name__:
-                        value2 = value2.tolist()
-                    if type(value2) != list:
-                        result += str(value2) + '\n'
-                    else:
-                        if len(value2) == 0:
-                            result += '[]\n'
-                        elif type(value2[0]) != list:
-                            result += list2str(value2, '    ') + '\n'
-                        else:
-                            result += '\n'
-                            for elem in value2:
-                                result += '  - ' + list2str(elem, '    ') + '\n'
-            except AttributeError:
-                pass
-    return result  
+# def generateFeaturesYAML(d):
+#     result = ''
+#     for key, value in d.items(): # key = curves / surfaces - value = todas primitivas
+#         if len(value) == 0:
+#             result += key + ': []\n'
+#             continue
+#         result += key + ':\n'
+#         for d2 in value:
+#             result += '- '
+#             for key2, value2 in d2.items():
+#                 if result[-2:] != '- ':
+#                     result += '  '
+#                 result += key2 + ': '
+#                 if type(value2).__module__ == np.__name__:
+#                     value2 = value2.tolist()
+#                 if type(value2) != list:
+#                     result += str(value2) + '\n'
+#                 else:
+#                     if len(value2) == 0:
+#                         result += '[]\n'
+#                     elif type(value2[0]) != list:
+#                         result += list2str(value2, '    ') + '\n'
+#                     else:
+#                         result += '\n'
+#                         for elem in value2:
+#                             result += '  - ' + list2str(elem, '    ') + '\n'
+#     return result  
 
-@profile
 def splitEntitiesByDim(entities):
     print('\nSpliting Entities by Dim...')
     new_entities = [[], [], [], []]
@@ -408,23 +403,55 @@ def generateFeatureByDim(shape, features):
             features['surfaces'].append(feature)
     print('Done.')    
 
+def generateString2YAML(dictionary, d):    
+    result = '' 
+    result += d + ':\n'
+    result += '- '
+    for key, value in dictionary.items():
+        if result[-2:] != '- ':
+            result += '  '
+        result += key + ': '
+        if type(value).__module__ == np.__name__:
+            value = value.tolist()
+        if type(value) != list:
+            result += str(value) + '\n'
+        else:
+            if str(value) == '':
+                result += '[]\n'
+            elif type(value[0]) != list:
+                result += list2str(value, '    ') + '\n'
+            else:
+                result += '\n'
+                for elem in value:
+                    result += '  - ' + list2str(elem, '    ') + '\n'
+    return result
+
 @profile
 def mergeFeaturesOCCandGMSH(features, entities):
+    features_yaml = ''
     print('\nMerging features PythonOCC and GMSH...')
     for dim in range(0, len(entities)):
         if dim == 1:
+            print('\nMerging curves...')
             if len(features['curves']) != len(entities[dim]):
                 print('\nThere are a number of different curves.\n')
-            for i in range(0, len(features['curves'])):
+            for i in tqdm(range(0, len(features['curves']))):
                 tag = entities[dim][i]
                 tp = gmsh.model.getType(dim, tag).lower()
 
                 if tp in POSSIBLE_CURVE_TYPES:
                     feature = generateFeature(dim, tag, tp)
 
-                    features['curves'][i].update(feature)
+                    features['curves'][0].update(feature)
+
+                    features_yaml += generateString2YAML(features['curves'][0], 'curves')
+
+                    del features['curves'][0]
+                    gc.collect()
+            print('Done curves.\n')
 
         elif dim == 2:
+            print('\nMerging surfaces...')
             if len(features['surfaces']) != len(entities[dim]):
                 print('\nThere are a number of different surfaces.\n')                         
             for i in tqdm(range(0, len(features['surfaces']))):
@@ -434,12 +461,15 @@ def mergeFeaturesOCCandGMSH(features, entities):
                 if tp in POSSIBLE_SURFACE_TYPES:
                     feature = generateFeature(dim, tag, tp)
 
-                    features['surfaces'][i].update(feature)
-    print('Done.\n')
+                    features['surfaces'][0].update(feature)
 
-@profile
-def generateGMSH():
-    gmsh.model.mesh.generate(2)
+                    features_yaml += generateString2YAML(features['surfaces'][0], 'surfaces')
+
+                    del features['surfaces'][0]
+                    gc.collect()
+            print('Done surfaces.\n')
+    print('Done merge.\n')
+    return features_yaml
 
 @profile
 def processGMSH(input_name, mesh_size):
@@ -455,15 +485,13 @@ def processGMSH(input_name, mesh_size):
     gmsh.option.setNumber("Mesh.MeshSizeMin", mesh_size)
     gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
     print('\nGenerating Mesh...')
-    # gmsh.model.mesh.generate(2)
-    generateGMSH()
+    gmsh.model.mesh.generate(2)
     print('Generating Finish\n')
     gmsh.model.mesh.refine()
     print('Refine Finish\n')
     gmsh.model.mesh.optimize('', True)
     print('Done.\n')
 
-@profile
 def writeSTL(output_name):
     print('\nWriting stl..')
     gmsh.write(output_name + '.stl')
@@ -477,7 +505,7 @@ def main():
     parser.add_argument('output', type=str, help='output file name for mesh and features.')
     parser.add_argument("-v", "--visualize", action="store_true", help='visualize mesh')
     # parser.add_argument("-l", "--log", action="store_true", help='show log of results')
-    parser.add_argument('--mesh_size', type = float, default = 20, help='mesh size.')
+    parser.add_argument('--mesh_size', type = float, default = 5, help='mesh size.')
     args = vars(parser.parse_args())
 
     input_name = args['input']
@@ -499,6 +527,7 @@ def main():
 
     processGMSH(input_name, mesh_size)
     writeSTL(output_name)
+
     # # Begin Gmsh Process
     # gmsh.initialize()
 
@@ -525,7 +554,10 @@ def main():
 
     entities = splitEntitiesByDim(gmsh.model.getEntities())
 
-    mergeFeaturesOCCandGMSH(features, entities)
+    feat_yaml = mergeFeaturesOCCandGMSH(features, entities)
+
+    del entities, features
+    gc.collect()
 
     if visualize:
         gmsh.model.setVisibility(gmsh.model.getEntities(3), 0)
@@ -534,8 +566,6 @@ def main():
 
     gmsh.finalize()
 
-    del entities
-    gc.collect()
 
     # dim_name_types = {
     #     1 : ('curves', ['Line', 'Circle', 'Ellipse']),
@@ -565,11 +595,11 @@ def main():
     # pp.pprint(features)
     print('\nWriting yaml...')
     with open(output_name + '.yaml', 'w') as f:
-        features_yaml = generateFeaturesYAML(features)
-        f.write(features_yaml)
+        # features_yaml = generateFeaturesYAML(features)
+        f.write(feat_yaml)
     print('Done.\n')
 
-    del features, features_yaml
+    del feat_yaml
     gc.collect()
 
     final_time = time.time() / 60.0
