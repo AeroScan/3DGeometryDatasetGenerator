@@ -380,7 +380,6 @@ def splitEntitiesByDim(entities):
 def processShape2Feature(shp, tp, dim):
     return generateFeature(dim, -1, tp, shp)    # tag=-1 to process PythonOCC only
 
-@profile
 def generateFeatureByDim(shape, features):
     print('\nGenerating Features by Dim...')
 
@@ -403,9 +402,14 @@ def generateFeatureByDim(shape, features):
             features['surfaces'].append(feature)
     print('Done.')    
 
-def generateString2YAML(dictionary, d):    
+def generateString2YAML(dictionary, d, dim):
     result = '' 
-    result += d + ':\n'
+    if dim == -1:
+        pass
+    elif dim == 1:
+        result += 'curves:\n'
+    elif dim == 2:
+        result += 'surfaces:\n'
     result += '- '
     for key, value in dictionary.items():
         if result[-2:] != '- ':
@@ -426,11 +430,11 @@ def generateString2YAML(dictionary, d):
                     result += '  - ' + list2str(elem, '    ') + '\n'
     return result
 
-@profile
 def mergeFeaturesOCCandGMSH(features, entities):
     features_yaml = ''
     print('\nMerging features PythonOCC and GMSH...')
     for dim in range(0, len(entities)):
+        state = 0
         if dim == 1:
             print('\nMerging curves...')
             if len(features['curves']) != len(entities[dim]):
@@ -443,8 +447,11 @@ def mergeFeaturesOCCandGMSH(features, entities):
                     feature = generateFeature(dim, tag, tp)
 
                     features['curves'][0].update(feature)
-
-                    features_yaml += generateString2YAML(features['curves'][0], 'curves')
+                    if state == 0:
+                        features_yaml += generateString2YAML(features['curves'][0], 'curves', dim)
+                        state = 1
+                    else:
+                        features_yaml += generateString2YAML(features['curves'][0], 'curves', -1)
 
                     del features['curves'][0]
                     gc.collect()
@@ -463,7 +470,11 @@ def mergeFeaturesOCCandGMSH(features, entities):
 
                     features['surfaces'][0].update(feature)
 
-                    features_yaml += generateString2YAML(features['surfaces'][0], 'surfaces')
+                    if state == 0:
+                        features_yaml += generateString2YAML(features['surfaces'][0], 'surfaces', dim)
+                        state = 1
+                    else:
+                        features_yaml += generateString2YAML(features['surfaces'][0], 'surfaces', -1)
 
                     del features['surfaces'][0]
                     gc.collect()
@@ -471,7 +482,6 @@ def mergeFeaturesOCCandGMSH(features, entities):
     print('Done merge.\n')
     return features_yaml
 
-@profile
 def processGMSH(input_name, mesh_size):
     gmsh.initialize()
 
