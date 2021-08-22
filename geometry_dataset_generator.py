@@ -326,7 +326,6 @@ def list2str(l, prefix, LINE_SIZE = 90):
         text += prefix + l[last_end+2:len(l)]
     return text
 
-@profile
 def generateFeaturesYAML(d):
     result = ''
     for key, value in d.items(): # key = curves / surfaces - value = todas primitivas
@@ -334,31 +333,29 @@ def generateFeaturesYAML(d):
             result += key + ': []\n'
             continue
         result += key + ':\n'
-        for d2 in value:
-            try:
-                result += '- '
-                for key2, value2 in d2.items():
-                    if result[-2:] != '- ':
-                        result += '  '
-                    result += key2 + ': '
-                    if type(value2).__module__ == np.__name__:
-                        value2 = value2.tolist()
-                    if type(value2) != list:
-                        result += str(value2) + '\n'
+        for d2 in value: # d2 é um dicionario por loop
+            result += '- '
+            for key2, value2 in d2.items():
+                if result[-2:] != '- ':
+                    result += '  '
+                result += key2 + ': '
+                if type(value2).__module__ == np.__name__:
+                    value2 = value2.tolist()
+                if type(value2) != list:
+                    result += str(value2) + '\n'
+                else:
+                    if len(value2) == 0:
+                        result += '[]\n'
+                    elif type(value2[0]) != list:
+                        result += list2str(value2, '    ') + '\n'
                     else:
-                        if len(value2) == 0:
-                            result += '[]\n'
-                        elif type(value2[0]) != list:
-                            result += list2str(value2, '    ') + '\n'
-                        else:
-                            result += '\n'
-                            for elem in value2:
-                                result += '  - ' + list2str(elem, '    ') + '\n'
-            except AttributeError:
-                pass
+                        result += '\n'
+                        for elem in value2:
+                            result += '  - ' + list2str(elem, '    ') + '\n'
+            del d2
+            gc.collect()
     return result  
 
-@profile
 def splitEntitiesByDim(entities):
     print('\nSpliting Entities by Dim...')
     new_entities = [[], [], [], []]
@@ -385,7 +382,6 @@ def splitEntitiesByDim(entities):
 def processShape2Feature(shp, tp, dim):
     return generateFeature(dim, -1, tp, shp)    # tag=-1 to process PythonOCC only
 
-@profile
 def generateFeatureByDim(shape, features):
     print('\nGenerating Features by Dim...')
 
@@ -408,7 +404,6 @@ def generateFeatureByDim(shape, features):
             features['surfaces'].append(feature)
     print('Done.')    
 
-@profile
 def mergeFeaturesOCCandGMSH(features, entities):
     print('\nMerging features PythonOCC and GMSH...')
     for dim in range(0, len(entities)):
@@ -437,11 +432,6 @@ def mergeFeaturesOCCandGMSH(features, entities):
                     features['surfaces'][i].update(feature)
     print('Done.\n')
 
-@profile
-def generateGMSH():
-    gmsh.model.mesh.generate(2)
-
-@profile
 def processGMSH(input_name, mesh_size):
     gmsh.initialize()
 
@@ -455,18 +445,11 @@ def processGMSH(input_name, mesh_size):
     gmsh.option.setNumber("Mesh.MeshSizeMin", mesh_size)
     gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
     print('\nGenerating Mesh...')
-    # gmsh.model.mesh.generate(2)
-    generateGMSH()
+    gmsh.model.mesh.generate(2)
     print('Generating Finish\n')
     gmsh.model.mesh.refine()
     print('Refine Finish\n')
     gmsh.model.mesh.optimize('', True)
-    print('Done.\n')
-
-@profile
-def writeSTL(output_name):
-    print('\nWriting stl..')
-    gmsh.write(output_name + '.stl')
     print('Done.\n')
 
 def main():
@@ -477,7 +460,7 @@ def main():
     parser.add_argument('output', type=str, help='output file name for mesh and features.')
     parser.add_argument("-v", "--visualize", action="store_true", help='visualize mesh')
     # parser.add_argument("-l", "--log", action="store_true", help='show log of results')
-    parser.add_argument('--mesh_size', type = float, default = 20, help='mesh size.')
+    parser.add_argument('--mesh_size', type = float, default = 5, help='mesh size.')
     args = vars(parser.parse_args())
 
     input_name = args['input']
@@ -498,7 +481,11 @@ def main():
     gc.collect()
 
     processGMSH(input_name, mesh_size)
-    writeSTL(output_name)
+    
+    print('\nWriting stl..')
+    gmsh.write(output_name + '.stl')
+    print('Done.\n')
+
     # # Begin Gmsh Process
     # gmsh.initialize()
 
