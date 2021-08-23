@@ -333,7 +333,9 @@ def generateFeaturesYAML(d):
             result += key + ': []\n'
             continue
         result += key + ':\n'
-        for d2 in value: # d2 é um dicionario por loop
+        while len(value) > 0:
+        # for d2 in value: # d2 é um dicionario por loop
+            d2 = value[0]
             result += '- '
             for key2, value2 in d2.items():
                 if result[-2:] != '- ':
@@ -352,8 +354,9 @@ def generateFeaturesYAML(d):
                         result += '\n'
                         for elem in value2:
                             result += '  - ' + list2str(elem, '    ') + '\n'
-            del d2
-            gc.collect()
+            value.pop(0)
+            # del d2
+            # gc.collect()
     return result  
 
 def splitEntitiesByDim(entities):
@@ -466,7 +469,7 @@ def main():
     input_name = args['input']
     output_name = args['output']
     visualize = args['visualize']
-    mesh_size = args['mesh_size']
+    mesh_size = args['mesh_size'] * 2.0
     # log = args['log']
 
     # Begin PythonOCC process
@@ -553,10 +556,12 @@ def main():
     print('\nWriting yaml...')
     with open(output_name + '.yaml', 'w') as f:
         features_yaml = generateFeaturesYAML(features)
+        del features
+        gc.collect()
         f.write(features_yaml)
     print('Done.\n')
 
-    del features, features_yaml
+    del features_yaml
     gc.collect()
 
     final_time = time.time() / 60.0
