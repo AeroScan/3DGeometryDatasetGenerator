@@ -326,33 +326,36 @@ def list2str(l, prefix, LINE_SIZE = 90):
         text += prefix + l[last_end+2:len(l)]
     return text
 
-# def generateFeaturesYAML(d):
-#     result = ''
-#     for key, value in d.items(): # key = curves / surfaces - value = todas primitivas
-#         if len(value) == 0:
-#             result += key + ': []\n'
-#             continue
-#         result += key + ':\n'
-#         for d2 in value:
-#             result += '- '
-#             for key2, value2 in d2.items():
-#                 if result[-2:] != '- ':
-#                     result += '  '
-#                 result += key2 + ': '
-#                 if type(value2).__module__ == np.__name__:
-#                     value2 = value2.tolist()
-#                 if type(value2) != list:
-#                     result += str(value2) + '\n'
-#                 else:
-#                     if len(value2) == 0:
-#                         result += '[]\n'
-#                     elif type(value2[0]) != list:
-#                         result += list2str(value2, '    ') + '\n'
-#                     else:
-#                         result += '\n'
-#                         for elem in value2:
-#                             result += '  - ' + list2str(elem, '    ') + '\n'
-#     return result  
+def generateFeaturesYAML(d):
+    result = ''
+    for key, value in d.items(): # key = curves / surfaces - value = todas primitivas
+        if len(value) == 0:
+            result += key + ': []\n'
+            continue
+        result += key + ':\n'
+        while len(value) > 0:
+        # for d2 in value: # d2 é um dicionario por loop
+            d2 = value[0]
+            result += '- '
+            for key2, value2 in d2.items():
+                if result[-2:] != '- ':
+                    result += '  '
+                result += key2 + ': '
+                if type(value2).__module__ == np.__name__:
+                    value2 = value2.tolist()
+                if type(value2) != list:
+                    result += str(value2) + '\n'
+                else:
+                    if len(value2) == 0:
+                        result += '[]\n'
+                    elif type(value2[0]) != list:
+                        result += list2str(value2, '    ') + '\n'
+                    else:
+                        result += '\n'
+                        for elem in value2:
+                            result += '  - ' + list2str(elem, '    ') + '\n'
+            value.pop(0)
+    return result  
 
 def splitEntitiesByDim(entities):
     print('\nSpliting Entities by Dim...')
@@ -402,34 +405,6 @@ def generateFeatureByDim(shape, features):
             features['surfaces'].append(feature)
     print('Done.')    
 
-def generateString2YAML(dictionary, d, dim):
-    result = '' 
-    if dim == -1:
-        pass
-    elif dim == 1:
-        result += 'curves:\n'
-    elif dim == 2:
-        result += 'surfaces:\n'
-    result += '- '
-    for key, value in dictionary.items():
-        if result[-2:] != '- ':
-            result += '  '
-        result += key + ': '
-        if type(value).__module__ == np.__name__:
-            value = value.tolist()
-        if type(value) != list:
-            result += str(value) + '\n'
-        else:
-            if str(value) == '':
-                result += '[]\n'
-            elif type(value[0]) != list:
-                result += list2str(value, '    ') + '\n'
-            else:
-                result += '\n'
-                for elem in value:
-                    result += '  - ' + list2str(elem, '    ') + '\n'
-    return result
-
 def mergeFeaturesOCCandGMSH(features, entities):
     features_yaml = ''
     print('\nMerging features PythonOCC and GMSH...')
@@ -446,15 +421,8 @@ def mergeFeaturesOCCandGMSH(features, entities):
                 if tp in POSSIBLE_CURVE_TYPES:
                     feature = generateFeature(dim, tag, tp)
 
-                    features['curves'][0].update(feature)
-                    if state == 0:
-                        features_yaml += generateString2YAML(features['curves'][0], 'curves', dim)
-                        state = 1
-                    else:
-                        features_yaml += generateString2YAML(features['curves'][0], 'curves', -1)
-
-                    del features['curves'][0]
-                    gc.collect()
+                    features['curves'][i].update(feature)
+                    
             print('Done curves.\n')
 
         elif dim == 2:
@@ -468,19 +436,7 @@ def mergeFeaturesOCCandGMSH(features, entities):
                 if tp in POSSIBLE_SURFACE_TYPES:
                     feature = generateFeature(dim, tag, tp)
 
-                    features['surfaces'][0].update(feature)
-
-                    if state == 0:
-                        features_yaml += generateString2YAML(features['surfaces'][0], 'surfaces', dim)
-                        state = 1
-                    else:
-                        features_yaml += generateString2YAML(features['surfaces'][0], 'surfaces', -1)
-
-                    del features['surfaces'][0]
-                    gc.collect()
-            print('Done surfaces.\n')
-    print('Done merge.\n')
-    return features_yaml
+                    features['surfaces'][i].update(feature)
 
 def processGMSH(input_name, mesh_size):
     gmsh.initialize()
@@ -502,11 +458,6 @@ def processGMSH(input_name, mesh_size):
     gmsh.model.mesh.optimize('', True)
     print('Done.\n')
 
-def writeSTL(output_name):
-    print('\nWriting stl..')
-    gmsh.write(output_name + '.stl')
-    print('Done.\n')
-
 def main():
     initial_time = time.time() / 60.0
 
@@ -521,7 +472,7 @@ def main():
     input_name = args['input']
     output_name = args['output']
     visualize = args['visualize']
-    mesh_size = args['mesh_size']
+    mesh_size = args['mesh_size'] * 2.0
     # log = args['log']
 
     # Begin PythonOCC process
@@ -536,7 +487,10 @@ def main():
     gc.collect()
 
     processGMSH(input_name, mesh_size)
-    writeSTL(output_name)
+    
+    print('\nWriting stl..')
+    gmsh.write(output_name + '.stl')
+    print('Done.\n')
 
     # # Begin Gmsh Process
     # gmsh.initialize()
@@ -605,11 +559,15 @@ def main():
     # pp.pprint(features)
     print('\nWriting yaml...')
     with open(output_name + '.yaml', 'w') as f:
-        # features_yaml = generateFeaturesYAML(features)
-        f.write(feat_yaml)
+        features_yaml = generateFeaturesYAML(features)
+
+        del features
+        gc.collect()
+        
+        f.write(features_yaml)
     print('Done.\n')
 
-    del feat_yaml
+    del features_yaml
     gc.collect()
 
     final_time = time.time() / 60.0
