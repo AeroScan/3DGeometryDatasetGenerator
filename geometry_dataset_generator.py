@@ -355,6 +355,8 @@ def generateFeaturesYAML(d):
                         for elem in value2:
                             result += '  - ' + list2str(elem, '    ') + '\n'
             value.pop(0)
+            # del d2
+            # gc.collect()
     return result  
 
 def splitEntitiesByDim(entities):
@@ -406,15 +408,12 @@ def generateFeatureByDim(shape, features):
     print('Done.')    
 
 def mergeFeaturesOCCandGMSH(features, entities):
-    features_yaml = ''
     print('\nMerging features PythonOCC and GMSH...')
     for dim in range(0, len(entities)):
-        state = 0
         if dim == 1:
-            print('\nMerging curves...')
             if len(features['curves']) != len(entities[dim]):
                 print('\nThere are a number of different curves.\n')
-            for i in tqdm(range(0, len(features['curves']))):
+            for i in range(0, len(features['curves'])):
                 tag = entities[dim][i]
                 tp = gmsh.model.getType(dim, tag).lower()
 
@@ -422,11 +421,8 @@ def mergeFeaturesOCCandGMSH(features, entities):
                     feature = generateFeature(dim, tag, tp)
 
                     features['curves'][i].update(feature)
-                    
-            print('Done curves.\n')
 
         elif dim == 2:
-            print('\nMerging surfaces...')
             if len(features['surfaces']) != len(entities[dim]):
                 print('\nThere are a number of different surfaces.\n')                         
             for i in tqdm(range(0, len(features['surfaces']))):
@@ -437,6 +433,7 @@ def mergeFeaturesOCCandGMSH(features, entities):
                     feature = generateFeature(dim, tag, tp)
 
                     features['surfaces'][i].update(feature)
+    print('Done.\n')
 
 def processGMSH(input_name, mesh_size):
     gmsh.initialize()
@@ -518,10 +515,7 @@ def main():
 
     entities = splitEntitiesByDim(gmsh.model.getEntities())
 
-    feat_yaml = mergeFeaturesOCCandGMSH(features, entities)
-
-    del entities, features
-    gc.collect()
+    mergeFeaturesOCCandGMSH(features, entities)
 
     if visualize:
         gmsh.model.setVisibility(gmsh.model.getEntities(3), 0)
@@ -530,6 +524,8 @@ def main():
 
     gmsh.finalize()
 
+    del entities
+    gc.collect()
 
     # dim_name_types = {
     #     1 : ('curves', ['Line', 'Circle', 'Ellipse']),
@@ -560,10 +556,8 @@ def main():
     print('\nWriting yaml...')
     with open(output_name + '.yaml', 'w') as f:
         features_yaml = generateFeaturesYAML(features)
-
         del features
         gc.collect()
-        
         f.write(features_yaml)
     print('Done.\n')
 
