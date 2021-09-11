@@ -398,13 +398,19 @@ def generateFeatureByDim(shape, features):
         if tp in POSSIBLE_CURVE_TYPES:
             feature = processShape2Feature(curv, tp, 1)
             features['curves'].append(feature)
+        else:
+            #puting None to not lost the elements order
+            features['curves'].append(None)
     #dimension 2
     for face in tqdm(te.faces()):
         surf = BRepAdaptor_Surface(face, True)
-        tp = str(GeomAbs_SurfaceType(surf.GetType())).split('_')[-1].lower()
+        tp = str(GeomAbs_SurfaceType(surf.GetType())).split('_')[-1].lower() 
         if tp in POSSIBLE_SURFACE_TYPES:
             feature = processShape2Feature(surf, tp, 2)
             features['surfaces'].append(feature)
+        else:
+            #puting None to not lost the elements order
+            features['surfaces'].append(None)
     print('Done.')    
 
 def mergeFeaturesOCCandGMSH(features, entities):
@@ -413,24 +419,34 @@ def mergeFeaturesOCCandGMSH(features, entities):
         if dim == 1:
             if len(features['curves']) != len(entities[dim]):
                 print('\nThere are a number of different curves.\n')
-            for i in range(0, len(features['curves'])):
+            for i in tqdm(range(0, len(features['curves']))):
                 tag = entities[dim][i]
-                #tp = gmsh.model.getType(dim, tag).lower()
 
-                feature = generateFeature(dim, tag, features['curves'][i]['type'])
+                if features['curves'][i] is not None:
+                    feature = generateFeature(dim, tag, features['curves'][i]['type'])
 
-                features['curves'][i].update(feature)
+                    features['curves'][i].update(feature)
 
         elif dim == 2:
             if len(features['surfaces']) != len(entities[dim]):
                 print('\nThere are a number of different surfaces.\n')                         
             for i in tqdm(range(0, len(features['surfaces']))):
                 tag = entities[dim][i]
-                #tp = gmsh.model.getType(dim, tag).lower()
 
-                feature = generateFeature(dim, tag, features['surfaces'][i]['type'])
+                if features['surfaces'][i] is not None:
+                    feature = generateFeature(dim, tag, features['surfaces'][i]['type'])
 
-                features['surfaces'][i].update(feature)
+                    features['surfaces'][i].update(feature)
+
+    #removing None values
+    for key in features.keys():
+        i = 0
+        while i < len(features[key]):
+            if features[key][i] is None:
+                features[key].pop(i)
+            else:
+                i+= 1
+    
     print('Done.\n')
 
 def processGMSH(input_name, mesh_size):
