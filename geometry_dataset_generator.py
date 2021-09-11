@@ -415,24 +415,22 @@ def mergeFeaturesOCCandGMSH(features, entities):
                 print('\nThere are a number of different curves.\n')
             for i in range(0, len(features['curves'])):
                 tag = entities[dim][i]
-                tp = gmsh.model.getType(dim, tag).lower()
+                #tp = gmsh.model.getType(dim, tag).lower()
 
-                if tp in POSSIBLE_CURVE_TYPES:
-                    feature = generateFeature(dim, tag, tp)
+                feature = generateFeature(dim, tag, features['curves'][i]['type'])
 
-                    features['curves'][i].update(feature)
+                features['curves'][i].update(feature)
 
         elif dim == 2:
             if len(features['surfaces']) != len(entities[dim]):
                 print('\nThere are a number of different surfaces.\n')                         
             for i in tqdm(range(0, len(features['surfaces']))):
                 tag = entities[dim][i]
-                tp = gmsh.model.getType(dim, tag).lower()
+                #tp = gmsh.model.getType(dim, tag).lower()
 
-                if tp in POSSIBLE_SURFACE_TYPES:
-                    feature = generateFeature(dim, tag, tp)
+                feature = generateFeature(dim, tag, features['surfaces'][i]['type'])
 
-                    features['surfaces'][i].update(feature)
+                features['surfaces'][i].update(feature)
     print('Done.\n')
 
 def processGMSH(input_name, mesh_size):
