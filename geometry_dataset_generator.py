@@ -84,7 +84,13 @@ def generateCircleFeature(dim, shp, tag):
             'y_axis': gpXYZ2List(shape.YAxis().Direction()),
         }
 
-    feature = {**f}
+        if f['radius'] == 0:
+            f = None
+
+    if f is not None:
+        feature = {**f}
+    else:
+        feature = None
 
     return feature
 
@@ -109,7 +115,13 @@ def generateEllipseFeature(dim, shp, tag):
             'y_radius': shape.MinorRadius(),
         }
 
-    feature = {**f}
+        if f['x_radius'] == 0 or f['y_radius'] == 0:
+            f = None
+
+    if f is not None:
+        feature = {**f}
+    else:
+        feature = None
 
     return feature
 
@@ -159,7 +171,13 @@ def generateCylinderFeature(dim, shp, tag):
             'radius': shape.Radius(),
         }
 
-    feature = {**f}
+        if f['radius'] == 0:
+            f = None
+
+    if f is not None:
+        feature = {**f}
+    else:
+        feature = None
 
     return feature
 
@@ -186,7 +204,13 @@ def generateConeFeature(dim, shp, tag):
             'apex': gpXYZ2List(shape.Apex()),
         }
 
-    feature = {**f}
+        if f['radius'] == 0:
+            f = None
+
+    if f is not None:
+        feature = {**f}
+    else:
+        feature = None
 
     return feature
 
@@ -215,7 +239,13 @@ def generateSphereFeature(dim, shp, tag):
             'radius': shape.Radius(),
         }
 
-    feature = {**f}
+        if f['radius' == 0]:
+            f = None
+
+    if f is not None:
+        feature = {**f}
+    else:
+        feature = None
 
     return feature
 
@@ -241,7 +271,13 @@ def generateTorusFeature(dim, shp, tag):
             'min_radius': shape.MinorRadius(),
         }
 
-    feature = {**f}
+        if f['max_radius'] == 0 or f['min_radius'] == 0:
+            f = None
+
+    if f is not None:
+        feature = {**f}
+    else:
+        feature = None
 
     return feature
 
