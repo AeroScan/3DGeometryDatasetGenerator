@@ -354,21 +354,6 @@ def splitEntitiesByDim(entities):
     print('Done.')
     return new_entities
 
-# def splitShapeByDim(shape):
-
-#     new_shape = [[], [], [], []]
-#     te = TopologyExplorer(shape)
-#     #dimension 1
-#     for edge in tqdm(te.edges()):
-#         curv = BRepAdaptor_Curve(edge) # guardar dict com parametros
-#         new_shape[1].append(curv)
-#     #dimension 2
-#     for face in tqdm(te.faces()):
-#         surf = BRepAdaptor_Surface(face, True)
-#         new_shape[2].append(surf)
-#     print('Done.')
-#     return new_shape
-
 def processShape2Feature(shp, tp, dim):
     return generateFeature(dim, -1, tp, shp)    # tag=-1 to process PythonOCC only
 
@@ -392,7 +377,6 @@ def generateFeatureByDim(shape, features):
     for face in tqdm(te.faces()):
         surf = BRepAdaptor_Surface(face, True)
         tp = str(GeomAbs_SurfaceType(surf.GetType())).split('_')[-1].lower()
-        print(tp)
         if tp in POSSIBLE_SURFACE_TYPES:
             feature = processShape2Feature(surf, tp, 2)
             features['surfaces'].append(feature)
@@ -448,8 +432,8 @@ def processGMSH(input_name, mesh_size):
     print('Done.\n')
 
     print('\nProcessing Model {} ({}D)'.format(gmsh.model.getCurrent(), str(gmsh.model.getDimension())))   
-    gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
-    gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
+    gmsh.option.setNumber("Mesh.MeshSizeMin", 5)
+    gmsh.option.setNumber("Mesh.MeshSizeMax", 10)
     print('\nGenerating Mesh...')
     gmsh.model.mesh.generate(2)
     print('Generating Finish\n')
@@ -458,6 +442,29 @@ def processGMSH(input_name, mesh_size):
     FIRST_NODE_TAG = node_tags[0]
     FIRST_ELEM_TAG = elem_tags[0][0]
     print('Done.\n')
+
+def writeOBJ(output_name, mesh):
+    node_tags, node_coords, node_params = mesh.getNodes(-1, -1)
+    elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(2, -1)
+
+    print(len(elem_tags[0]))
+    print(len(elem_node_tags[0]))
+
+    obj_content = ''
+
+    node_coords = np.resize(node_coords, (int(node_coords.shape[0]/3), 3))
+
+    for coord in node_coords:
+        obj_content += 'v ' + str(coord[0]) + ' ' + str(coord[1]) + ' ' + str(coord[2]) + '\n'
+
+    elem_node_tags = elem_node_tags[0] - FIRST_NODE_TAG + 1
+    elem_node_tags = np.resize(elem_node_tags, (int(elem_node_tags.shape[0]/3), 3))
+
+    for node_tags in elem_node_tags:
+        obj_content += 'f ' + str(node_tags[0]) + ' ' + str(node_tags[1]) + ' ' + str(node_tags[2]) + '\n'
+
+    f = open(output_name, 'w')
+    f.write(obj_content)
 
 def main():
     initial_time = time.time() / 60.0
@@ -490,6 +497,7 @@ def main():
     processGMSH(input_name, mesh_size)
     
     print('\nWriting stl..')
+    writeOBJ(output_name + '.obj', gmsh.model.mesh)
     gmsh.write(output_name + '.stl')
     print('Done.\n')
 
