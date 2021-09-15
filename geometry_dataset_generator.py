@@ -24,9 +24,38 @@ POSSIBLE_SURFACE_TYPES = ['plane', 'cylinder', 'cone', 'sphere', 'torus']
 FIRST_NODE_TAG = 0
 FIRST_ELEM_TAG = 0
 
-def generateBaseCurveFeature(dim, tag):
-    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
+def getNodes(dim, tag):
+    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag, includeBoundary = True)
+    if len(node_tags) > 2 and node_tags[-2] < node_tags[0]:
+        node_tags = np.roll(node_tags, 1)
+        aux = node_tags[0]
+        node_tags[0] = node_tags[-1]
+        node_tags[-1] = aux
+        
+        node_coords = np.roll(node_coords, 3)
+        for i in range(0, 3):
+            aux = node_coords[i]
+            node_coords[i] = node_coords[i - 3]
+            node_coords[i - 3] = aux
+        
+        node_params = np.roll(node_params, dim)
+        for i in range(0, dim):
+            aux = node_params[i]
+            node_params[i] = node_params[i - dim]
+            node_params[i - dim] = aux
+        if dim > 1:
+            node_params = np.resize(node_params, (int(node_params.shape[0]/dim), dim))
+    
     node_tags -= FIRST_NODE_TAG
+    return node_tags, node_coords, node_params
+
+def getElements(dim, tag):
+    elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
+    elem_tags[0] -= FIRST_ELEM_TAG
+    return elem_types, elem_tags, elem_node_tags
+
+def generateBaseCurveFeature(dim, tag):
+    node_tags, node_coords, node_params = getNodes(dim, tag)
     feature = {
         'sharp': True,
         'vert_indices': node_tags,
@@ -35,11 +64,8 @@ def generateBaseCurveFeature(dim, tag):
     return feature
 
 def generateBaseSurfaceFeature(dim, tag):
-    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag)
-    node_tags -= FIRST_NODE_TAG
-    elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
-    elem_tags[0] -= FIRST_ELEM_TAG
-    node_params = np.resize(node_params, (int(node_params.shape[0]/2), 2))
+    node_tags, node_coords, node_params = getNodes(dim, tag)
+    elem_types, elem_tags, elem_node_tags = getElements(dim, tag)
     feature = {
         'vert_indices': node_tags,
         'vert_parameters': node_params,
@@ -286,9 +312,9 @@ def float2str(n, limit = 10):
         return ('%.' + str(limit) + 'e') % n
     elif abs(n) <= 1/(10**limit) and n != 0:
         return ('%.' + str(limit) + 'e') % n
-    elif n == 0:
+    elif type(n) == int and n == 0:
         return str(0)
-    elif n == -0.0:
+    elif n == 0.0:
         return str(0.0)
     else:
         return str(n)
@@ -432,8 +458,8 @@ def processGMSH(input_name, mesh_size):
     print('Done.\n')
 
     print('\nProcessing Model {} ({}D)'.format(gmsh.model.getCurrent(), str(gmsh.model.getDimension())))   
-    gmsh.option.setNumber("Mesh.MeshSizeMin", 5)
-    gmsh.option.setNumber("Mesh.MeshSizeMax", 10)
+    gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
+    gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
     print('\nGenerating Mesh...')
     gmsh.model.mesh.generate(2)
     print('Generating Finish\n')
@@ -474,7 +500,7 @@ def main():
     parser.add_argument('output', type=str, help='output file name for mesh and features.')
     parser.add_argument("-v", "--visualize", action="store_true", help='visualize mesh')
     # parser.add_argument("-l", "--log", action="store_true", help='show log of results')
-    parser.add_argument('--mesh_size', type = float, default = 2, help='mesh size.')
+    parser.add_argument('--mesh_size', type = float, default = 1, help='mesh size.')
     args = vars(parser.parse_args())
 
     input_name = args['input']
