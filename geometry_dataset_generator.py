@@ -24,8 +24,8 @@ POSSIBLE_SURFACE_TYPES = ['plane', 'cylinder', 'cone', 'sphere', 'torus']
 FIRST_NODE_TAG = 0
 FIRST_ELEM_TAG = 0
 
-def getNodes(dim, tag):
-    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag, includeBoundary = True)
+def getNodes(dim, tag, include_boundary = True):
+    node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag, includeBoundary = include_boundary)
     if len(node_tags) > 2 and node_tags[-2] < node_tags[0]:
         node_tags = np.roll(node_tags, 1)
         aux = node_tags[0]
@@ -52,6 +52,7 @@ def getNodes(dim, tag):
 def getElements(dim, tag):
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dim, tag)
     elem_tags[0] -= FIRST_ELEM_TAG
+    elem_node_tags[0] -= FIRST_NODE_TAG 
     return elem_types, elem_tags, elem_node_tags
 
 def generateBaseCurveFeature(dim, tag):
@@ -469,12 +470,9 @@ def processGMSH(input_name, mesh_size):
     FIRST_ELEM_TAG = elem_tags[0][0]
     print('Done.\n')
 
-def writeOBJ(output_name, mesh):
-    node_tags, node_coords, node_params = mesh.getNodes(-1, -1)
-    elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(2, -1)
-
-    print(len(elem_tags[0]))
-    print(len(elem_node_tags[0]))
+def writeOBJ(output_name):
+    node_tags, node_coords, node_params = getNodes(-1, -1, include_boundary = False)
+    elem_types, elem_tags, elem_node_tags = getElements(2, -1)
 
     obj_content = ''
 
@@ -483,11 +481,25 @@ def writeOBJ(output_name, mesh):
     for coord in node_coords:
         obj_content += 'v ' + str(coord[0]) + ' ' + str(coord[1]) + ' ' + str(coord[2]) + '\n'
 
-    elem_node_tags = elem_node_tags[0] - FIRST_NODE_TAG + 1
-    elem_node_tags = np.resize(elem_node_tags, (int(elem_node_tags.shape[0]/3), 3))
+    lut = [-1 for i in range(0, len(node_tags))]
+    entities = gmsh.model.getEntities(2)
+    i = 0
+    for dim, tag in entities:
+        n_t, n_c, n_p = getNodes(dim, tag)
+        for j in range(0, len(n_t)):
+            if lut[n_t[j]] == -1:
+                normal = gmsh.model.getNormal(tag, n_p[j])
+                obj_content += 'vn ' + str(normal[0]) + ' ' + str(normal[1]) + ' ' + str(normal[2]) + '\n'
+                lut[n_t[j]] = i
+                i+= 1
 
-    for node_tags in elem_node_tags:
-        obj_content += 'f ' + str(node_tags[0]) + ' ' + str(node_tags[1]) + ' ' + str(node_tags[2]) + '\n'
+    elem_node_tags[0] += 1
+    elem_node_tags[0] = np.resize(elem_node_tags[0], (int(elem_node_tags[0].shape[0]/3), 3))
+    for node_tags in elem_node_tags[0]:
+        n0 = int(node_tags[0])
+        n1 = int(node_tags[1])
+        n2 = int(node_tags[2])
+        obj_content += 'f ' + str(n0) + '//' + str(lut[n0 - 1] + 1) + ' ' + str(n1) + '//' + str(lut[n1 - 1] + 1) + ' ' + str(n2) + '//' + str(lut[n2 - 1] + 1) + '\n'
 
     f = open(output_name, 'w')
     f.write(obj_content)
@@ -523,7 +535,7 @@ def main():
     processGMSH(input_name, mesh_size)
     
     print('\nWriting stl..')
-    writeOBJ(output_name + '.obj', gmsh.model.mesh)
+    writeOBJ(output_name + '.obj')
     gmsh.write(output_name + '.stl')
     print('Done.\n')
 
