@@ -26,7 +26,7 @@ FIRST_ELEM_TAG = 0
 
 def getNodes(dim, tag, include_boundary = True):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dim, tag, includeBoundary = include_boundary)
-    if len(node_tags) > 2 and node_tags[-2] < node_tags[0]:
+    if dim == 1 and len(node_tags) > 2 and node_tags[-2] < node_tags[0]:
         node_tags = np.roll(node_tags, 1)
         aux = node_tags[0]
         node_tags[0] = node_tags[-1]
@@ -43,8 +43,9 @@ def getNodes(dim, tag, include_boundary = True):
             aux = node_params[i]
             node_params[i] = node_params[i - dim]
             node_params[i - dim] = aux
-        if dim > 1:
-            node_params = np.resize(node_params, (int(node_params.shape[0]/dim), dim))
+        
+    if dim > 1:
+        node_params = np.resize(node_params, (int(node_params.shape[0]/dim), dim))
     
     node_tags -= FIRST_NODE_TAG
     return node_tags, node_coords, node_params
@@ -254,7 +255,7 @@ def generateSphereFeature(dim, tag, shp):
             'radius': shape.Radius(),
         }
 
-        if f['radius' == 0]:
+        if f['radius'] == 0:
             f = None
 
     if f is not None:
@@ -534,9 +535,9 @@ def main():
 
     processGMSH(input_name, mesh_size)
     
-    print('\nWriting stl..')
+    print('\nWriting OBJ..')
     writeOBJ(output_name + '.obj')
-    gmsh.write(output_name + '.stl')
+    #gmsh.write(output_name + '.stl')
     print('Done.\n')
 
     # # Begin Gmsh Process
