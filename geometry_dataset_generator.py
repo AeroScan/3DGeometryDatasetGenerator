@@ -308,7 +308,6 @@ def generateFeature(dim, tag, type, shp=""):
     if type.lower() in generate_functions_dict.keys():
         return generate_functions_dict[type.lower()](dim, tag, shp)
 
-
 def float2str(n, limit = 10):
     if abs(n) >= 10**limit:
         return ('%.' + str(limit) + 'e') % n
@@ -419,6 +418,7 @@ def mergeFeaturesOCCandGMSH(features, entities):
         if dim == 1:
             if len(features['curves']) != len(entities[dim]):
                 print('\nThere are a number of different curves.\n')
+                print(f'Features = {len(features["curves"])} e Entities = {len(entities[dim])}')
             for i in tqdm(range(0, len(features['curves']))):
                 tag = entities[dim][i]
 
@@ -448,6 +448,28 @@ def mergeFeaturesOCCandGMSH(features, entities):
                 i+= 1
     
     print('Done.\n')
+    
+def setupGMSH(mesh_size):
+    
+    # Setup the mesh edge length 
+    gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
+    gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
+
+    gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)
+    gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 1)
+    gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 0)
+
+    # Defines the algorithm to be used 
+    # gmsh.option.setNumber("Mesh.Algorithm", 6) # Default 6 - Frontal Delaunay
+
+    # Define the number of threads for mesh generate
+    # gmsh.option.setNumber("Mesh.MaxNumThreads2D", 8)
+
+    # gmsh.option.setNumber("Mesh.RefineSteps", 20)
+    # gmsh.option.setNumber("Mesh.Smoothing", 20)
+
+    # gmsh.option.setNumber("Mesh.GeneralVerbosity", 1) # 0 fatal errors, 1 errors, 2 warnings, 3 direct, 4 information, 5 status, 99 debug
+    
 
 def processGMSH(input_name, mesh_size):
     global FIRST_NODE_TAG, FIRST_ELEM_TAG
@@ -460,8 +482,11 @@ def processGMSH(input_name, mesh_size):
     print('Done.\n')
 
     print('\nProcessing Model {} ({}D)'.format(gmsh.model.getCurrent(), str(gmsh.model.getDimension())))   
-    gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
-    gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
+
+    setupGMSH(mesh_size)
+
+    # gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
+    # gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
     print('\nGenerating Mesh...')
     gmsh.model.mesh.generate(2)
     print('Generating Finish\n')
