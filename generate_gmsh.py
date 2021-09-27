@@ -108,9 +108,9 @@ def setupGMSH(mesh_size: float):
     gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
     gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
 
-    # gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)
-    # gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 1)
-    # gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 0)
+    gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)
+    gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 1)
+    gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 0)
 
     # Defines the algorithm to be used 
     # gmsh.option.setNumber("Mesh.Algorithm", 6) # Default 6 - Frontal Delaunay
@@ -174,7 +174,7 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: 
     FIRST_NODE_TAG = node_tags[0]
     FIRST_ELEM_TAG = elem_tags[0][0]
 
-    writeOBJ(output_name)
+    writeOBJ(output_name + '.obj')
 
     entities = splitEntitiesByDim(gmsh.model.getEntities())
     mergeFeaturesOCCandGMSH(features=features, entities=entities)
