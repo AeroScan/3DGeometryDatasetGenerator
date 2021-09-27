@@ -554,7 +554,8 @@ def main():
 
     features = {}
     generateFeatureByDim(shape, features) # feature without gmsh
-
+    print(f'Tipo = {type(features)}\nCurvas = {len(features["curves"])}\nSuperficies = {len(features["surfaces"])}')
+    exit()
     del shape
     gc.collect()
 
