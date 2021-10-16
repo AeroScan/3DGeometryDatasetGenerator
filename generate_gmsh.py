@@ -165,9 +165,54 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: 
     gmsh.model.occ.importShapes(input_name)
     gmsh.model.occ.synchronize()
 
-    setupGMSH(mesh_size=mesh_size)
+    ## Inicio testes com PhysicalGroups
 
+    gmsh.option.setNumber("Mesh.SaveAll", 1)
+
+    plane = []
+    cylinder = []
+
+    entities = splitEntitiesByDim(gmsh.model.getEntities())
+    for tag in entities[2]:
+        tp = gmsh.model.getType(2, tag).lower()
+        
+        if tp == 'plane':
+            plane.append(tag)
+        elif tp == 'cylinder':
+            cylinder.append(tag)
+
+    gmsh.model.occ.mesh.setSize((2, plane), 50)
     gmsh.model.mesh.generate(2)
+
+    gmsh.write('stl_plane.stl')
+
+    gmsh.model.mesh.clear()
+
+    gmsh.model.occ.mesh.setSize((2, cylinder), 10)
+    gmsh.model.mesh.generate(2)
+
+    gmsh.write('stl_cylinder.stl')
+
+    # gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
+    # gmsh.option.setNumber("Mesh.MeshSizeMin", 40)
+
+    # gmsh.model.addPhysicalGroup(2, plane)
+    # gmsh.model.mesh.generate(2)
+
+    # gmsh.write('stl_testes.stl')
+
+    # gmsh.model.mesh.clear()
+
+    # gmsh.model.mesh.field.add("PostView")
+    
+    # gmsh.model.addPhysicalGroup(2, cylinder)
+    # gmsh.model.mesh.generate(2)
+
+    # gmsh.write('stl_cylinder.stl')
+
+    ## Fim Testes com PhysicalGroups 
+
+    # gmsh.model.mesh.generate(2)
 
     node_tags, _, _ = gmsh.model.mesh.getNodes(-1, -1)
     _, elem_tags, _ = gmsh.model.mesh.getElements(2, -1)
@@ -180,3 +225,4 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: 
     mergeFeaturesOCCandGMSH(features=features, entities=entities)
 
     gmsh.finalize()
+
