@@ -167,7 +167,7 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: 
 
     ## Inicio testes com PhysicalGroups
 
-    gmsh.option.setNumber("Mesh.SaveAll", 1)
+    gmsh.option.setNumber("Mesh.SaveAll", 0)
 
     plane = []
     cylinder = []
@@ -181,34 +181,32 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: 
         elif tp == 'cylinder':
             cylinder.append(tag)
 
-    gmsh.model.occ.mesh.setSize((2, plane), 50)
-    gmsh.model.mesh.generate(2)
+    gmsh.model.removePhysicalGroups()
+    gmsh.option.setNumber("Mesh.MeshSizeMin", 10)
+    gmsh.option.setNumber("Mesh.MeshSizeMax", 10)
+    gmsh.model.addPhysicalGroup(2, cylinder)
 
-    gmsh.write('stl_plane.stl')
-
-    gmsh.model.mesh.clear()
-
-    gmsh.model.occ.mesh.setSize((2, cylinder), 10)
     gmsh.model.mesh.generate(2)
 
     gmsh.write('stl_cylinder.stl')
 
-    # gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
-    # gmsh.option.setNumber("Mesh.MeshSizeMin", 40)
+    gmsh.model.removePhysicalGroups()
 
-    # gmsh.model.addPhysicalGroup(2, plane)
-    # gmsh.model.mesh.generate(2)
-
-    # gmsh.write('stl_testes.stl')
-
-    # gmsh.model.mesh.clear()
-
-    # gmsh.model.mesh.field.add("PostView")
+    over_dimTags = [[2, x] for x in cylinder]
+    gmsh.model.mesh.clear(dimTags=over_dimTags)
     
-    # gmsh.model.addPhysicalGroup(2, cylinder)
-    # gmsh.model.mesh.generate(2)
+    gmsh.option.setNumber("Mesh.MeshSizeMin", 30)
+    gmsh.option.setNumber("Mesh.MeshSizeMax", 30)
+    # gmsh.option.setNumber("Mesh.MeshSizeFactor", 3)
+    gmsh.model.addPhysicalGroup(2, plane)
 
-    # gmsh.write('stl_cylinder.stl')
+    gmsh.model.mesh.generate(2)
+
+    gmsh.write('stl_plane.stl')
+
+    gmsh.open('stl_plane.stl')
+    gmsh.merge('stl_cylinder.stl')
+    gmsh.write('stl_test.stl')
 
     ## Fim Testes com PhysicalGroups 
 
