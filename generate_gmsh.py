@@ -108,9 +108,9 @@ def setupGMSH(mesh_size: float):
     gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
     gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
 
-    gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)
-    gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 1)
-    gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 0)
+    # gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)
+    # gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 1)
+    # gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 0)
 
     # Defines the algorithm to be used 
     # gmsh.option.setNumber("Mesh.Algorithm", 6) # Default 6 - Frontal Delaunay
