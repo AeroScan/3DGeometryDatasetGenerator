@@ -15,11 +15,16 @@ if __name__ == '__main__':
     output_name = args['output']
     mesh_size = args['mesh_size']
 
+    print('\nProcessing file ' + input_name + '...')
+
+    print('\n+-----PythonOCC-----+')
     # Process in PythonOCC
     features = processPythonOCC(input_name)
 
+    print('\n+-----GMSH-----+')
     # Process in GMSH
     processGMSH(input_name, mesh_size, features, output_name)
 
+    print('\n+-----Writing YAML results-----+')
     # Write YAML
     writeYAML(output_name, features)

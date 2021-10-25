@@ -77,12 +77,12 @@ if __name__ == '__main__':
     time_finish = time.time()
     
     if log:
-        print('+-----Log-----+')
+        print('\n\n+----------Log----------+')
         print(f'Processed files: {len(files) - error_counter}')
         print(f'Unprocessed files: {error_counter}')
         print(f'List of unprocessed files: {processorErrors}')
         print(f'Time used: {time_finish - time_initial}')
-        print('+-------------+')
+        print('+---------------------------+')
 
     
 

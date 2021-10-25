@@ -85,7 +85,7 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
                     feature = generateGMSHCurveFeature(dimension, tag)
 
                     features['curves'][i].update(feature)
-        elif dimension == 2:
+        if dimension == 2:
             for i in tqdm(range(0, len(features['surfaces']))):
                 tag = entities[dimension][i]
 
@@ -93,7 +93,7 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
                     feature = generateGMSHSurfaceFeature(dimension, tag)
 
                     features['surfaces'][i].update(feature)
-    
+
     for key in features.keys():
         i = 0
         while i < len(features[key]):
@@ -107,6 +107,8 @@ def setupGMSH(mesh_size: float):
 
     gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
     gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
+    
+    gmsh.option.setNumber("General.ExpertMode", 1)
 
     # gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)
     # gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 1)

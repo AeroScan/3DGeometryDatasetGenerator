@@ -178,7 +178,8 @@ def generateFeature(type: str, shape):
 
 # Generate features by dimensions
 def generateFeatureByDim(shape, features: dict):
-    features['curves'], features['surfaces'] = [], []
+    features['curves'] = []
+    features['surfaces'] = []
     topology = TopologyExplorer(shape)
 
     for edge in tqdm(topology.edges()):
