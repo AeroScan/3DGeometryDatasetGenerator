@@ -159,12 +159,17 @@ def writeOBJ(output_name: str):
     f.write(obj_content)
 
 # Main function
-def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: str):
+def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: str, shape = None):
     global FIRST_NODE_TAG, FIRST_ELEM_TAG
 
     gmsh.initialize()
 
-    gmsh.model.occ.importShapes(input_name)
+    if shape is None:
+        gmsh.model.occ.importShapes(input_name)
+    else:
+        shape_pnt = int(shape.this)
+        gmsh.model.occ.importShapesNativePointer(shape_pnt)
+
     gmsh.model.occ.synchronize()
 
     setupGMSH(mesh_size=mesh_size)
@@ -178,7 +183,10 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: 
 
     writeOBJ(output_name + '.obj')
 
-    entities = splitEntitiesByDim(gmsh.model.getEntities())
+    entities = splitEntitiesByDim(gmsh.model.occ.getEntities())
+
+    print(len(entities[0]), len(entities[1]), len(entities[2]), len(entities[3]))
+        
     mergeFeaturesOCCandGMSH(features=features, entities=entities)
 
     gmsh.finalize()

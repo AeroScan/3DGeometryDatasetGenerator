@@ -64,10 +64,10 @@ if __name__ == '__main__':
             print('\nProcessing file ' + file + '...')
 
             print('\n+-----PythonOCC-----+')
-            features = processPythonOCC(file)
+            shape, features = processPythonOCC(file)
 
             print('\n+-----GMSH-----+')
-            processGMSH(input_name=file, mesh_size=mesh_size, features=features, output_name=output_path)
+            processGMSH(input_name=file, mesh_size=mesh_size, features=features, output_name=output_path, shape=shape)
 
             print('\n+-----Writing YAML results-----+')
             writeYAML(output_name=output_path, features=features)

@@ -209,4 +209,4 @@ def processPythonOCC(input_name: str) -> dict:
     shape = read_step_file(input_name)
     generateFeatureByDim(shape, features)
 
-    return features
+    return shape, features 
