@@ -28,7 +28,7 @@ def output_name_converter(input_path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset Generator')
     parser.add_argument('--input_dir', type=str, default='.', help='directory of input files.')
-    parser.add_argument('--output_dir', type=str, default='./results/', help='results directory')
+    parser.add_argument('--output_dir', type=str, default='./result/', help='results directory')
     parser.add_argument('--mesh_size', type=float, default=1e22, help='mesh size max. default: 1e+22')
     parser.add_argument("-l", "--log", action="store_true", help='show log of results')
     args = vars(parser.parse_args())
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     # Test the directories
     if not os.path.isdir(output_directory):
         print('Output directory not found, changing to "./results/"...')
-        output_directory = './results/'
+        output_directory = './result/'
     if not os.path.isdir(input_directory):
         print('input directory not found, trying to use directory "."...')
         input_directory = '.'
