@@ -85,7 +85,7 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
                     feature = generateGMSHCurveFeature(dimension, tag)
 
                     features['curves'][i].update(feature)
-        elif dimension == 2:
+        if dimension == 2:
             for i in tqdm(range(0, len(features['surfaces']))):
                 tag = entities[dimension][i]
 
@@ -93,7 +93,7 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
                     feature = generateGMSHSurfaceFeature(dimension, tag)
 
                     features['surfaces'][i].update(feature)
-    
+
     for key in features.keys():
         i = 0
         while i < len(features[key]):
@@ -107,10 +107,12 @@ def setupGMSH(mesh_size: float):
 
     gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
     gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
+    
+    gmsh.option.setNumber("General.ExpertMode", 1)
 
-    gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)
-    gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 1)
-    gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 0)
+    # gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)
+    # gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 1)
+    # gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 0)
 
     # Defines the algorithm to be used 
     # gmsh.option.setNumber("Mesh.Algorithm", 6) # Default 6 - Frontal Delaunay
@@ -157,12 +159,17 @@ def writeOBJ(output_name: str):
     f.write(obj_content)
 
 # Main function
-def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: str):
+def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: str, shape = None):
     global FIRST_NODE_TAG, FIRST_ELEM_TAG
 
     gmsh.initialize()
 
-    gmsh.model.occ.importShapes(input_name)
+    if shape is None:
+        gmsh.model.occ.importShapes(input_name)
+    else:
+        shape_pnt = int(shape.this)
+        gmsh.model.occ.importShapesNativePointer(shape_pnt)
+
     gmsh.model.occ.synchronize()
 
     setupGMSH(mesh_size=mesh_size)
@@ -174,9 +181,13 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: 
     FIRST_NODE_TAG = node_tags[0]
     FIRST_ELEM_TAG = elem_tags[0][0]
 
-    writeOBJ(output_name + '.obj')
+    gmsh.write(output_name + '.stl')
+    #writeOBJ(output_name + '.obj')
 
-    entities = splitEntitiesByDim(gmsh.model.getEntities())
+    entities = splitEntitiesByDim(gmsh.model.occ.getEntities())
+
+    print(len(entities[0]), len(entities[1]), len(entities[2]), len(entities[3]))
+        
     mergeFeaturesOCCandGMSH(features=features, entities=entities)
 
     gmsh.finalize()

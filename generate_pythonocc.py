@@ -178,7 +178,8 @@ def generateFeature(type: str, shape):
 
 # Generate features by dimensions
 def generateFeatureByDim(shape, features: dict):
-    features['curves'], features['surfaces'] = [], []
+    features['curves'] = []
+    features['surfaces'] = []
     topology = TopologyExplorer(shape)
 
     for edge in tqdm(topology.edges()):
@@ -208,4 +209,4 @@ def processPythonOCC(input_name: str) -> dict:
     shape = read_step_file(input_name)
     generateFeatureByDim(shape, features)
 
-    return features
+    return shape, features 
