@@ -71,7 +71,7 @@ def gpXYZ2List(gp):
     return [gp.X(), gp.Y(), gp.Z()]
 
 # Write string to yaml file
-def writeYAML(output_name: str, features: dict):
-    with open(output_name + '.yaml', 'w') as f:
+def writeYAML(feature_name: str, features: dict):
+    with open(feature_name + '.yaml', 'w') as f:
         features_yaml = generateFeaturesYAML(features)
         f.write(features_yaml)
