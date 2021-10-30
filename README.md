@@ -23,8 +23,8 @@ Just a list of dependencies, follow the installation steps to install them all.
 - [numpy](https://pypi.org/project/numpy/)
 
 ## Installation
-### OCC (7.5.0)
-Install dependencies:
+
+### Apt dependencies:
 
     $ sudo apt-get install software-properties-common
     $ sudo apt-get install libtool autoconf automake gfortran gdebi
@@ -33,11 +33,13 @@ Install dependencies:
     $ sudo apt-get install libfontconfig1-dev
     $ sudo apt-get install libfreetype6 libfreetype6-dev
     $ sudo apt-get install tcl tcl-dev tk tk-dev
+    $ sudo apt-get install libfltk1.1-dev
 
+### OCC (7.5.0)
 Download the "tgz" file on https://dev.opencascade.org/release, than:
 
     $ cd ~/Downloads
-    $ tar xf opencascade-7.5.0.tar.gz
+    $ tar xf opencascade-7.5.0.tgz
     $ cd opencascade-7.5.0
     $ mkdir build && cd build
     $ cmake ..
@@ -47,18 +49,26 @@ Download the "tgz" file on https://dev.opencascade.org/release, than:
 
 
 ### Gmsh (4.8.4)
-Install:
+On your prefered folder, install:
 
     $ git clone https://github.com/igormaurell/gmsh
+    $ cd gmsh
     $ mkdir build && cd build
     $ cmake -DCMAKE_INSTALL_PREFIX=/opt/gmsh -DENABLE_BUILD_DYNAMIC=1 ..
     $ make
-    $ make install
+    $ sudo make install
 
-Add to PYTHONPATH:
+Add to PYTHONPATH,
+
+for bash:
 
     $ echo "export PYTHONPATH=${PYTHONPATH}:/opt/gmsh/lib" >> ~/.bashrc
+    $ source ~/.bashrc
+    
+for zsh:
+
     $ echo "export PYTHONPATH=${PYTHONPATH}:/opt/gmsh/lib" >> ~/.zshrc
+    $ source ~/.zshrc
 
 
 
@@ -72,7 +82,7 @@ Create conda env:
 
 
 ### 3D Geometry Dataset Generator
-Download:
+On your workspace folder, download:
 
     $ git clone https://github.com/AeroScan/3DGeometryDatasetGenerator
     $ cd 3DGeometryDatasetGenerator

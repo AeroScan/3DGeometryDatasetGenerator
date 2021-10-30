@@ -27,8 +27,8 @@ def output_name_converter(input_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset Generator')
-    parser.add_argument('--input_dir', type=str, default='.', help='directory of input files.')
-    parser.add_argument('--output_dir', type=str, default='./result/', help='results directory')
+    parser.add_argument('input_dir', type=str, default='.', help='directory of input files.')
+    parser.add_argument('output_dir', type=str, default='./results/', help='results directory')
     parser.add_argument('--mesh_size', type=float, default=1e22, help='mesh size max. default: 1e+22')
     parser.add_argument("-l", "--log", action="store_true", help='show log of results')
     args = vars(parser.parse_args())
@@ -58,7 +58,6 @@ if __name__ == '__main__':
         output_name = output_name_converter(file)
         if '/' is not output_directory[-1:]:
             output_directory = output_directory + '/'
-        output_path = output_directory + output_name
         
         try:
             print('\nProcessing file ' + file + '...')
@@ -67,10 +66,19 @@ if __name__ == '__main__':
             shape, features = processPythonOCC(file)
 
             print('\n+-----GMSH-----+')
-            processGMSH(input_name=file, mesh_size=mesh_size, features=features, output_name=output_path, shape=shape)
+            output_obj = output_directory + 'obj/'
+            if not os.path.isdir(output_obj):
+                os.mkdir(output_obj)
+            output_obj += output_name
+            processGMSH(input_name=file, mesh_size=mesh_size, features=features, output_name=output_obj, shape=shape)
 
             print('\n+-----Writing YAML results-----+')
-            writeYAML(output_name=output_path, features=features)
+            output_yaml = output_directory + 'yaml/'
+            if not os.path.isdir(output_yaml):
+                os.mkdir(output_yaml)
+            output_yaml += output_name
+            writeYAML(output_name=output_yaml, features=features)
+            print('\nProcess done.')
         except:
             processorErrors.append(file)
             error_counter += 1
