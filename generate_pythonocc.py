@@ -4,12 +4,16 @@ from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
 
+from sortedcontainers import SortedSet
+
 from functools import reduce
 
 from tools import gpXYZ2List
 
 from tqdm import tqdm
 import numpy as np
+
+MAX_INT = 2**31 - 1
 
 POSSIBLE_CURVE_TYPES = ['line', 'circle', 'ellipse']
 POSSIBLE_SURFACE_TYPES = ['plane', 'cylinder', 'cone', 'sphere', 'torus']
@@ -184,15 +188,18 @@ def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
     features['surfaces'] = []
     topology = TopologyExplorer(shape)
 
-    faces = []
-    edges = []
+    faces = SortedSet()
+    edges = SortedSet()
 
     if use_highest_dim:
         for solid in tqdm(topology.solids()):
             for face in topology.faces_from_solids(solid):
-                if True in [face.IsSame(elem) for elem in faces]:
+
+                face_hc = face.HashCode(MAX_INT)
+                if faces.count(face_hc) > 0:
                     continue
-                faces.append(face)
+                faces.add(face_hc)
+
 
                 surface = BRepAdaptor_Surface(face, True)
                 tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
@@ -204,9 +211,11 @@ def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
                     features['surfaces'].append(None)
                 
                 for edge in topology.edges_from_face(face):
-                    if True in [edge.IsSame(elem) for elem in edges]:
+
+                    edge_hc = edge.HashCode(MAX_INT)
+                    if edges.count(edge_hc) > 0:
                         continue
-                    edges.append(edge)
+                    edges.add(edge_hc)
 
                     curve = BRepAdaptor_Curve(edge)
                     tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()

@@ -163,7 +163,6 @@ def writeOBJ(output_name: str):
         n1 = int(node_tags[1])
         n2 = int(node_tags[2])
         obj_content += 'f ' + str(n0) + '//' + str(lut[n0 - 1] + 1) + ' ' + str(n1) + '//' + str(lut[n1 - 1] + 1) + ' ' + str(n2) + '//' + str(lut[n2 - 1] + 1) + '\n'
-        #obj_content += 'f ' + str(n0) + ' ' + str(n1) + ' ' + str(n2) + '\n'
 
     f = open(output_name, 'w')
     f.write(obj_content)
@@ -191,7 +190,6 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
     FIRST_NODE_TAG = node_tags[0]
     FIRST_ELEM_TAG = elem_tags[0][0]
 
-    # gmsh.write(mesh_name + '.stl')
     writeOBJ(mesh_name + '.obj')
 
     entities = splitEntitiesByDim(gmsh.model.occ.getEntities())

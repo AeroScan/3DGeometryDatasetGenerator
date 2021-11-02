@@ -3,3 +3,4 @@ tqdm
 pyyaml
 numpy
 psutil
+sortedcontainers

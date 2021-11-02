@@ -63,9 +63,9 @@ if __name__ == '__main__':
     if not os.path.isdir(feature_folder_dir):
         os.mkdir(feature_folder_dir)
 
+    # Main loop
     error_counter = 0
     processorErrors = []
-    # Main loop
     time_initial = time.time()
     for file in files:
         file = str(file)
