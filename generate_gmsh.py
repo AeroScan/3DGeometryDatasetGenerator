@@ -38,6 +38,10 @@ def getNodes(dimension: int, tag: int, include_boundary = True):
 # Get elements and sets the first element to 0
 def getElements(dimension: int, tag: int):
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dimension, tag)
+    
+    if len(elem_tags) == 0 or len(elem_node_tags) == 0:
+        return elem_types, elem_tags, elem_node_tags
+   
     elem_tags[0] -= FIRST_ELEM_TAG
     elem_node_tags[0] -= FIRST_NODE_TAG
     return elem_types, elem_tags, elem_node_tags
@@ -62,7 +66,7 @@ def generateGMSHSurfaceFeature(dimension: int, tag: int) -> dict:
     feature = {
         'vert_indices': node_tags,
         'vert_parameters': node_params,
-        'face_indices': elem_tags[0],
+        'face_indices': np.array([]) if len(elem_tags) == 0 else elem_tags[0],
     }
 
     return feature
@@ -159,16 +163,16 @@ def writeOBJ(output_name: str):
     f.write(obj_content)
 
 # Main function
-def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: str, shape = None):
+def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: str, shape = None, use_highest_dim=True):
     global FIRST_NODE_TAG, FIRST_ELEM_TAG
 
     gmsh.initialize()
 
     if shape is None:
-        gmsh.model.occ.importShapes(input_name)
+        gmsh.model.occ.importShapes(input_name, highestDimOnly=use_highest_dim)
     else:
         shape_pnt = int(shape.this)
-        gmsh.model.occ.importShapesNativePointer(shape_pnt)
+        gmsh.model.occ.importShapesNativePointer(shape_pnt, highestDimOnly=use_highest_dim)
 
     gmsh.model.occ.synchronize()
 
@@ -187,7 +191,12 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
     entities = splitEntitiesByDim(gmsh.model.occ.getEntities())
 
     print(len(entities[0]), len(entities[1]), len(entities[2]), len(entities[3]))
-        
+
+    print(len(features['curves']))
+    print(len(features['surfaces']))
+
     mergeFeaturesOCCandGMSH(features=features, entities=entities)
+        
+    
 
     gmsh.finalize()

@@ -32,6 +32,7 @@ if __name__ == '__main__':
     parser.add_argument('--mesh_folder_name', type=str, default = 'mesh', help='mesh folder name.')
     parser.add_argument('--feature_folder_name', type=str, default = 'feature', help='feature folder name.')
     parser.add_argument('--mesh_size', type=float, default=1e22, help='mesh size max. default: 1e+22')
+    parser.add_argument('--use_highest_dim', type=bool, default=True, help='use highest dim to explore file topology. default: True')
     args = vars(parser.parse_args())
 
     input_path = args['input_path']
@@ -39,6 +40,7 @@ if __name__ == '__main__':
     mesh_folder_name = args['mesh_folder_name']
     feature_folder_name = args['feature_folder_name']
     mesh_size = args['mesh_size']
+    use_highest_dim = args['use_highest_dim']
 
     # Test the directories
     if os.path.exists(input_path):
@@ -73,11 +75,11 @@ if __name__ == '__main__':
             print('\nProcessing file ' + file + '...')
 
             print('\n+-----------PythonOCC----------+')
-            shape, features = processPythonOCC(file)
+            shape, features = processPythonOCC(file, use_highest_dim=use_highest_dim)
 
             print('\n+-------------GMSH-------------+')
             mesh_name = os.path.join(mesh_folder_dir, output_name)
-            processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape)
+            processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim)
 
             print('\nWriting YAML...')
             feature_name = os.path.join(feature_folder_dir, output_name)
@@ -85,14 +87,14 @@ if __name__ == '__main__':
             print('\nProcess done.')
             
         except:
-            processorErrors.append(file)
-            error_counter += 1
+           processorErrors.append(file)
+           error_counter += 1
 
     time_finish = time.time()
     
-    print('\n\n+------------Log------------+')
+    print('\n\n+-----------LOG--------------+')
     print(f'Processed files: {len(files) - error_counter}')
     print(f'Unprocessed files: {error_counter}')
     print(f'List of unprocessed files: {processorErrors}')
     print(f'Time used: {time_finish - time_initial}')
-    print('+---------------------------+')
+    print('+----------------------------+')
