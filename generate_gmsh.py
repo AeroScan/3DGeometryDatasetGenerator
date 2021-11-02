@@ -11,6 +11,9 @@ FIRST_ELEM_TAG = 0
 def getNodes(dimension: int, tag: int, include_boundary = True):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dimension, tag, includeBoundary = include_boundary)
 
+    if len(node_tags) == 0 or len(node_coords) == 0 or len(node_params) == 0:
+        return node_tags, node_coords, node_params
+
     if dimension == 1 and len(node_tags) > 2 and node_tags[-2] < node_tags[0]:
         node_tags = np.roll(node_tags, 1)
         temp = node_tags[0]
@@ -185,18 +188,11 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
     FIRST_NODE_TAG = node_tags[0]
     FIRST_ELEM_TAG = elem_tags[0][0]
 
-    gmsh.write(mesh_name + '.stl')
-    #writeOBJ(output_name + '.obj')
+    # gmsh.write(mesh_name + '.stl')
+    writeOBJ(mesh_name + '.obj')
 
     entities = splitEntitiesByDim(gmsh.model.occ.getEntities())
 
-    print(len(entities[0]), len(entities[1]), len(entities[2]), len(entities[3]))
-
-    print(len(features['curves']))
-    print(len(features['surfaces']))
-
     mergeFeaturesOCCandGMSH(features=features, entities=entities)
         
-    
-
     gmsh.finalize()
