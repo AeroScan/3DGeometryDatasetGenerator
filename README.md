@@ -62,12 +62,12 @@ Add to PYTHONPATH,
 
 for bash:
 
-    $ echo "export PYTHONPATH=${PYTHONPATH}:/opt/gmsh/lib" >> ~/.bashrc
+    $ echo export PYTHONPATH="${PYTHONPATH}:/opt/gmsh/lib" >> ~/.bashrc
     $ source ~/.bashrc
     
 for zsh:
 
-    $ echo "export PYTHONPATH=${PYTHONPATH}:/opt/gmsh/lib" >> ~/.zshrc
+    $ echo export PYTHONPATH="${PYTHONPATH}:/opt/gmsh/lib" >> ~/.zshrc
     $ source ~/.zshrc
 
 
@@ -91,4 +91,5 @@ On your workspace folder, download:
 ## Using
 After install, use the help to understand the parameters, doing:
     
+    $ conda activate pyoccenv
     $ python dataset_generator.py --help
