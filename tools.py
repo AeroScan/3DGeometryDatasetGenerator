@@ -1,4 +1,6 @@
 import numpy as np
+import pickle
+import json
 
 # Convert a float to string
 def float2str(number, limit = 10) -> str:
@@ -71,7 +73,23 @@ def gpXYZ2List(gp):
     return [gp.X(), gp.Y(), gp.Z()]
 
 # Write string to yaml file
-def writeYAML(feature_name: str, features: dict):
-    with open(feature_name + '.yaml', 'w') as f:
+def writeYAML(features_name: str, features: dict):
+    with open(features_name + '.yaml', 'w') as f:
         features_yaml = generateFeaturesYAML(features)
         f.write(features_yaml)
+
+def writeJSON(features_name: str, features: dict):
+    with open(features_name + '.json', 'w') as f:
+        json.dump(features, f, indent=4)
+
+def writePKL(features_name: str, features: dict):
+    with open(features_name + '.pkl', 'wb') as f:
+        pickle.dump(features, f)
+
+def writeFeatures(features_name: str, features: dict, tp: str):
+    if tp == 'yaml':
+        writeYAML(features_name, features)
+    elif tp == 'pkl':
+        writePKL(features_name, features)
+    else:
+        writeJSON(features_name, features)
