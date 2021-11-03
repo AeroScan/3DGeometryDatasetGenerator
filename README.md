@@ -33,7 +33,7 @@ Just a list of dependencies, follow the installation steps to install them all.
     $ sudo apt-get install libfontconfig1-dev
     $ sudo apt-get install libfreetype6 libfreetype6-dev
     $ sudo apt-get install tcl tcl-dev tk tk-dev
-    $ sudo apt-get install libfltk1.1-dev
+    $ sudo apt-get install libfltk1.3-dev
 
 ### OCC (7.5.0)
 Download the "tgz" file on https://dev.opencascade.org/release, than:
