@@ -114,7 +114,7 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
 # Configure the GMSH
 def setupGMSH(mesh_size: float):
 
-    gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
+    gmsh.option.setNumber("Mesh.MeshSizeMin", 1)
     gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
     
     gmsh.option.setNumber("General.ExpertMode", 1)
@@ -170,30 +170,33 @@ def writeOBJ(output_name: str):
 # Main function
 def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: str, shape = None, use_highest_dim=True):
     global FIRST_NODE_TAG, FIRST_ELEM_TAG
+    try:
+        gmsh.initialize()
 
-    gmsh.initialize()
+        if shape is None:
+            gmsh.model.occ.importShapes(input_name, highestDimOnly=use_highest_dim)
+        else:
+            shape_pnt = int(shape.this)
+            gmsh.model.occ.importShapesNativePointer(shape_pnt, highestDimOnly=use_highest_dim)
 
-    if shape is None:
-        gmsh.model.occ.importShapes(input_name, highestDimOnly=use_highest_dim)
-    else:
-        shape_pnt = int(shape.this)
-        gmsh.model.occ.importShapesNativePointer(shape_pnt, highestDimOnly=use_highest_dim)
+        gmsh.model.occ.synchronize()
 
-    gmsh.model.occ.synchronize()
+        setupGMSH(mesh_size=mesh_size)
 
-    setupGMSH(mesh_size=mesh_size)
+        gmsh.model.mesh.generate(2)
 
-    gmsh.model.mesh.generate(2)
+        node_tags, _, _ = gmsh.model.mesh.getNodes(-1, -1)
+        _, elem_tags, _ = gmsh.model.mesh.getElements(2, -1)
+        FIRST_NODE_TAG = node_tags[0]
+        FIRST_ELEM_TAG = elem_tags[0][0]
 
-    node_tags, _, _ = gmsh.model.mesh.getNodes(-1, -1)
-    _, elem_tags, _ = gmsh.model.mesh.getElements(2, -1)
-    FIRST_NODE_TAG = node_tags[0]
-    FIRST_ELEM_TAG = elem_tags[0][0]
+        writeOBJ(mesh_name + '.obj')
 
-    writeOBJ(mesh_name + '.obj')
+        entities = splitEntitiesByDim(gmsh.model.occ.getEntities())
 
-    entities = splitEntitiesByDim(gmsh.model.occ.getEntities())
-
-    mergeFeaturesOCCandGMSH(features=features, entities=entities)
-        
-    gmsh.finalize()
+        mergeFeaturesOCCandGMSH(features=features, entities=entities)
+            
+        gmsh.finalize()
+    except Exception as e:
+        gmsh.finalize()
+        raise e
