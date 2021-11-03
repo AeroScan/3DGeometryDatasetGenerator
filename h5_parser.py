@@ -13,10 +13,6 @@ import numpy as np
 from os import listdir, mkdir
 from os.path import isfile, join, exists
 
-def createH5File(h5_filename):
-    h5_file = h5py.File(h5_filename, 'w')
-    return h5_file
-
 def addPointsAndNormals2H5(pc_file, h5_file):
     return
 

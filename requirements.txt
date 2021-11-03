@@ -1,6 +1,11 @@
 argparse
 tqdm
-pyyaml
 numpy
 psutil
 sortedcontainers
+termcolor
+pickle
+json
+h5py
+pypcd
+pyyaml

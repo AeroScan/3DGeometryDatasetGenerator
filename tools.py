@@ -72,7 +72,7 @@ def generateFeaturesYAML(features: dict) -> str:
 def gpXYZ2List(gp):
     return [gp.X(), gp.Y(), gp.Z()]
 
-# Write string to yaml file
+# Write features file
 def writeYAML(features_name: str, features: dict):
     with open(features_name + '.yaml', 'w') as f:
         features_yaml = generateFeaturesYAML(features)
