@@ -57,8 +57,8 @@ def generateGMSHCurveFeature(dimension: int, tag: int) -> dict:
     
     feature = {
         'sharp': True,
-        'vert_indices': node_tags,
-        'vert_parameters': node_params,
+        'vert_indices': node_tags.tolist(),
+        'vert_parameters': node_params.tolist(),
     }
 
     return feature
@@ -69,9 +69,9 @@ def generateGMSHSurfaceFeature(dimension: int, tag: int) -> dict:
     elem_types, elem_tags, elem_node_tags = getElements(dimension, tag)
     
     feature = {
-        'vert_indices': node_tags,
-        'vert_parameters': node_params,
-        'face_indices': np.array([]) if len(elem_tags) == 0 else elem_tags[0],
+        'vert_indices': node_tags.tolist(),
+        'vert_parameters': node_params.tolist(),
+        'face_indices': [] if len(elem_tags) == 0 else elem_tags[0].tolist(),
     }
 
     return feature

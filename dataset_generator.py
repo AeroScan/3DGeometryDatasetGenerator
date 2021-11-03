@@ -1,4 +1,4 @@
-from tools import writeYAML
+from tools import writeFeatures, writeYAML
 from generate_gmsh import processGMSH
 from generate_pythonocc import processPythonOCC
 
@@ -6,6 +6,8 @@ import os
 import time
 import argparse
 from pathlib import Path
+
+from termcolor import colored
 
 INPUT_FORMATS = ['.step', '.stp']
 
@@ -28,19 +30,21 @@ def output_name_converter(input_path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset Generator')
     parser.add_argument('input_path', type=str, default='.', help='path to input directory or input file.')
-    parser.add_argument('output_dir', type=str, default='./results/', help='results directory')
-    parser.add_argument('--mesh_folder_name', type=str, default = 'mesh', help='mesh folder name.')
-    parser.add_argument('--feature_folder_name', type=str, default = 'feature', help='feature folder name.')
-    parser.add_argument('--mesh_size', type=float, default=1e22, help='mesh size max. default: 1e+22')
-    parser.add_argument('--use_highest_dim', type=bool, default=True, help='use highest dim to explore file topology. default: True')
+    parser.add_argument('output_dir', type=str, default='./results/', help='results directory.')
+    parser.add_argument('--mesh_folder_name', type=str, default = 'mesh', help='mesh folder name. Default: mesh.')
+    parser.add_argument('--features_folder_name', type=str, default = 'features', help='features folder name. Default: features.')
+    parser.add_argument('--mesh_size', type=float, default=1e22, help='mesh size max. Default: 1e+22.')
+    parser.add_argument('--use_highest_dim', type=bool, default=True, help='use highest dim to explore file topology. Default: True.')
+    parser.add_argument('--features_file_type', type=str, default='json', help='type of the file to save the dict of features. Default: json. Possible types: json, yaml and pkl.')
     args = vars(parser.parse_args())
 
     input_path = args['input_path']
     output_directory = args['output_dir']
     mesh_folder_name = args['mesh_folder_name']
-    feature_folder_name = args['feature_folder_name']
+    features_folder_name = args['features_folder_name']
     mesh_size = args['mesh_size']
     use_highest_dim = args['use_highest_dim']
+    features_file_type = args['features_file_type']
 
     # Test the directories
     if os.path.exists(input_path):
@@ -56,12 +60,12 @@ if __name__ == '__main__':
         os.mkdir(output_directory)
 
     mesh_folder_dir = os.path.join(output_directory, mesh_folder_name)
-    feature_folder_dir = os.path.join(output_directory, feature_folder_name)
+    features_folder_dir = os.path.join(output_directory, features_folder_name)
     
     if not os.path.isdir(mesh_folder_dir):
         os.mkdir(mesh_folder_dir)
-    if not os.path.isdir(feature_folder_dir):
-        os.mkdir(feature_folder_dir)
+    if not os.path.isdir(features_folder_dir):
+        os.mkdir(features_folder_dir)
 
     # Main loop
     error_counter = 0
@@ -81,14 +85,15 @@ if __name__ == '__main__':
             mesh_name = os.path.join(mesh_folder_dir, output_name)
             processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim)
 
-            print('\nWriting YAML...')
-            feature_name = os.path.join(feature_folder_dir, output_name)
-            writeYAML(feature_name=feature_name, features=features)
+            print('\nWriting Features...')
+            features_name = os.path.join(features_folder_dir, output_name)
+            writeFeatures(features_name=features_name, features=features, tp=features_file_type)
             print('\nProcess done.')
             
-        except:
-           processorErrors.append(file)
-           error_counter += 1
+        except Exception as e:
+            print(colored(f'Error   : {e}', 'red'))
+            processorErrors.append(file)
+            error_counter += 1
 
     time_finish = time.time()
     
