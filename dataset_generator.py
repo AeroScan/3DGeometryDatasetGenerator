@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('--mesh_folder_name', type=str, default = 'mesh', help='mesh folder name. Default: mesh.')
     parser.add_argument('--features_folder_name', type=str, default = 'features', help='features folder name. Default: features.')
     parser.add_argument('--mesh_size', type=float, default=1e22, help='mesh size max. Default: 1e+22.')
-    parser.add_argument('--use_highest_dim', type=bool, default=True, help='use highest dim to explore file topology. Default: True.')
+    parser.add_argument('--no_use_highest_dim', action='store_false', help='use highest dim to explore file topology. Default: True.')
     parser.add_argument('--features_file_type', type=str, default='json', help='type of the file to save the dict of features. Default: json. Possible types: json, yaml and pkl.')
     args = vars(parser.parse_args())
 
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     mesh_folder_name = args['mesh_folder_name']
     features_folder_name = args['features_folder_name']
     mesh_size = args['mesh_size']
-    use_highest_dim = args['use_highest_dim']
+    use_highest_dim = args['no_use_highest_dim']
     features_file_type = args['features_file_type']
 
     # Test the directories
