@@ -1,6 +1,7 @@
 import numpy as np
 import pickle
 import json
+import yaml
 
 # Convert a float to string
 def float2str(number, limit = 10) -> str:
@@ -72,24 +73,53 @@ def generateFeaturesYAML(features: dict) -> str:
 def gpXYZ2List(gp):
     return [gp.X(), gp.Y(), gp.Z()]
 
+
+YAML_NAMES = ['yaml', 'yml']
+JSON_NAMES = ['json']
+PKL_NAMES  = ['pkl']
+
 # Write features file
 def writeYAML(features_name: str, features: dict):
-    with open(features_name + '.yaml', 'w') as f:
+    with open(features_name, 'w') as f:
         features_yaml = generateFeaturesYAML(features)
         f.write(features_yaml)
 
 def writeJSON(features_name: str, features: dict):
-    with open(features_name + '.json', 'w') as f:
+    with open(features_name, 'w') as f:
         json.dump(features, f, indent=4)
 
 def writePKL(features_name: str, features: dict):
-    with open(features_name + '.pkl', 'wb') as f:
+    with open(features_name, 'wb') as f:
         pickle.dump(features, f)
 
 def writeFeatures(features_name: str, features: dict, tp: str):
-    if tp == 'yaml':
-        writeYAML(features_name, features)
-    elif tp == 'pkl':
-        writePKL(features_name, features)
+    if tp.lower() in YAML_NAMES:
+        writeYAML(f'{features_name}.{tp}', features)
+    elif tp.lower() in PKL_NAMES:
+        writePKL(f'{features_name}.{tp}', features)
     else:
-        writeJSON(features_name, features)
+        writeJSON(f'{features_name}.{tp}', features)
+
+# Load features file
+def loadYAML(features_name: str):
+    with open(features_name, 'r') as f:
+        data = yaml.load(f, Loader=yaml.Loader)
+    return data
+
+def loadJSON(features_name: str):
+    with open(features_name, 'r') as f:
+        data = json.load(f)
+    return data
+
+def loadPKL(features_name: str):
+    with open(features_name, 'rb') as f:
+        data = pickle.load(f)
+    return data
+
+def loadFeatures(features_name: str, tp: str):
+    if tp.lower() in YAML_NAMES:
+        return loadYAML(f'{features_name}.{tp}')
+    elif tp.lower() in PKL_NAMES:
+        return loadPKL(f'{features_name}.{tp}')
+    else:
+        return loadJSON(f'{features_name}.{tp}')
