@@ -5,5 +5,5 @@ psutil
 sortedcontainers
 termcolor
 h5py
-pypcd
+pcl
 pyyaml
