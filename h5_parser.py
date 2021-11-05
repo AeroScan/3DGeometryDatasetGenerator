@@ -16,6 +16,37 @@ from os.path import isfile, join, exists
 
 import gc
 
+def generateFace2PrimitiveMap(features_data):
+    max_face = 0
+    for feat in features_data['surfaces']:
+        max_face = max(max(feat['face_indices']), max_face)
+    face_2_primitive = np.ndarray(shape=(max_face+1,), dtype=np.int32)
+    for i, feat in enumerate(features_data['surfaces']):
+        for face in feat['face_indices']:
+            face_2_primitive[face] = i
+    return face_2_primitive
+
+def createH5File(filename):
+    return h5py.File(filename, 'w')
+
+def filterFeaturesData(features_data, curve_types, surface_types):
+    i = 0
+    while i < len(features_data['curves']):
+        feature = features_data['curves'][i]
+        if feature['type'].lower() not in curve_types:
+            features_data['curves'].pop(i)
+        else:
+            i+=1
+
+    i = 0
+    while i < len(features_data['surfaces']):
+        feature = features_data['surfaces'][i]
+        if feature['type'].lower() not in surface_types:
+            features_data['surfaces'].pop(i)
+        else:
+            i+=1
+
+
 def generatePCD2LSSPFN(pc_filename, pc_files, mps_ns, lpcp_r, lpcp_nl, mesh_filename=None): 
     pc_files_out = []
     for resolution in lpcp_r:
@@ -49,8 +80,7 @@ def generatePCD2LSSPFN(pc_filename, pc_files, mps_ns, lpcp_r, lpcp_nl, mesh_file
         remove(pc_filename)
     return pc_files_out
 
-def generateH52LSSPFN(pc_files, features_data, h5_file, surface_types):
-    print(pc_files)
+def generateH52LSSPFN(pc_files, face_2_primitive, features_data, h5_file, surface_types):
     pc_filename_gt = ''
     pc_filename_noisy = ''
     for f in pc_files:
@@ -68,13 +98,34 @@ def generateH52LSSPFN(pc_files, features_data, h5_file, surface_types):
     gt_points[:, 0] = pc['x']
     gt_points[:, 1] = pc['y']
     gt_points[:, 2] = pc['z']
+
+    h5_file.create_dataset('gt_points', data=gt_points)
+
+    del gt_points
+    gc.collect()
     
     gt_normals = np.ndarray(shape=(pc['x'].shape[0], 3), dtype=np.float64)
     gt_normals[:, 0] = pc['normal_x']
     gt_normals[:, 1] = pc['normal_y']
     gt_normals[:, 2] = pc['normal_z']
 
+    h5_file.create_dataset('gt_normals', data=gt_normals)
+
+    del gt_normals
+    gc.collect()
+
     gt_labels = pc['label']
+    features_points = [[] for f in features_data]
+    for i in range(0, len(gt_labels)):
+        index = face_2_primitive[gt_labels[i]]
+        features_points[index].append(i)
+        gt_labels[i] = index
+    
+    h5_file.create_dataset('gt_labels', data=gt_labels)
+
+    del pc
+    del gt_labels
+    gc.collect()
 
     pc = pypcd.PointCloud.from_path(pc_filename_noisy).pc_data
 
@@ -83,36 +134,26 @@ def generateH52LSSPFN(pc_files, features_data, h5_file, surface_types):
     noisy_points[:, 1] = pc['y']
     noisy_points[:, 2] = pc['z']
 
+    h5_file.create_dataset('noisy_points', data=noisy_points)
+
     del pc
+    del noisy_points
     gc.collect()
-
-    print(gt_points)
-    print(noisy_points)
-
-
-    #h5_file.create_dataset('gt_types', data=gt_types)
 
     return h5_file
 
-def createH5File(filename):
-    return h5py.File(filename, 'w')
+def generateLSSPFN(features_data, pc_folder_files, lpcp_r, filename, surface_types):
+    face_2_primitive = generateFace2PrimitiveMap(features_data)
 
-def filterFeaturesData(feature_data, curve_types, surface_types):
-    i = 0
-    while i < len(features_data['curves']):
-        feature = features_data['curves'][i]
-        if feature['type'] not in curve_types:
-            features_data['curves'].pop(i)
-        else:
-            i+=1
+    for i, resolution in enumerate(lpcp_r):
+        str_resolution = str(resolution).replace('.','-')
+        h5_filename = join(h5_folder_name, f'{filename}_{str_resolution}.h5')
+        h5_file = createH5File(h5_filename)
 
-    i = 0
-    while i < len(features_data['surfaces']):
-        feature = features_data['surfaces'][i]
-        if feature['type'] not in surface_types:
-            features_data['surfaces'].pop(i)
-        else:
-            i+=1
+        h5_file = generateH52LSSPFN(pc_folder_files[(i*2):(i*2+2)], face_2_primitive, features_data['surfaces'], h5_file, surface_types)
+
+        h5_file.close()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Converts a dataset from OBJ and YAML to HDF5')
@@ -135,7 +176,7 @@ if __name__ == '__main__':
     features_folder_name = join(folder_name, args['features_folder_name'])
     pc_folder_name = join(folder_name, args['pc_folder_name'])
     curve_types = args['curve_types'].split(',')
-    surface_types = args['surface_types'].split(',')
+    surface_types = [s.lower() for s in args['surface_types'].split(',')]
     mps_ns = args['mesh_point_sampling_n_samples']
     lpcp_r = sorted([float(x) for x in args['large_point_cloud_preprocessing_resolutions'].split(',')])
     lpcp_nl = args['large_point_cloud_preprocessing_noise_limit']
@@ -159,7 +200,6 @@ if __name__ == '__main__':
         exit()
 
     if not exists(h5_folder_name):
-        print(h5_folder_name)
         mkdir(h5_folder_name)
 
     for features_filename in features_files:
@@ -201,13 +241,7 @@ if __name__ == '__main__':
         feature_ext =  features_filename[(point_position + 1):]
         features_data = loadFeatures(join(features_folder_name, filename), feature_ext)
         filterFeaturesData(features_data, curve_types, surface_types)
+        
+        generateLSSPFN(features_data, pc_folder_files, lpcp_r, filename, surface_types)
 
-        for i, resolution in enumerate(lpcp_r):
-            str_resolution = str(resolution).replace('.','-')
-            h5_filename = join(h5_folder_name, f'{filename}_{str_resolution}.h5')
-            h5_file = createH5File(h5_filename)
-
-            h5_file = generateH52LSSPFN(pc_folder_files[(i*2):(i*2+2)], features_data['surfaces'], h5_file, surface_types)
-
-            h5_file.close()
         print('\nProcess done.')
