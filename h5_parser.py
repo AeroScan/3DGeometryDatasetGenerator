@@ -67,19 +67,19 @@ def generatePCD2LSSPFN(pc_filename, pc_files, mps_ns, lpcp_r, lpcp_nl, mesh_file
             if not exists(pc_filename):
                 if mesh_filename is None:
                     return []
-                system(f'mesh_point_sampling {mesh_filename} {pc_filename} --n_samples {mps_ns} --write_normals --no_vis_result')
-            system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename} --vg {resolution} --centralize --align')
+                system(f'mesh_point_sampling {mesh_filename} {pc_filename} --n_samples {mps_ns} --write_normals --no_vis_result > /dev/null')
+            system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename} --vg {resolution} --centralize --align > /dev/null')
             filtered = True
-            system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename_gt} --cube_reescale_factor 1')
+            system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename_gt} --cube_reescale_factor 1 > /dev/null')
 
         if pc_filename_noisy not in pc_files:
             if not exists(pc_filename):
                 if mesh_filename is None:
                     return []
-                system(f'mesh_point_sampling {mesh_filename} {pc_filename} --n_samples {mps_ns} --write_normals --no_vis_result')
+                system(f'mesh_point_sampling {mesh_filename} {pc_filename} --n_samples {mps_ns} --write_normals --no_vis_result > /dev/null')
             if filtered:
-               system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename} --vg {resolution} --centralize --align')
-            system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename_noisy} --noise_limit {lpcp_nl} --cube_reescale_factor 1')
+               system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename} --vg {resolution} --centralize --align > /dev/null')
+            system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename_noisy} --noise_limit {lpcp_nl} --cube_reescale_factor 1 > /dev/null')
     if exists(pc_filename):
         remove(pc_filename)
     return pc_files_out
@@ -205,10 +205,10 @@ if __name__ == '__main__':
 
     if not exists(h5_folder_name):
         mkdir(h5_folder_name)
+    
+    print(f'\nGenerating dataset for {len(features_files)} features files...\n')
 
-    for features_filename in features_files:
-        print('\nProcessing ' + features_filename + '...\n')
-
+    for features_filename in tqdm(features_files):
         point_position = features_filename.rfind('.')
         filename = features_filename[:point_position]
 
@@ -248,4 +248,4 @@ if __name__ == '__main__':
         
         generateLSSPFN(features_data, pc_folder_files, lpcp_r, filename, surface_types)
 
-        print('\nProcess done.')
+    print()
