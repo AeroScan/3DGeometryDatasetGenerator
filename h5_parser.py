@@ -29,7 +29,7 @@ if __name__ == '__main__':
     parser.add_argument('--surface_types', type=str, default = 'plane,cylinder,cone,sphere', help='types of surfaces to generate. Default = plane,cylinder,cone,sphere')
     parser.add_argument('-mps_ns', '--mesh_point_sampling_n_samples', type=int, default= '1000000', help='n_samples param for mesh_point_sampling execution, if necessary. Default: 100000000.')
     parser.add_argument('-lpcp_r', '--large_point_cloud_preprocessing_resolutions', type=str, default= '10', help='list of resolutions for large_point_cloud_preprocessing execution, if necessary. Default: 10.')
-    parser.add_argument('-lpcp_nl', '--large_point_cloud_preprocessing_noise_limit', type=float, default= 10, help='noise_limit for large_point_cloud_preprocessing execution, if necessary. Default: 10.')
+    parser.add_argument('-nl', '--noise_limit', type=float, default= 10, help='noise_limit for point cloud, if necessary. Default: 10.')
 
     args = vars(parser.parse_args())
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     surface_types = [s.lower() for s in args['surface_types'].split(',')]
     mps_ns = args['mesh_point_sampling_n_samples']
     lpcp_r = sorted([float(x) for x in args['large_point_cloud_preprocessing_resolutions'].split(',')])
-    lpcp_nl = args['large_point_cloud_preprocessing_noise_limit']
+    noise_limit = args['noise_limit']
 
     mesh_files = []
     features_files = []
@@ -67,6 +67,6 @@ if __name__ == '__main__':
     
     print(f'\nGenerating dataset for {len(features_files)} features files...\n')
 
-    generateLSSPFN(features_folder_name, features_files, mesh_folder_name, mesh_files, pc_folder_name, pc_folders, h5_folder_name, mps_ns, lpcp_r, lpcp_nl, surface_types)
+    generateLSSPFN(features_folder_name, features_files, mesh_folder_name, mesh_files, pc_folder_name, pc_folders, h5_folder_name, mps_ns, lpcp_r, noise_limit, surface_types)
 
     print()

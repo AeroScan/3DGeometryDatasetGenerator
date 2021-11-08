@@ -13,74 +13,67 @@ import gc
 
 from tools import loadFeatures, generateFace2PrimitiveMap, filterFeaturesData
 
-def generatePCD2LSSPFN(pc_filename, pc_files, mps_ns, lpcp_r, lpcp_nl, mesh_filename=None): 
+from normalization import centralize, align_canonical, add_noise, cube_rescale
+
+def normalize2LSSPFN(point_cloud, features=[], noise_limit = 10):
+    point_cloud = centralize(point_cloud)
+    point_cloud = align_canonical(point_cloud)
+    if noise_limit != 0:
+        point_cloud = add_noise(point_cloud, limit=noise_limit)
+    point_cloud = cube_rescale(point_cloud)
+    for i in range(0, len(features)):
+        features[i]['normalized'] = True
+    return point_cloud, features
+
+def generatePCD2LSSPFN(pc_filename, pc_files, mps_ns, lpcp_r, mesh_filename=None): 
     pc_files_out = []
     for resolution in lpcp_r:
         point_position = pc_filename.rfind('.')
         str_resolution = str(resolution).replace('.','-')
-        pc_filename_gt = f'{pc_filename[:point_position]}_{str_resolution}_gt{pc_filename[point_position:]}'
-        pc_filename_noisy = f'{pc_filename[:point_position]}_{str_resolution}_noisy{pc_filename[point_position:]}'
+        pc_filename_gt = f'{pc_filename[:point_position]}_{str_resolution}{pc_filename[point_position:]}'
 
-        pc_files_out.append(pc_filename_noisy)
         pc_files_out.append(pc_filename_gt)
 
-        filtered = False
         if pc_filename_gt not in pc_files:
             if not exists(pc_filename):
                 if mesh_filename is None:
                     return []
                 system(f'mesh_point_sampling {mesh_filename} {pc_filename} --n_samples {mps_ns} --write_normals --no_vis_result > /dev/null')
-            system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename} --vg {resolution} --centralize --align > /dev/null')
-            filtered = True
-            system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename_gt} --cube_reescale_factor 1 > /dev/null')
+            system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename_gt} --vg {resolution} > /dev/null')
 
-        if pc_filename_noisy not in pc_files:
-            if not exists(pc_filename):
-                if mesh_filename is None:
-                    return []
-                system(f'mesh_point_sampling {mesh_filename} {pc_filename} --n_samples {mps_ns} --write_normals --no_vis_result > /dev/null')
-            if filtered:
-               system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename} --vg {resolution} --centralize --align > /dev/null')
-            system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename_noisy} --noise_limit {lpcp_nl} --cube_reescale_factor 1 > /dev/null')
     if exists(pc_filename):
         remove(pc_filename)
     return pc_files_out
 
-def generateH52LSSPFN(pc_files, face_2_primitive, features_data, h5_filename, surface_types):
+def generateH52LSSPFN(pc_filename, face_2_primitive, features_data, h5_filename, noise_limit):
     h5_file = h5py.File(h5_filename, 'w')
-    pc_filename_gt = ''
-    pc_filename_noisy = ''
-    for f in pc_files:
-        if 'gt' in f:
-            pc_filename_gt = f
-        elif 'noisy' in f:
-            pc_filename_noisy = f
-    if pc_filename_noisy == '' or pc_filename_gt == '':
-        print(f'{pc_files} has no gt or noisy cloud.')
-        return None
         
-    pc = pypcd.PointCloud.from_path(pc_filename_gt).pc_data
+    pc = pypcd.PointCloud.from_path(pc_filename).pc_data
 
     gt_points = np.ndarray(shape=(pc['x'].shape[0], 3), dtype=np.float64)
     gt_points[:, 0] = pc['x']
     gt_points[:, 1] = pc['y']
     gt_points[:, 2] = pc['z']
 
-    h5_file.create_dataset('gt_points', data=gt_points)
-
-    del gt_points
-    gc.collect()
-    
     gt_normals = np.ndarray(shape=(pc['x'].shape[0], 3), dtype=np.float64)
     gt_normals[:, 0] = pc['normal_x']
     gt_normals[:, 1] = pc['normal_y']
     gt_normals[:, 2] = pc['normal_z']
 
-    h5_file.create_dataset('gt_normals', data=gt_normals)
+    point_cloud = np.concatenate((gt_points, gt_normals), axis=1)
 
+    del gt_points
     del gt_normals
     gc.collect()
 
+    gt_point_cloud, features_data = normalize2LSSPFN(point_cloud, features=features_data, noise_limit=0)
+
+    h5_file.create_dataset('gt_points', data=gt_point_cloud[:, :3])
+    h5_file.create_dataset('gt_normals', data=gt_point_cloud[:, 3:])
+
+    del gt_point_cloud
+    gc.collect()
+    
     gt_labels = pc['label']
     features_points = [[] for f in features_data]
     for i in range(0, len(gt_labels)):
@@ -94,17 +87,11 @@ def generateH52LSSPFN(pc_files, face_2_primitive, features_data, h5_filename, su
     del gt_labels
     gc.collect()
 
-    pc = pypcd.PointCloud.from_path(pc_filename_noisy).pc_data
+    noisy_point_cloud, _ = normalize2LSSPFN(point_cloud, noise_limit=noise_limit) 
 
-    noisy_points = np.ndarray(shape=(pc['x'].shape[0], 3), dtype=np.float64)
-    noisy_points[:, 0] = pc['x']
-    noisy_points[:, 1] = pc['y']
-    noisy_points[:, 2] = pc['z']
+    h5_file.create_dataset('noisy_points', data=noisy_point_cloud[:, :3])
 
-    h5_file.create_dataset('noisy_points', data=noisy_points)
-
-    del pc
-    del noisy_points
+    del noisy_point_cloud
     gc.collect()
 
     point_position = h5_filename.rfind('.')
@@ -123,7 +110,7 @@ def generateH52LSSPFN(pc_files, face_2_primitive, features_data, h5_filename, su
 
     h5_file.close()
 
-def generateLSSPFN(features_folder_name, features_files, mesh_folder_name, mesh_files, pc_folder_name, pc_folders, h5_folder_name, mps_ns, lpcp_r, lpcp_nl, surface_types):
+def generateLSSPFN(features_folder_name, features_files, mesh_folder_name, mesh_files, pc_folder_name, pc_folders, h5_folder_name, mps_ns, lpcp_r, noise_limit, surface_types):
     for features_filename in tqdm(features_files):
         point_position = features_filename.rfind('.')
         filename = features_filename[:point_position]
@@ -142,14 +129,14 @@ def generateLSSPFN(features_folder_name, features_files, mesh_folder_name, mesh_
             if not exists(pc_folder_files_name):
                 mkdir(pc_folder_files_name)
             pc_folder_files = sorted([join(pc_folder_files_name, f) for f in listdir(pc_folder_files_name) if isfile(join(pc_folder_files_name, f))])
-            pc_folder_files = generatePCD2LSSPFN(join(pc_folder_files_name, pc_filename), pc_folder_files, mps_ns, lpcp_r, lpcp_nl, mesh_filename=join(mesh_folder_name, mesh_filename))
+            pc_folder_files = generatePCD2LSSPFN(join(pc_folder_files_name, pc_filename), pc_folder_files, mps_ns, lpcp_r, mesh_filename=join(mesh_folder_name, mesh_filename))
 
         elif filename in pc_folders:
             index = pc_folders.index(filename)
             pc_folders.pop(index)
             pc_folder_files_name = join(pc_folder_name, filename)
             pc_folder_files = sorted([join(pc_folder_files_name, f) for f in listdir(pc_folder_files_name) if isfile(join(pc_folder_files_name, f))])
-            pc_folder_files = generatePCD2LSSPFN(join(pc_folder_files_name, pc_filename), pc_folder_files, mps_ns, lpcp_r, lpcp_nl)
+            pc_folder_files = generatePCD2LSSPFN(join(pc_folder_files_name, pc_filename), pc_folder_files, mps_ns, lpcp_r)
             if len(pc_folder_files) == 0:
                 print(f'\n{filename} has no OBJ and not has all PCD files.')
                 continue
@@ -168,4 +155,4 @@ def generateLSSPFN(features_folder_name, features_files, mesh_folder_name, mesh_
             str_resolution = str(resolution).replace('.','-')
             h5_filename = join(h5_folder_name, f'{filename}_{str_resolution}.h5')
             
-            generateH52LSSPFN(pc_folder_files[(i*2):(i*2+2)], face_2_primitive, features_data['surfaces'], h5_filename, surface_types)   
+            generateH52LSSPFN(pc_folder_files[i], face_2_primitive, features_data['surfaces'], h5_filename, noise_limit)   
