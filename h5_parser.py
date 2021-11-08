@@ -84,7 +84,8 @@ def generatePCD2LSSPFN(pc_filename, pc_files, mps_ns, lpcp_r, lpcp_nl, mesh_file
         remove(pc_filename)
     return pc_files_out
 
-def generateH52LSSPFN(pc_files, face_2_primitive, features_data, h5_file, surface_types):
+def generateH52LSSPFN(pc_files, face_2_primitive, features_data, h5_filename, surface_types):
+    h5_file = createH5File(h5_filename)
     pc_filename_gt = ''
     pc_filename_noisy = ''
     for f in pc_files:
@@ -144,7 +145,21 @@ def generateH52LSSPFN(pc_files, face_2_primitive, features_data, h5_file, surfac
     del noisy_points
     gc.collect()
 
-    return h5_file
+    point_position = h5_filename.rfind('.')
+    point_position = point_position if point_position >= 0 else len(point_position)
+    bar_position = h5_filename.rfind('/')
+    bar_position = bar_position if bar_position >= 0 else 0
+
+    name = h5_filename[bar_position:point_position]
+
+    print(name)
+
+    for i, feature in enumerate(features_data):
+        grp = h5_file.create_group('{name}_soup_{i}')
+        gt_indices = np.array(features_points[i])
+        grp.create_dataset('gt_indices', data=gt_indices)
+
+    h5_file.close()
 
 def generateLSSPFN(features_data, pc_folder_files, lpcp_r, filename, surface_types):
     face_2_primitive = generateFace2PrimitiveMap(features_data)
@@ -152,11 +167,8 @@ def generateLSSPFN(features_data, pc_folder_files, lpcp_r, filename, surface_typ
     for i, resolution in enumerate(lpcp_r):
         str_resolution = str(resolution).replace('.','-')
         h5_filename = join(h5_folder_name, f'{filename}_{str_resolution}.h5')
-        h5_file = createH5File(h5_filename)
-
-        h5_file = generateH52LSSPFN(pc_folder_files[(i*2):(i*2+2)], face_2_primitive, features_data['surfaces'], h5_file, surface_types)
-
-        h5_file.close()
+        
+        generateH52LSSPFN(pc_folder_files[(i*2):(i*2+2)], face_2_primitive, features_data['surfaces'], h5_filename, surface_types)    
 
 
 if __name__ == '__main__':
