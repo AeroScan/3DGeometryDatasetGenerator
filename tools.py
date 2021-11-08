@@ -123,3 +123,34 @@ def loadFeatures(features_name: str, tp: str):
         return loadPKL(f'{features_name}.{tp}')
     else:
         return loadJSON(f'{features_name}.{tp}')
+
+def generateFace2PrimitiveMap(features_data):
+    max_face = 0
+    for feat in features_data['surfaces']:
+        max_face = max(max(feat['face_indices']), max_face)
+    face_2_primitive = np.zeros(shape=(max_face+1,), dtype=np.int32) - 1
+    face_primitive_count = np.zeros(shape=(max_face+1,), dtype=np.int32)
+    for i, feat in enumerate(features_data['surfaces']):
+        for face in feat['face_indices']:
+            face_2_primitive[face] = i
+            face_primitive_count[face] += 1
+    if len(np.unique(face_primitive_count)) > 2:
+        print('There is faces that lies to more than one primitive.')
+    return face_2_primitive
+
+def filterFeaturesData(features_data, curve_types, surface_types):
+    i = 0
+    while i < len(features_data['curves']):
+        feature = features_data['curves'][i]
+        if feature['type'].lower() not in curve_types:
+            features_data['curves'].pop(i)
+        else:
+            i+=1
+
+    i = 0
+    while i < len(features_data['surfaces']):
+        feature = features_data['surfaces'][i]
+        if feature['type'].lower() not in surface_types:
+            features_data['surfaces'].pop(i)
+        else:
+            i+=1 
