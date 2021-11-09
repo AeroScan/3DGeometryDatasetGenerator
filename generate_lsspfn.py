@@ -1,6 +1,6 @@
 from tqdm import tqdm
 
-from os import listdir, mkdir, system, remove
+from os import listdir, mkdir, system
 from os.path import isfile, join, exists
 
 import pickle
@@ -39,34 +39,22 @@ def filterFeature2LSSPFN(feature, name):
     return feature
 
 def normalize2LSSPFN(point_cloud, features=[], noise_limit = 10):
-    #point_cloud, features = centralize(point_cloud, features)
-    #point_cloud, features = align_canonical(point_cloud, features)
-    #if noise_limit != 0:
-    #    point_cloud = add_noise(point_cloud, limit=noise_limit)
+    point_cloud, features = centralize(point_cloud, features)
+    point_cloud, features = align_canonical(point_cloud, features)
+    if noise_limit != 0:
+       point_cloud = add_noise(point_cloud, limit=noise_limit)
     point_cloud, features = cube_rescale(point_cloud, features)
     for i in range(0, len(features)):
         features[i]['normalized'] = True
     return point_cloud, features
 
-def generatePCD2LSSPFN(pc_filename, pc_files, mps_ns, lpcp_r, mesh_filename=None): 
-    pc_files_out = []
-    for resolution in lpcp_r:
-        point_position = pc_filename.rfind('.')
-        str_resolution = str(resolution).replace('.','-')
-        pc_filename_gt = f'{pc_filename[:point_position]}_{str_resolution}{pc_filename[point_position:]}'
+def generatePCD2LSSPFN(pc_filename, mps_ns, mesh_filename=None): 
+    if not exists(pc_filename):
+        if mesh_filename is None:
+            return []
+        system(f'mesh_point_sampling {mesh_filename} {pc_filename} --n_samples {mps_ns} --write_normals --no_vis_result > /dev/null')
 
-        pc_files_out.append(pc_filename_gt)
-
-        if pc_filename_gt not in pc_files:
-            if not exists(pc_filename):
-                if mesh_filename is None:
-                    return []
-                system(f'mesh_point_sampling {mesh_filename} {pc_filename} --n_samples {mps_ns} --write_normals --no_vis_result > /dev/null')
-            system(f'large_point_cloud_preprocessing {pc_filename} {pc_filename_gt} --vg {resolution} > /dev/null')
-
-    if exists(pc_filename):
-        remove(pc_filename)
-    return pc_files_out
+    return True
 
 def generateH52LSSPFN(pc_filename, face_2_primitive, features_data, h5_filename, noise_limit):
     h5_file = h5py.File(h5_filename, 'w')
@@ -134,36 +122,32 @@ def generateH52LSSPFN(pc_filename, face_2_primitive, features_data, h5_filename,
 
     h5_file.close()
 
-def generateLSSPFN(features_folder_name, features_files, mesh_folder_name, mesh_files, pc_folder_name, pc_folders, h5_folder_name, mps_ns, lpcp_r, noise_limit, surface_types):
+def generateLSSPFN(features_folder_name, mesh_folder_name, pc_folder_name, h5_folder_name, mps_ns, noise_limit, surface_types):
+    if exists(features_folder_name):
+        features_files = sorted([f for f in listdir(features_folder_name) if isfile(join(features_folder_name, f))])
+        print(f'\nGenerating dataset for {len(features_files)} features files...\n')
+    else:
+        print('\nThere is no features folder.\n')
+        return False
+    
+    if not exists(h5_folder_name):
+        mkdir(h5_folder_name)
+
     for features_filename in tqdm(features_files):
         point_position = features_filename.rfind('.')
         filename = features_filename[:point_position]
 
-        pc_filename = filename + '.pcd'
-        mesh_filename = filename + '.obj'
-        
-        pc_folder_files = []
-        if mesh_filename in mesh_files:
-            index = mesh_files.index(mesh_filename)
-            mesh_files.pop(index)
+        pc_filename = join(pc_folder_name, filename) + '.pcd'
+        mesh_filename = join(mesh_folder_name, filename) + '.obj'
+              
+        if exists(pc_filename):
+            generatePCD2LSSPFN(pc_filename, mps_ns)
 
+        elif exists(mesh_filename):
             if not exists(pc_folder_name):
                 mkdir(pc_folder_name)
-            pc_folder_files_name = join(pc_folder_name, filename)
-            if not exists(pc_folder_files_name):
-                mkdir(pc_folder_files_name)
-            pc_folder_files = sorted([join(pc_folder_files_name, f) for f in listdir(pc_folder_files_name) if isfile(join(pc_folder_files_name, f))])
-            pc_folder_files = generatePCD2LSSPFN(join(pc_folder_files_name, pc_filename), pc_folder_files, mps_ns, lpcp_r, mesh_filename=join(mesh_folder_name, mesh_filename))
 
-        elif filename in pc_folders:
-            index = pc_folders.index(filename)
-            pc_folders.pop(index)
-            pc_folder_files_name = join(pc_folder_name, filename)
-            pc_folder_files = sorted([join(pc_folder_files_name, f) for f in listdir(pc_folder_files_name) if isfile(join(pc_folder_files_name, f))])
-            pc_folder_files = generatePCD2LSSPFN(join(pc_folder_files_name, pc_filename), pc_folder_files, mps_ns, lpcp_r)
-            if len(pc_folder_files) == 0:
-                print(f'\n{filename} has no OBJ and not has all PCD files.')
-                continue
+            generatePCD2LSSPFN(pc_filename, mps_ns, mesh_filename=mesh_filename)
 
         else:
             print(f'\nFeature {filename} has no PCD or OBJ to use.')
@@ -175,8 +159,9 @@ def generateLSSPFN(features_folder_name, features_files, mesh_folder_name, mesh_
 
         face_2_primitive = generateFace2PrimitiveMap(features_data)
 
-        for i, resolution in enumerate(lpcp_r):
-            str_resolution = str(resolution).replace('.','-')
-            h5_filename = join(h5_folder_name, f'{filename}_{str_resolution}.h5')
-            
-            generateH52LSSPFN(pc_folder_files[i], face_2_primitive, features_data['surfaces'], h5_filename, noise_limit)   
+        h5_filename = join(h5_folder_name, f'{filename}.h5')
+        
+        generateH52LSSPFN(pc_filename, face_2_primitive, features_data['surfaces'], h5_filename, noise_limit)
+    
+    print()
+    return True
