@@ -190,6 +190,7 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
         FIRST_NODE_TAG = node_tags[0]
         FIRST_ELEM_TAG = elem_tags[0][0]
 
+        #gmsh.write(mesh_name + '.stl')
         writeOBJ(mesh_name + '.obj')
 
         entities = splitEntitiesByDim(gmsh.model.occ.getEntities())

@@ -188,10 +188,9 @@ def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
     features['surfaces'] = []
     topology = TopologyExplorer(shape)
 
-    faces = SortedSet()
-    edges = SortedSet()
-
     if use_highest_dim:
+        faces = SortedSet()
+        edges = SortedSet()
         for solid in tqdm(topology.solids()):
             for face in topology.faces_from_solids(solid):
 
