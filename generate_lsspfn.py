@@ -13,9 +13,22 @@ from pypcd import pypcd
 
 import gc
 
-from tools import loadFeatures, generateFace2PrimitiveMap, filterFeaturesData
+from tools import loadFeatures, filterFeaturesData
 
 from normalization import centralize, align_canonical, add_noise, cube_rescale
+
+def generateFace2PrimitiveMap(features_data, max_face=0):
+    for feat in features_data:
+        max_face = max(0 if len(feat['face_indices']) == 0 else max(feat['face_indices']), max_face)
+    face_2_primitive = np.zeros(shape=(max_face+1,), dtype=np.int32) - 1
+    face_primitive_count = np.zeros(shape=(max_face+1,), dtype=np.int32)
+    for i, feat in enumerate(features_data):
+        for face in feat['face_indices']:
+            face_2_primitive[face] = i
+            face_primitive_count[face] += 1
+    if len(np.unique(face_primitive_count)) > 2:
+        print('There is faces that lies to more than one primitive.')
+    return face_2_primitive
 
 LSSPFN_FEATURES = {
     'plane': ['location', 'z_axis', 'normalized'],
@@ -56,7 +69,7 @@ def generatePCD2LSSPFN(pc_filename, mps_ns, mesh_filename=None):
 
     return True
 
-def generateH52LSSPFN(pc_filename, face_2_primitive, features_data, h5_filename, noise_limit):
+def generateH52LSSPFN(pc_filename, features_data, h5_filename, noise_limit):
     h5_file = h5py.File(h5_filename, 'w')
         
     pc = pypcd.PointCloud.from_path(pc_filename).pc_data
@@ -86,10 +99,14 @@ def generateH52LSSPFN(pc_filename, face_2_primitive, features_data, h5_filename,
     gc.collect()
     
     gt_labels = pc['label']
-    features_points = [[] for f in features_data]
+
+    face_2_primitive = generateFace2PrimitiveMap(features_data, max_face=np.max(gt_labels))
+
+    features_points = [[] for i in range(0, len(features_data))]
     for i in range(0, len(gt_labels)):
         index = face_2_primitive[gt_labels[i]]
-        features_points[index].append(i)
+        if index != -1:
+            features_points[index].append(i)
         gt_labels[i] = index
     
     h5_file.create_dataset('gt_labels', data=gt_labels)
@@ -157,11 +174,9 @@ def generateLSSPFN(features_folder_name, mesh_folder_name, pc_folder_name, h5_fo
         features_data = loadFeatures(join(features_folder_name, filename), feature_ext)
         filterFeaturesData(features_data, [], surface_types)
 
-        face_2_primitive = generateFace2PrimitiveMap(features_data)
-
         h5_filename = join(h5_folder_name, f'{filename}.h5')
         
-        generateH52LSSPFN(pc_filename, face_2_primitive, features_data['surfaces'], h5_filename, noise_limit)
+        generateH52LSSPFN(pc_filename, features_data['surfaces'], h5_filename, noise_limit)
     
     print()
     return True

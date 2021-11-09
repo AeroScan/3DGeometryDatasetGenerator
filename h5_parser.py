@@ -15,9 +15,9 @@ if __name__ == '__main__':
     parser.add_argument('--pc_folder_name', type=str, default = 'pc', help='point cloud folder name.')
     parser.add_argument('--curve_types', type=str, default = '', help='types of curves to generate. Default = ')
     parser.add_argument('--surface_types', type=str, default = 'plane,cylinder,cone,sphere', help='types of surfaces to generate. Default = plane,cylinder,cone,sphere')
-    parser.add_argument('-mps_ns', '--mesh_point_sampling_n_samples', type=int, default= 1000000, help='n_samples param for mesh_point_sampling execution, if necessary. Default: 1000000.')
+    parser.add_argument('-mps_ns', '--mesh_point_sampling_n_samples', type=int, default= 50000000, help='n_samples param for mesh_point_sampling execution, if necessary. Default: 1000000.')
     parser.add_argument('-nl', '--noise_limit', type=float, default= 10, help='noise_limit for point cloud, if necessary. Default: 10.')
-    parser.add_argument('-r', '--regenerate', action='store_true', help='regenerate files.')
+    parser.add_argument('-nr', '--no_regenerate', action='store_false', help='no regenerate files.')
 
     args = vars(parser.parse_args())
 
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     surface_types = [s.lower() for s in args['surface_types'].split(',')]
     mps_ns = str(args['mesh_point_sampling_n_samples'])
     noise_limit = args['noise_limit']
-    regenerate = args['regenerate']
+    regenerate = not args['regenerate']
 
     if regenerate:
         if exists(h5_folder_name):
