@@ -1,4 +1,4 @@
-from tools import writeFeatures, writeYAML
+from tools import writeFeatures
 from generate_gmsh import processGMSH
 from generate_pythonocc import processPythonOCC
 

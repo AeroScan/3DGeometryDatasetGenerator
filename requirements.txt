@@ -1,6 +1,7 @@
 argparse
 tqdm
-pyyaml
 numpy
-psutil
 sortedcontainers
+termcolor
+h5py
+pyyaml
