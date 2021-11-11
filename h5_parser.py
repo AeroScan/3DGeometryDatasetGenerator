@@ -30,7 +30,7 @@ if __name__ == '__main__':
     surface_types = [s.lower() for s in args['surface_types'].split(',')]
     mps_ns = str(args['mesh_point_sampling_n_samples'])
     noise_limit = args['noise_limit']
-    regenerate = not args['regenerate']
+    regenerate = not args['no_regenerate']
 
     if regenerate:
         if exists(h5_folder_name):
