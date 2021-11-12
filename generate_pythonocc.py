@@ -223,7 +223,7 @@ def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
                         feature = generateFeature(type=tp, shape=curve)
                         features['curves'].append(feature)
                     else:
-                        features['curves'].append(None)                
+                        features['curves'].append(None)     
                 
     else:
         for edge in tqdm(topology.edges()):
@@ -245,6 +245,7 @@ def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
                 features['surfaces'].append(feature)
             else:
                 features['surfaces'].append(None)
+    print(features['surfaces'])           
 
 # Main function
 def processPythonOCC(input_name: str, use_highest_dim=True) -> dict:
