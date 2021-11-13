@@ -2,6 +2,8 @@ import gmsh
 
 import numpy as np
 
+from tools import float2str
+
 from tqdm import tqdm
 
 FIRST_NODE_TAG = 0
@@ -10,6 +12,9 @@ FIRST_ELEM_TAG = 0
 # Get nodes and sets the first node to 0
 def getNodes(dimension: int, tag: int, include_boundary = True):
     node_tags, node_coords, node_params = gmsh.model.mesh.getNodes(dimension, tag, includeBoundary = include_boundary)
+
+    if len(node_tags) == 0 or len(node_coords) == 0 or len(node_params) == 0:
+        return node_tags, node_coords, node_params
 
     if dimension == 1 and len(node_tags) > 2 and node_tags[-2] < node_tags[0]:
         node_tags = np.roll(node_tags, 1)
@@ -38,6 +43,10 @@ def getNodes(dimension: int, tag: int, include_boundary = True):
 # Get elements and sets the first element to 0
 def getElements(dimension: int, tag: int):
     elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(dimension, tag)
+    
+    if len(elem_tags) == 0 or len(elem_node_tags) == 0:
+        return elem_types, elem_tags, elem_node_tags
+   
     elem_tags[0] -= FIRST_ELEM_TAG
     elem_node_tags[0] -= FIRST_NODE_TAG
     return elem_types, elem_tags, elem_node_tags
@@ -48,8 +57,8 @@ def generateGMSHCurveFeature(dimension: int, tag: int) -> dict:
     
     feature = {
         'sharp': True,
-        'vert_indices': node_tags,
-        'vert_parameters': node_params,
+        'vert_indices': node_tags.tolist(),
+        'vert_parameters': node_params.tolist(),
     }
 
     return feature
@@ -60,9 +69,9 @@ def generateGMSHSurfaceFeature(dimension: int, tag: int) -> dict:
     elem_types, elem_tags, elem_node_tags = getElements(dimension, tag)
     
     feature = {
-        'vert_indices': node_tags,
-        'vert_parameters': node_params,
-        'face_indices': elem_tags[0],
+        'vert_indices': node_tags.tolist(),
+        'vert_parameters': node_params.tolist(),
+        'face_indices': [] if len(elem_tags) == 0 else elem_tags[0].tolist(),
     }
 
     return feature
@@ -105,7 +114,7 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
 # Configure the GMSH
 def setupGMSH(mesh_size: float):
 
-    gmsh.option.setNumber("Mesh.MeshSizeMin", 0)
+    gmsh.option.setNumber("Mesh.MeshSizeMin", 1)
     gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
     
     gmsh.option.setNumber("General.ExpertMode", 1)
@@ -133,61 +142,66 @@ def writeOBJ(output_name: str):
     node_coords = np.resize(node_coords, (int(node_coords.shape[0]/3), 3))
 
     for coord in node_coords:
-        obj_content += 'v ' + str(coord[0]) + ' ' + str(coord[1]) + ' ' + str(coord[2]) + '\n'
+        obj_content += 'v ' + float2str(coord[0]) + ' ' + float2str(coord[1]) + ' ' + float2str(coord[2]) + '\n'
 
     lut = [-1 for i in range(0, len(node_tags))]
-    entities = gmsh.model.getEntities(2)
+    entities = gmsh.model.occ.getEntities(2)
     i = 0
     for dim, tag in entities:
         n_t, n_c, n_p = getNodes(dim, tag)
         for j in range(0, len(n_t)):
             if lut[n_t[j]] == -1:
                 normal = gmsh.model.getNormal(tag, n_p[j])
-                obj_content += 'vn ' + str(normal[0]) + ' ' + str(normal[1]) + ' ' + str(normal[2]) + '\n'
+                obj_content += 'vn ' + float2str(normal[0]) + ' ' + float2str(normal[1]) + ' ' + float2str(normal[2]) + '\n'
                 lut[n_t[j]] = i
                 i+= 1
-
-    elem_node_tags[0] += 1
-    elem_node_tags[0] = np.resize(elem_node_tags[0], (int(elem_node_tags[0].shape[0]/3), 3))
-    for node_tags in elem_node_tags[0]:
-        n0 = int(node_tags[0])
-        n1 = int(node_tags[1])
-        n2 = int(node_tags[2])
-        obj_content += 'f ' + str(n0) + '//' + str(lut[n0 - 1] + 1) + ' ' + str(n1) + '//' + str(lut[n1 - 1] + 1) + ' ' + str(n2) + '//' + str(lut[n2 - 1] + 1) + '\n'
+    if len(elem_node_tags) > 0:
+        elem_node_tags[0] += 1
+        elem_node_tags[0] = np.resize(elem_node_tags[0], (int(elem_node_tags[0].shape[0]/3), 3))
+        for node_tags in elem_node_tags[0]:
+            n0 = int(node_tags[0])
+            n1 = int(node_tags[1])
+            n2 = int(node_tags[2])
+            obj_content += 'f ' + str(n0) + '//' + str(lut[n0 - 1] + 1) + ' ' + str(n1) + '//' + str(lut[n1 - 1] + 1) + ' ' + str(n2) + '//' + str(lut[n2 - 1] + 1) + '\n'
 
     f = open(output_name, 'w')
     f.write(obj_content)
 
 # Main function
-def processGMSH(input_name: str, mesh_size: float, features: dict, output_name: str, shape = None):
+def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: str, shape = None, use_highest_dim=True):
     global FIRST_NODE_TAG, FIRST_ELEM_TAG
+    try:
+        gmsh.initialize()
 
-    gmsh.initialize()
+        if shape is None:
+            gmsh.model.occ.importShapes(input_name, highestDimOnly=use_highest_dim)
+        else:
+            shape_pnt = int(shape.this)
+            gmsh.model.occ.importShapesNativePointer(shape_pnt, highestDimOnly=use_highest_dim)
 
-    if shape is None:
-        gmsh.model.occ.importShapes(input_name)
-    else:
-        shape_pnt = int(shape.this)
-        gmsh.model.occ.importShapesNativePointer(shape_pnt)
+        gmsh.model.occ.synchronize()
 
-    gmsh.model.occ.synchronize()
+        setupGMSH(mesh_size=mesh_size)
 
-    setupGMSH(mesh_size=mesh_size)
+        gmsh.model.mesh.generate(2)
 
-    gmsh.model.mesh.generate(2)
-
-    node_tags, _, _ = gmsh.model.mesh.getNodes(-1, -1)
-    _, elem_tags, _ = gmsh.model.mesh.getElements(2, -1)
-    FIRST_NODE_TAG = node_tags[0]
-    FIRST_ELEM_TAG = elem_tags[0][0]
-
-    gmsh.write(output_name + '.stl')
-    #writeOBJ(output_name + '.obj')
-
-    entities = splitEntitiesByDim(gmsh.model.occ.getEntities())
-
-    print(len(entities[0]), len(entities[1]), len(entities[2]), len(entities[3]))
+        node_tags, _, _ = gmsh.model.mesh.getNodes(-1, -1)
+        _, elem_tags, _ = gmsh.model.mesh.getElements(2, -1)
+        FIRST_NODE_TAG = 0
+        if len(node_tags) > 0:
+            FIRST_NODE_TAG = node_tags[0]
+        FIRST_ELEM_TAG = 0
+        if len(elem_tags) > 0:
+           if len(elem_tags[0]) > 0:
+                FIRST_ELEM_TAG = elem_tags[0][0]
         
-    mergeFeaturesOCCandGMSH(features=features, entities=entities)
+        writeOBJ(mesh_name + '.obj')
 
-    gmsh.finalize()
+        entities = splitEntitiesByDim(gmsh.model.occ.getEntities())
+
+        mergeFeaturesOCCandGMSH(features=features, entities=entities)
+            
+        gmsh.finalize()
+    except Exception as e:
+        gmsh.finalize()
+        raise e
