@@ -36,6 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('--mesh_size', type=float, default=1e22, help='mesh size max. Default: 1e+22.')
     parser.add_argument('--no_use_highest_dim', action='store_false', help='use highest dim to explore file topology. Default: True.')
     parser.add_argument('--features_file_type', type=str, default='json', help='type of the file to save the dict of features. Default: json. Possible types: json, yaml and pkl.')
+    parser.add_argument('--unit', type=str, default='mm', help='unit of measure used in the process. Default: mm. Possible units: inch, mm, ft, m, mi, km, mil, um, cm, uin')
     args = vars(parser.parse_args())
 
     input_path = args['input_path']
@@ -45,6 +46,7 @@ if __name__ == '__main__':
     mesh_size = args['mesh_size']
     use_highest_dim = args['no_use_highest_dim']
     features_file_type = args['features_file_type']
+    unit = args['unit']
 
     # Test the directories
     if os.path.exists(input_path):
@@ -79,7 +81,7 @@ if __name__ == '__main__':
             print('\nProcessing file ' + file + '...')
 
             print('\n+-----------PythonOCC----------+')
-            shape, features = processPythonOCC(file, use_highest_dim=use_highest_dim)
+            shape, features = processPythonOCC(file, unit=unit, use_highest_dim=use_highest_dim)
 
             print('\n+-------------GMSH-------------+')
             mesh_name = os.path.join(mesh_folder_dir, output_name)

@@ -1,8 +1,15 @@
+from OCC.Core import STEPControl
 from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
+from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
+from OCC.Core.STEPControl import STEPControl_Reader
 from OCC.Extend.TopologyUtils import TopologyExplorer
+from OCC.Core.Interface import Interface_Static_IVal, Interface_Static_SetCVal
+from OCC.Core.ShapeProcess import ShapeProcess_OperLibrary
+from OCC.Extend.TopologyUtils import (list_of_shapes_to_compound)
+from OCC.Core.IFSelect import IFSelect_RetDone, IFSelect_ItemsByEntity
 
 from sortedcontainers import SortedSet
 
@@ -17,6 +24,7 @@ MAX_INT = 2**31 - 1
 
 POSSIBLE_CURVE_TYPES = ['line', 'circle', 'ellipse']
 POSSIBLE_SURFACE_TYPES = ['plane', 'cylinder', 'cone', 'sphere', 'torus']
+POSSIBLE_UNITS = ['1', 'inch', 'mm', '??', 'ft', 'mi', 'm', 'km', 'mil', 'um', 'cm', 'uin']
 
 # Generate lines information
 def generateLineFeature(shape) -> dict:
@@ -244,14 +252,59 @@ def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
                 feature = generateFeature(type=tp, shape=surface)
                 features['surfaces'].append(feature)
             else:
-                features['surfaces'].append(None)
-    print(features['surfaces'])           
+                features['surfaces'].append(None)       
+
+def read_step(input_name, as_compound=True, verbosity=False, unit='m'):
+    step_reader = STEPControl_Reader()
+    status = step_reader.ReadFile(input_name)
+
+    # To control the input/output unit
+    print(f'Unidade padrão: {POSSIBLE_UNITS[Interface_Static_IVal("xstep.cascade.unit")]}')
+    if unit in POSSIBLE_UNITS:
+        Interface_Static_SetCVal('xstep.cascade.unit', unit.upper())
+        print(f'Unidade alterada para: {POSSIBLE_UNITS[Interface_Static_IVal("xstep.cascade.unit")]}')
+
+    if status == IFSelect_RetDone:
+        if verbosity:
+            failsonly = False
+            step_reader.PrintCheckLoad(failsonly, IFSelect_ItemsByEntity)
+            step_reader.PrintCheckTransfer(failsonly, IFSelect_ItemsByEntity)
+        transfer_result = step_reader.TransferRoots()
+        if not transfer_result:
+            raise AssertionError("Transfer failed.")
+        _nbs = step_reader.NbShapes()
+        if _nbs == 0:
+            raise AssertionError("No shape to transfer.")
+        elif _nbs == 1:  # most cases
+            return step_reader.Shape(1)
+        elif _nbs > 1:
+            print("Number of shapes:", _nbs)
+            shps = []
+            # loop over root shapes
+            for k in range(1, _nbs + 1):
+                new_shp = step_reader.Shape(k)
+                if not new_shp.IsNull():
+                    shps.append(new_shp)
+            if as_compound:
+                compound, result = list_of_shapes_to_compound(shps)
+                if not result:
+                    print("Warning: all shapes were not added to the compound")
+                return compound
+            else:
+                print("Warning, returns a list of shapes.")
+                return shps
+    else:
+        raise AssertionError("Error: can't read file.")
+    return None
 
 # Main function
-def processPythonOCC(input_name: str, use_highest_dim=True) -> dict:
+def processPythonOCC(input_name: str, unit: str, use_highest_dim=True) -> dict:
     features = {}
 
-    shape = read_step_file(input_name)
+    # shape = read_step_file(filename=input_name, as_compound=True, verbosity=False)
+
+    shape = read_step(input_name, unit=unit)
+
     generateFeatureByDim(shape, features, use_highest_dim=use_highest_dim)
 
-    return shape, features 
+    return shape, features
