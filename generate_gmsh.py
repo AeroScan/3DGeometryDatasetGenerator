@@ -200,10 +200,10 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
         
         number_of_entities_dim = [len(x) for x in entities]
 
-        print(f'\nNumber of Entities by Dimension: {number_of_entities_dim}\n')
-
         if len(features['curves']) != number_of_entities_dim[1] or len(features['surfaces']) != number_of_entities_dim[2]:
             raise Exception('Different number of entities between PythonOCC and GMSH')
+
+        print(f'\nNumber of Entities by Dimension: {number_of_entities_dim}\n')
 
         writeOBJ(mesh_name + '.obj')
 
