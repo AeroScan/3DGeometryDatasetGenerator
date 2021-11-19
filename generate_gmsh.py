@@ -198,6 +198,7 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
         writeOBJ(mesh_name + '.obj')
 
         entities = splitEntitiesByDim(gmsh.model.occ.getEntities())
+        print(f'Number of Entities by Dimension: {[len(x) for x in entities]}')
 
         mergeFeaturesOCCandGMSH(features=features, entities=entities)
             

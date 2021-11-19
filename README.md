@@ -22,7 +22,6 @@ Just a list of dependencies, follow the installation steps to install them all.
 - [tqdm](https://github.com/tqdm/tqdm)
 - [PyYAML](https://pypi.org/project/PyYAML/)
 - [numpy](https://pypi.org/project/numpy/)
-- [sortedcontainers](https://pypi.org/project/sortedcontainers/0.8.4/)
 - [termcolor](https://pypi.org/project/termcolor/)
 - [h5py](https://www.h5py.org/)
 - [pypcd](https://github.com/dimatura/pypcd)
