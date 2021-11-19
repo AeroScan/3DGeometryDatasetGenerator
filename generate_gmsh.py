@@ -79,7 +79,7 @@ def generateGMSHSurfaceFeature(dimension: int, tag: int) -> dict:
 # Separates entities by dimension
 def splitEntitiesByDim(entities):
     new_entities = [[], [], [], []]
-    for dimension, tag in tqdm(entities):
+    for dimension, tag in entities:
         new_entities[dimension].append(tag)
     return new_entities
 
@@ -195,9 +195,17 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
            if len(elem_tags[0]) > 0:
                 FIRST_ELEM_TAG = elem_tags[0][0]
         
-        writeOBJ(mesh_name + '.obj')
 
         entities = splitEntitiesByDim(gmsh.model.occ.getEntities())
+        
+        number_of_entities_dim = [len(x) for x in entities]
+
+        if len(features['curves']) != number_of_entities_dim[1] or len(features['surfaces']) != number_of_entities_dim[2]:
+            raise Exception('Different number of entities between PythonOCC and GMSH')
+
+        print(f'\nNumber of Entities by Dimension: {number_of_entities_dim}\n')
+
+        writeOBJ(mesh_name + '.obj')
 
         mergeFeaturesOCCandGMSH(features=features, entities=entities)
             

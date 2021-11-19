@@ -2,9 +2,7 @@ from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
-from OCC.Extend.TopologyUtils import TopologyExplorer
-
-from sortedcontainers import SortedSet
+from TopologyUtils import TopologyExplorer
 
 from functools import reduce
 
@@ -182,50 +180,96 @@ def generateFeature(type: str, shape):
     if type.lower() in generate_functions_dict.keys():
         return generate_functions_dict[type.lower()](shape)
 
+def processEdgesHighestDim(edges, features: dict, edges_dict={}, use_tqdm=False):
+    count = 0
+    for edge in edges if not use_tqdm else tqdm(edges):
+        edge_hc = edge.HashCode(MAX_INT)
+        if edge_hc in edges_dict:
+            edges_list = edges_dict[edge_hc]
+            unique = True
+            for f in edges_list:
+                if edge.IsSame(f):
+                    unique = False
+                    break
+            if not unique:
+                continue
+            else:
+               edges_list.append(edge)  
+        else:
+            edges_dict[edge_hc] = [edge]
+
+        curve = BRepAdaptor_Curve(edge)
+        tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
+
+        if tp in POSSIBLE_CURVE_TYPES:
+            feature = generateFeature(type=tp, shape=curve)
+            features['curves'].append(feature)
+        else:
+            features['curves'].append(None)
+        count += 1
+    return count
+
+def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, use_tqdm=False):
+    edges_dict = {}
+    count = 0
+    for face in faces if not use_tqdm else tqdm(faces):
+        face_hc = face.HashCode(MAX_INT)
+        if face_hc in faces_dict:
+            faces_list = faces_dict[face_hc]
+            unique = True
+            for f in faces_list:
+                if face.IsSame(f):
+                    unique = False
+                    break
+            if not unique:
+                continue
+            else:
+                faces_list.append(face)  
+        else:
+            faces_dict[face_hc] = [face]
+
+        surface = BRepAdaptor_Surface(face, True)
+        tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
+
+        if tp in POSSIBLE_SURFACE_TYPES:
+            feature = generateFeature(type=tp, shape=surface)
+            features['surfaces'].append(feature)
+        else:
+            features['surfaces'].append(None)
+
+        processEdgesHighestDim(topology.edges_from_face(face), features, edges_dict=edges_dict)
+
+        count += 1
+    return count
+
 # Generate features by dimensions
 def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
+    print('\nTopology Exploration to Generate Features by Dimension')
     features['curves'] = []
     features['surfaces'] = []
     topology = TopologyExplorer(shape)
 
     if use_highest_dim:
-        faces = SortedSet()
-        edges = SortedSet()
+        print('\nUsing Highest Dim Only, trying with Solids...')
+        faces_dict = {}
+        count_solids = 0
         for solid in tqdm(topology.solids()):
-            for face in topology.faces_from_solids(solid):
+            processFacesHighestDim(topology.faces_from_solids(solid), topology, features, faces_dict=faces_dict)         
+            count_solids += 1
 
-                face_hc = face.HashCode(MAX_INT)
-                if faces.count(face_hc) > 0:
-                    continue
-                faces.add(face_hc)
+        if count_solids == 0:
+            print('\nThere are no Solids, using Faces as highest dim...')
+            count_faces = processFacesHighestDim(topology.faces(), topology, features, use_tqdm=True)
 
+            if count_faces == 0:
+                print('\nThere are no Faces, using Curves as highest dim...')
+                count_edges = processFacesHighestDim(topology.edges(), features, use_tqdm=True)
 
-                surface = BRepAdaptor_Surface(face, True)
-                tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
+                if count_edges == 0:
+                    print('\nThere are no Curves to use...')
 
-                if tp in POSSIBLE_SURFACE_TYPES:
-                    feature = generateFeature(type=tp, shape=surface)
-                    features['surfaces'].append(feature)
-                else:
-                    features['surfaces'].append(None)
-                
-                for edge in topology.edges_from_face(face):
-
-                    edge_hc = edge.HashCode(MAX_INT)
-                    if edges.count(edge_hc) > 0:
-                        continue
-                    edges.add(edge_hc)
-
-                    curve = BRepAdaptor_Curve(edge)
-                    tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
-
-                    if tp in POSSIBLE_CURVE_TYPES:
-                        feature = generateFeature(type=tp, shape=curve)
-                        features['curves'].append(feature)
-                    else:
-                        features['curves'].append(None)     
-                
     else:
+        print('\nUsing all the Shapes')
         for edge in tqdm(topology.edges()):
             curve = BRepAdaptor_Curve(edge)
             tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
@@ -244,8 +288,7 @@ def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
                 feature = generateFeature(type=tp, shape=surface)
                 features['surfaces'].append(feature)
             else:
-                features['surfaces'].append(None)
-    print(features['surfaces'])           
+                features['surfaces'].append(None)          
 
 # Main function
 def processPythonOCC(input_name: str, use_highest_dim=True) -> dict:
@@ -254,4 +297,58 @@ def processPythonOCC(input_name: str, use_highest_dim=True) -> dict:
     shape = read_step_file(input_name)
     generateFeatureByDim(shape, features, use_highest_dim=use_highest_dim)
 
+    print('\nNumber of shapes: (curves = ' + str(len(features['curves'])) + ') (surfaces = ' + str(len(features['surfaces'])) + ')\n')
+
     return shape, features 
+
+# # Main function
+# def processPythonOCC(input_name: str, use_highest_dim=True) -> dict:
+#     features = {}
+
+#     import time
+
+#     shape = read_step_file(input_name)
+    
+#     time_initial = time.time()
+#     features = {}
+#     features['curves'] = []
+#     features['surfaces'] = []
+#     topology = TopologyExplorer(shape)
+#     for edge in tqdm(topology.edges()):
+#         features['curves'].append(edge)
+
+#     for face in tqdm(topology.faces()):
+#         features['surfaces'].append(face)
+
+#     time_finish = time.time()
+#     print('Time Old:', time_finish - time_initial, 'sec')
+#     print()
+
+#     time_initial = time.time()
+#     features2 = {}
+#     features2['curves'] = []
+#     features2['surfaces'] = []
+#     topology2 = TopologyExplorer2(shape)
+#     for edge in tqdm(topology2.edges()):
+#         features2['curves'].append(edge)
+    
+#     for face in tqdm(topology2.faces()):
+#         features2['surfaces'].append(face)
+
+#     time_finish = time.time()
+#     print('Time New:', time_finish - time_initial, 'sec')
+#     print()
+
+#     diffs = 0
+#     for i in range(len(features['curves'])):
+#         if not features['curves'][i].IsSame(features2['curves'][i]):
+#             diffs+= 1
+#     for i in range(len(features['surfaces'])):
+#         if not features['surfaces'][i].IsSame(features2['surfaces'][i]):
+#             diffs+= 1 
+
+#     print('Number of Differences:', diffs)
+
+#     exit()
+
+#     return shape, features

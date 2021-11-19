@@ -1,7 +1,6 @@
 argparse
 tqdm
 numpy
-sortedcontainers
 termcolor
 h5py
 pyyaml
