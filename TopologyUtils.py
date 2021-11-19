@@ -39,9 +39,6 @@ from OCC.Core.GCPnts import (GCPnts_UniformAbscissa,
                              GCPnts_UniformDeflection)
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
 
-from sortedcontainers import SortedSet
-
-MAX_INT = 2**31 - 1
 
 class WireExplorer:
     '''
@@ -95,18 +92,26 @@ class TopologyExplorer:
         this class lets you find how various topological entities are connected from one to another
         find the faces connected to an edge, find the vertices this edge is made from, get all faces connected to
         a vertex, and find out how many topological elements are connected from a source
+
         *note* when traversing TopoDS_Wire entities, its advised to use the specialized
         ``WireExplorer`` class, which will return the vertices / edges in the expected order
+
         :param myShape: the shape which topology will be traversed
+
         :param ignore_orientation: filter out TopoDS_* entities of similar TShape but different Orientation
+
         for instance, a cube has 24 edges, 4 edges for each of 6 faces
+
         that results in 48 vertices, while there are only 8 vertices that have a unique
         geometric coordinate
+
         in certain cases ( computing a graph from the topology ) its preferable to return
         topological entities that share similar geometry, though differ in orientation
         by setting the ``ignore_orientation`` variable
         to True, in case of a cube, just 12 edges and only 8 vertices will be returned
+
         for further reference see TopoDS_Shape IsEqual / IsSame methods
+
         """
         self.myShape = myShape
         self.ignore_orientation = ignore_orientation
@@ -134,6 +139,7 @@ class TopologyExplorer:
         for face in srf.faces:
             processFace(face)
         '''
+        MAX_INT = 2**31 - 1
         topoTypes = {TopAbs_VERTEX: TopoDS_Vertex,
                      TopAbs_EDGE: TopoDS_Edge,
                      TopAbs_FACE: TopoDS_Face,
@@ -294,6 +300,7 @@ class TopologyExplorer:
         @param topoTypeB:
         @param topologicalEntity:
         '''
+        MAX_INT = 2**31 - 1
         topo_set = set()
         topo_set_hash_codes = {}
         _map = TopTools_IndexedDataMapOfShapeListOfShape()
@@ -354,6 +361,7 @@ class TopologyExplorer:
     # ======================================================================
     def faces_from_edge(self, edge: TopoDS_Edge):
         """
+
         :param edge:
         :return:
         """
@@ -361,6 +369,7 @@ class TopologyExplorer:
 
     def number_of_faces_from_edge(self, edge: TopoDS_Edge) -> int:
         """
+
         :param edge:
         :return:
         """
@@ -368,6 +377,7 @@ class TopologyExplorer:
 
     def edges_from_face(self, face: TopoDS_Face) -> Iterator[TopoDS_Edge]:
         """
+
         :param face:
         :return:
         """
