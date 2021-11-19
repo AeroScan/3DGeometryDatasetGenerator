@@ -91,7 +91,7 @@ if __name__ == '__main__':
             print('\nProcess done.')
             
         except Exception as e:
-            print(colored(f'Error   : {e}', 'red'))
+            print(colored(f'\nError   : {e}', 'red'))
             processorErrors.append(file)
             error_counter += 1
 

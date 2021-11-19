@@ -180,69 +180,96 @@ def generateFeature(type: str, shape):
     if type.lower() in generate_functions_dict.keys():
         return generate_functions_dict[type.lower()](shape)
 
+def processEdgesHighestDim(edges, features: dict, edges_dict={}, use_tqdm=False):
+    count = 0
+    for edge in edges if not use_tqdm else tqdm(edges):
+        edge_hc = edge.HashCode(MAX_INT)
+        if edge_hc in edges_dict:
+            edges_list = edges_dict[edge_hc]
+            unique = True
+            for f in edges_list:
+                if edge.IsSame(f):
+                    unique = False
+                    break
+            if not unique:
+                continue
+            else:
+               edges_list.append(edge)  
+        else:
+            edges_dict[edge_hc] = [edge]
+
+        curve = BRepAdaptor_Curve(edge)
+        tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
+
+        if tp in POSSIBLE_CURVE_TYPES:
+            feature = generateFeature(type=tp, shape=curve)
+            features['curves'].append(feature)
+        else:
+            features['curves'].append(None)
+        count += 1
+    return count
+
+def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, use_tqdm=False):
+    edges_dict = {}
+    count = 0
+    for face in faces if not use_tqdm else tqdm(faces):
+        face_hc = face.HashCode(MAX_INT)
+        if face_hc in faces_dict:
+            faces_list = faces_dict[face_hc]
+            unique = True
+            for f in faces_list:
+                if face.IsSame(f):
+                    unique = False
+                    break
+            if not unique:
+                continue
+            else:
+                faces_list.append(face)  
+        else:
+            faces_dict[face_hc] = [face]
+
+        surface = BRepAdaptor_Surface(face, True)
+        tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
+
+        if tp in POSSIBLE_SURFACE_TYPES:
+            feature = generateFeature(type=tp, shape=surface)
+            features['surfaces'].append(feature)
+        else:
+            features['surfaces'].append(None)
+
+        processEdgesHighestDim(topology.edges_from_face(face), features, edges_dict=edges_dict)
+
+        count += 1
+    return count
+
 # Generate features by dimensions
 def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
+    print('\nTopology Exploration to Generate Features by Dimension')
     features['curves'] = []
     features['surfaces'] = []
     topology = TopologyExplorer(shape)
 
     if use_highest_dim:
-        faces = {}
-        edges = {}
+        print('\nUsing Highest Dim Only, trying with Solids...')
+        faces_dict = {}
+        count_solids = 0
         for solid in tqdm(topology.solids()):
-            for face in topology.faces_from_solids(solid):
+            processFacesHighestDim(topology.faces_from_solids(solid), topology, features, faces_dict=faces_dict)         
+            count_solids += 1
 
-                face_hc = face.HashCode(MAX_INT)
-                if face_hc in faces:
-                    faces_list = faces[face_hc]
-                    unique = True
-                    for f in faces_list:
-                        if face.IsSame(f):
-                            unique = False
-                            break
-                    if not unique:
-                        continue
-                    else:
-                        faces[face_hc].append(face)  
-                else:
-                    faces[face_hc] = [face]
+        if count_solids == 0:
+            print('\nThere are no Solids, using Faces as highest dim...')
+            count_faces = processFacesHighestDim(topology.faces(), topology, features, use_tqdm=True)
 
-                surface = BRepAdaptor_Surface(face, True)
-                tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
+            if count_faces == 0:
+                print('\nThere are no Faces, using Curves as highest dim...')
+                count_edges = processFacesHighestDim(topology.edges(), features, use_tqdm=True)
 
-                if tp in POSSIBLE_SURFACE_TYPES:
-                    feature = generateFeature(type=tp, shape=surface)
-                    features['surfaces'].append(feature)
-                else:
-                    features['surfaces'].append(None)
-                
-                for edge in topology.edges_from_face(face):
+                if count_edges == 0:
+                    print('\nThere are no Curves to use...')
 
-                    edge_hc = edge.HashCode(MAX_INT)
-                    if edge_hc in edges:
-                        edges_list = edges[edge_hc]
-                        unique = True
-                        for f in edges_list:
-                            if edge.IsSame(f):
-                                unique = False
-                                break
-                        if not unique:
-                            continue
-                        else:
-                            edges[edge_hc].append(edge)  
-                    else:
-                        edges[edge_hc] = [edge]
-
-                    curve = BRepAdaptor_Curve(edge)
-                    tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
-
-                    if tp in POSSIBLE_CURVE_TYPES:
-                        feature = generateFeature(type=tp, shape=curve)
-                        features['curves'].append(feature)
-                    else:
-                        features['curves'].append(None)     
-                
     else:
+        print('\nUsing all the Shapes')
         for edge in tqdm(topology.edges()):
             curve = BRepAdaptor_Curve(edge)
             tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
@@ -270,7 +297,7 @@ def processPythonOCC(input_name: str, use_highest_dim=True) -> dict:
     shape = read_step_file(input_name)
     generateFeatureByDim(shape, features, use_highest_dim=use_highest_dim)
 
-    exit()
+    print('\nNumber of shapes: (curves = ' + str(len(features['curves'])) + ') (surfaces = ' + str(len(features['surfaces'])) + ')\n')
 
     return shape, features 
 
