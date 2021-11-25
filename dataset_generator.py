@@ -1,6 +1,6 @@
 from tools import writeFeatures
 from generate_gmsh import processGMSH
-from convert_unit import unitConverter
+from normalization import reescaleDictFeatures
 from generate_pythonocc import processPythonOCC
 
 import os
@@ -11,6 +11,7 @@ from pathlib import Path
 from termcolor import colored
 
 INPUT_FORMATS = ['.step', '.stp']
+FACTORS = {'m': 0.001, 'cm': 0.1}
 
 def list_files(input_dir: str) -> list:
     files = []
@@ -47,7 +48,7 @@ if __name__ == '__main__':
     mesh_size = args['mesh_size']
     use_highest_dim = args['no_use_highest_dim']
     features_file_type = args['features_file_type']
-    output_unit = args['output_unit']
+    output_unit = args['output_unit'].lower()
 
     # Test the directories
     if os.path.exists(input_path):
@@ -88,8 +89,10 @@ if __name__ == '__main__':
             mesh_name = os.path.join(mesh_folder_dir, output_name)
             processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim)
 
-            if output_unit != 'mm':
-                unitConverter(features, output_unit)
+            if output_unit != 'mm' and output_unit in FACTORS.keys():
+                print('\nConverting scale to: {}...'.format(output_unit))
+                reescaleDictFeatures(features=features, factor=FACTORS[output_unit])
+                print('\nDone.')
 
             print('\nWriting Features...')
             features_name = os.path.join(features_folder_dir, output_name)

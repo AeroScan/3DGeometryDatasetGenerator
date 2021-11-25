@@ -119,3 +119,13 @@ def cube_rescale(array, features=[], factor=1):
     array[:, :3] = scaled_points
     features = reescaleFeatures(features, f)
     return array, features
+
+def reescaleDictFeatures(features: dict, factor: float):
+    for value in features.values():
+        for item in value:
+            for key in item.keys():
+                if key in FEATURE_TYPE.keys():
+                    if FEATURE_TYPE[key] == 'point':
+                        item[key] = list(np.array(item[key])*factor)
+                    if FEATURE_TYPE[key] == 'value':
+                        item[key] *= factor
