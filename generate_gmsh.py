@@ -112,12 +112,26 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
                 i = i + 1
 
 # Configure the GMSH
-def setupGMSH(mesh_size: float):
+def setupGMSH(mesh_size: float, use_debug=True):
 
     gmsh.option.setNumber("Mesh.MeshSizeMin", 1)
     gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
     
     gmsh.option.setNumber("General.ExpertMode", 1)
+    
+    if use_debug:
+        '''
+        0 - silent except for fatal errors,
+        1 - +errors
+        2 - +warnings
+        3 - +direct
+        4 - +information
+        5 - +status (default)
+        99 - +debug
+        '''
+        gmsh.option.setNumber("General.Verbosity", 99)
+    else:
+        gmsh.option.setNumber("General.Verbosity", 0)
 
     # gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)
     # gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 1)
@@ -168,7 +182,7 @@ def writeOBJ(output_name: str):
     f.write(obj_content)
 
 # Main function
-def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: str, shape = None, use_highest_dim=True):
+def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: str, shape = None, use_highest_dim=True, debug=True):
     global FIRST_NODE_TAG, FIRST_ELEM_TAG
     try:
         gmsh.initialize()
@@ -181,7 +195,7 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
 
         gmsh.model.occ.synchronize()
 
-        setupGMSH(mesh_size=mesh_size)
+        setupGMSH(mesh_size=mesh_size, use_debug=debug)
 
         gmsh.model.mesh.generate(2)
 
@@ -201,9 +215,7 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
         number_of_entities_dim = [len(x) for x in entities]
 
         if len(features['curves']) != number_of_entities_dim[1] or len(features['surfaces']) != number_of_entities_dim[2]:
-            raise Exception('Different number of entities between PythonOCC and GMSH')
-
-        print(f'\nNumber of Entities by Dimension: {number_of_entities_dim}\n')
+            raise Exception('[GMSH] Different number of entities between PythonOCC and GMSH')
 
         writeOBJ(mesh_name + '.obj')
 
@@ -212,4 +224,5 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
         gmsh.finalize()
     except Exception as e:
         gmsh.finalize()
+        err = '[GMSH] ' + str(e)
         raise e
