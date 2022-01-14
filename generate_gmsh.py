@@ -161,14 +161,14 @@ def writeOBJ(output_name: str):
     lut = [-1 for i in range(0, len(node_tags))]
     entities = gmsh.model.occ.getEntities(2)
     i = 0
-    for dim, tag in entities:
-        n_t, n_c, n_p = getNodes(dim, tag)
-        for j in range(0, len(n_t)):
-            if lut[n_t[j]] == -1:
-                normal = gmsh.model.getNormal(tag, n_p[j])
-                obj_content += 'vn ' + float2str(normal[0]) + ' ' + float2str(normal[1]) + ' ' + float2str(normal[2]) + '\n'
-                lut[n_t[j]] = i
-                i+= 1
+    # for dim, tag in entities:
+    #     n_t, n_c, n_p = getNodes(dim, tag)
+    #     for j in range(0, len(n_t)):
+    #         if lut[n_t[j]] == -1:
+    #             normal = gmsh.model.getNormal(tag, n_p[j])
+    #             obj_content += 'vn ' + float2str(normal[0]) + ' ' + float2str(normal[1]) + ' ' + float2str(normal[2]) + '\n'
+    #             lut[n_t[j]] = i
+    #             i+= 1
     if len(elem_node_tags) > 0:
         elem_node_tags[0] += 1
         elem_node_tags[0] = np.resize(elem_node_tags[0], (int(elem_node_tags[0].shape[0]/3), 3))
@@ -176,7 +176,8 @@ def writeOBJ(output_name: str):
             n0 = int(node_tags[0])
             n1 = int(node_tags[1])
             n2 = int(node_tags[2])
-            obj_content += 'f ' + str(n0) + '//' + str(lut[n0 - 1] + 1) + ' ' + str(n1) + '//' + str(lut[n1 - 1] + 1) + ' ' + str(n2) + '//' + str(lut[n2 - 1] + 1) + '\n'
+            # obj_content += 'f ' + str(n0) + '//' + str(lut[n0 - 1] + 1) + ' ' + str(n1) + '//' + str(lut[n1 - 1] + 1) + ' ' + str(n2) + '//' + str(lut[n2 - 1] + 1) + '\n'
+            obj_content += 'f ' + str(n0) + ' ' + str(n1) + ' ' + str(n2) + '\n'
 
     f = open(output_name, 'w')
     f.write(obj_content)
