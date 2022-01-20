@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 import json
 import yaml
+import igl
 
 # Convert a float to string
 def float2str(number, limit = 10) -> str:
@@ -140,3 +141,20 @@ def filterFeaturesData(features_data, curve_types, surface_types):
             features_data['surfaces'].pop(i)
         else:
             i+=1 
+
+def write_mesh_obj(output_name, meshes):
+    # for idx, mesh in enumerate(meshes):
+    #     print('#################################')
+    #     print(mesh)
+    #     igl.write_triangle_mesh("%s/%05i_mesh.obj"%(str(output_name), idx), mesh["vertices"], mesh["faces"])
+    #     print('#################################')
+
+    verts = []
+    tris = []
+    for _, mesh in enumerate(meshes):
+        verts += [list(arr) for arr in mesh["vertices"]]
+        tris += [list(arr) for arr in mesh["faces"]]
+    verts_arr = np.array(verts)
+    tris_arr = np.array(tris)
+    
+    igl.write_triangle_mesh((str(output_name) + '.obj'), verts_arr, tris_arr)
