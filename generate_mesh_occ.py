@@ -2,6 +2,7 @@ import numpy as np
 
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.TopLoc import TopLoc_Location
+from OCC.Extend.DataExchange import read_step_file
 from OCC.Core.STEPControl import STEPControl_Reader
 from OCC.Extend.TopologyUtils import TopologyExplorer
 from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
@@ -78,10 +79,12 @@ def load_parts_from_step_files(pathname):
     
     return shapes
 
-def generateMeshOcc(pathname):
+def generateMeshOcc(shapes):
     parts = []
 
-    parts = load_parts_from_step_files(pathname)
+    # parts = load_parts_from_step_files(pathname) # return list of the TopoDS
+    parts = [shapes]
+    print(type(parts))
     
     indices = range(len(parts))
     meshes = []
@@ -113,6 +116,7 @@ def generateMeshOcc(pathname):
                 meshes[fake_index] = {"vertices": np.array([]), "faces": np.array([])}
                 continue
                 
-            fake_index += 1
-            vertex_count += 4
+            fake_index += 1 ## arrumar o indice da face baseado no indice dado pelo OCC 
+                            # importante para garantir a mesma ordem entre processMesh e processFeatures
+            vertex_count += 4 ## verificar se o valor 4 é para todos tipos de superfícies
     return meshes

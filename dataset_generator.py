@@ -89,7 +89,7 @@ if __name__ == '__main__':
             if generator_library.lower() == 'occ':
                 print('\n+-------------OCC--------------+')    
                 mesh_name = os.path.join(mesh_folder_dir, output_name)
-                mesh = generateMeshOcc(file)
+                mesh = generateMeshOcc(shape)
                 write_mesh_obj(mesh_name, mesh)
 
             else:
