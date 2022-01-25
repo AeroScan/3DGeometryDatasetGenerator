@@ -84,7 +84,6 @@ def generateMeshOcc(shapes):
 
     # parts = load_parts_from_step_files(pathname) # return list of the TopoDS
     parts = [shapes]
-    print(type(parts))
     
     indices = range(len(parts))
     meshes = []

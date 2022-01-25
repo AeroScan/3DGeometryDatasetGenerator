@@ -143,18 +143,23 @@ def filterFeaturesData(features_data, curve_types, surface_types):
             i+=1 
 
 def write_mesh_obj(output_name, meshes):
-    verts = []
-    tris = []
-    for _, mesh in enumerate(meshes):
-        verts += [list(arr) for arr in mesh["vertices"]]
-        tris += [list(arr) for arr in mesh["faces"]]
-    verts_arr = np.array(verts)
-    tris_arr = np.array(tris)
+    # verts = []
+    # tris = []
+    # for _, mesh in enumerate(meshes):
+    #     verts += [list(arr) for arr in mesh["vertices"]]
+    #     tris += [list(arr) for arr in mesh["faces"]]
+    # verts_arr = np.array(verts)
+    # tris_arr = np.array(tris)
     
-    igl.write_triangle_mesh((str(output_name) + '.obj'), verts_arr, tris_arr)
-
-    # for idx, mesh in enumerate(meshes):
-    #     print('#################################')
-    #     print(mesh)
-    #     igl.write_triangle_mesh("%s/%05i_mesh.obj"%(str(output_name), idx), mesh["vertices"], mesh["faces"])
-    #     print('#################################')
+    # igl.write_triangle_mesh((str(output_name) + '.obj'), verts_arr, tris_arr)
+    count = 0
+    for idx, mesh in enumerate(meshes):
+        if count == 0:
+            count += 1
+            continue
+        else:
+            print('#################################')
+            print(mesh)
+            igl.write_triangle_mesh("%s/%05i_mesh.obj"%(str(output_name), idx), mesh["vertices"], mesh["faces"])
+            print('#################################')
+            exit()
