@@ -117,5 +117,5 @@ def generateMeshOcc(shapes):
                 
             fake_index += 1 ## arrumar o indice da face baseado no indice dado pelo OCC 
                             # importante para garantir a mesma ordem entre processMesh e processFeatures
-            vertex_count += 4 ## verificar se o valor 4 é para todos tipos de superfícies
+            vertex_count += len(verts) ## a confirmar
     return meshes
