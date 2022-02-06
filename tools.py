@@ -146,6 +146,7 @@ def write_mesh_obj(output_name, meshes):
     verts = []
     tris = []
     for _, mesh in enumerate(meshes):
+        # verts = verts.flatten()
         verts += [list(arr) for arr in mesh["vertices"]]
         tris += [list(arr) for arr in mesh["faces"]]
     verts_arr = np.array(verts)

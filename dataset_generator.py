@@ -32,7 +32,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset Generator')
     parser.add_argument('input_path', type=str, default='.', help='path to input directory or input file.')
     parser.add_argument('output_dir', type=str, default='./results/', help='results directory.')
-    parser.add_argument('--gmsh_or_occ', type=str, default='gmsh', help='occ or gmsh Default: GMSH')
+    parser.add_argument('--no_use_gmsh', action='store_true', help='occ or gmsh. Default: GMSH')
     parser.add_argument('--mesh_folder_name', type=str, default = 'mesh', help='mesh folder name. Default: mesh.')
     parser.add_argument('--features_folder_name', type=str, default = 'features', help='features folder name. Default: features.')
     parser.add_argument('--mesh_size', type=float, default=1e22, help='mesh size max. Default: 1e+22.')
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     use_highest_dim = args['no_use_highest_dim']
     features_file_type = args['features_file_type']
     use_debug = args['no_use_debug']
-    generator_library = args['gmsh_or_occ']
+    no_use_gmsh = args['no_use_gmsh']
 
     # Test the directories
     if os.path.exists(input_path):
@@ -79,20 +79,21 @@ if __name__ == '__main__':
     for file in files:
         file = str(file)
         output_name = output_name_converter(file)
+        mesh_name = os.path.join(mesh_folder_dir, output_name)
 
         try:
             print('\n[Generator] Processing file ' + file + '...')
 
             print('\n+-----------PythonOCC----------+')
-            shape, features = processPythonOCC(file, use_highest_dim=use_highest_dim, debug=use_debug)
-
-            if generator_library.lower() == 'occ':
-                print('\n+-------------OCC--------------+')    
-                mesh_name = os.path.join(mesh_folder_dir, output_name)
-                mesh = generateMeshOcc(shape)
-                write_mesh_obj(mesh_name, mesh)
-
-            else:
+            shape, features, meshes = processPythonOCC(file, no_use_gmsh=no_use_gmsh, use_highest_dim=use_highest_dim, debug=use_debug)
+    
+            # if no_use_gmsh:
+            #     print('\n+-------------OCC--------------+')    
+            #     mesh_name = os.path.join(mesh_folder_dir, output_name)
+            #     mesh = generateMeshOcc(shape)
+            #     write_mesh_obj(mesh_name, mesh)
+            
+            if not no_use_gmsh:
                 print('\n+-------------GMSH-------------+')
                 mesh_name = os.path.join(mesh_folder_dir, output_name)
                 processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
@@ -100,6 +101,13 @@ if __name__ == '__main__':
             print(f'\nWriting Features in {features_file_type} format...')
             features_name = os.path.join(features_folder_dir, output_name)
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
+            
+            # *** Salva a malha caso tenha sido gerado pelo PythonOCC *** #
+            if meshes:
+                print(f'\nWriting meshes in obj file...')
+                write_mesh_obj(mesh_name, meshes)
+            # *** Salva a malha caso tenha sido gerado pelo PythonOCC *** #
+
             print('\n[Generator] Process done.')
 
         except Exception as e:
