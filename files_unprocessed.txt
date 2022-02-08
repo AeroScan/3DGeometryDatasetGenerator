@@ -1,1 +1,1 @@
-../data/onshape/cubo.step
+../data/onshape/Cone.step

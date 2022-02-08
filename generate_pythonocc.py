@@ -33,7 +33,7 @@ def generateLineFeature(shape, face_indices=[]) -> dict:
     return {**feature}
 
 # Generate circles information
-def generateCircleFeature(shape) -> dict:
+def generateCircleFeature(shape, face_indices=[]) -> dict:
     shape = shape.Circle()
 
     feature = {
@@ -51,7 +51,7 @@ def generateCircleFeature(shape) -> dict:
         return {**feature}
 
 # Generate ellipses information
-def generateEllipseFeature(shape) -> dict:
+def generateEllipseFeature(shape, face_indices=[]) -> dict:
     shape = shape.Ellipse()
 
     feature = {
@@ -86,7 +86,7 @@ def generatePlaneFeature(shape, face_indices=[]) -> dict:
 
     if face_indices:
         f2 = {
-            'face_indices': [face_indices]
+            'face_indices': face_indices,
         }
 
     feature = {**f1, **f2}
@@ -94,10 +94,10 @@ def generatePlaneFeature(shape, face_indices=[]) -> dict:
     return {**feature}
 
 # Generate cylinders information
-def generateCylinderFeature(shape) -> dict:
+def generateCylinderFeature(shape, face_indices=[]) -> dict:
     shape = shape.Cylinder()
 
-    feature = {
+    f1 = {
         'type': 'Cylinder',
         'location': gpXYZ2List(shape.Location()),
         'x_axis': gpXYZ2List(shape.XAxis().Direction()),
@@ -107,16 +107,23 @@ def generateCylinderFeature(shape) -> dict:
         'radius': shape.Radius(),
     }
 
+    if face_indices:
+        f2 = {
+            'face_indices': face_indices,
+        }
+
+    feature = {**f1, **f2}
+
     if feature['radius'] == 0:
         return None
     else:
         return {**feature}
 
 # Generate cones information
-def generateConeFeature(shape) -> dict:
+def generateConeFeature(shape, face_indices=[]) -> dict:
     shape = shape.Cone()
 
-    feature = {
+    f1 = {
         'type': 'Cone',
         'location': gpXYZ2List(shape.Location()),
         'x_axis': gpXYZ2List(shape.XAxis().Direction()),
@@ -128,20 +135,27 @@ def generateConeFeature(shape) -> dict:
         'apex': gpXYZ2List(shape.Apex()),
     }
 
+    if face_indices:
+        f2 = {
+            'face_indices': face_indices,
+        }
+
+    feature = {**f1, **f2}
+
     if feature['radius'] == 0:
         return None
     else:
         return {**feature}
 
 # Generate spheres information
-def generateSphereFeature(shape) -> dict:
+def generateSphereFeature(shape, face_indices=[]) -> dict:
     shape = shape.Sphere()
 
     x_axis = np.array(gpXYZ2List(shape.XAxis().Direction()))
     y_axis = np.array(gpXYZ2List(shape.YAxis().Direction()))
     z_axis = np.cross(x_axis, y_axis)
 
-    feature = {
+    f1 = {
         'type': 'Sphere',
         'location': gpXYZ2List(shape.Location()),
         'x_axis': x_axis.tolist(),
@@ -151,16 +165,23 @@ def generateSphereFeature(shape) -> dict:
         'radius': shape.Radius(),
     }
 
+    if face_indices:
+        f2 = {
+            'face_indices': face_indices,
+        }
+
+    feature = {**f1, **f2}
+
     if feature['radius'] == 0:
         return None
     else:
         return {**feature}
 
 # Generate torus information
-def generateTorusFeature(shape) -> dict:
+def generateTorusFeature(shape, face_indices=[]) -> dict:
     shape = shape.Torus()
 
-    feature = {
+    f1 = {
         'type': 'Torus',
         'location': gpXYZ2List(shape.Location()),
         'x_axis': gpXYZ2List(shape.XAxis().Direction()),
@@ -170,6 +191,13 @@ def generateTorusFeature(shape) -> dict:
         'max_radius': shape.MajorRadius(),
         'min_radius': shape.MinorRadius(),
     }
+
+    if face_indices:
+        f2 = {
+            'face_indices': face_indices,
+        }
+
+    feature = {**f1, **f2}
 
     if feature['max_radius'] == 0 or feature['min_radius'] == 0:
         return None
@@ -230,8 +258,6 @@ def _process_face(face, vert_index, face_index):
     faces = {}
     verts = []
     triangle = []
-    # normals = []
-    # centroids = []
     if mesh != None:
         
         num_vertices = mesh.NbNodes()
@@ -248,20 +274,7 @@ def _process_face(face, vert_index, face_index):
              triangle.append([vert_index + index3 - 1, vert_index + index2 - 1, vert_index + index1 - 1])
             else:
                 print("Broken face orientation", face_orientation_wrt_surface_normal)
-        
-        # # Get mesh normals
-        # pt1, pt2, pt3 = verts[index1 - 1], verts[index2 - 1], verts[index3 - 1]
-        # centroid = (pt1 + pt2 + pt3) / 3
-        # centroids.append(centroid)
-        # normal = np.cross(pt2-pt1, pt3-pt1)
-        # norm = np.linalg.norm(normal)
-        # if not np.isclose(norm, 0):
-        #     normal /= norm
-        # if face_orientation_wrt_surface_normal == 1:
-        #     normal -= normal
-        # normals.append(normal)
 
-        # Get global face_index 
         for face in triangle:
             faces[str(face_index)] = face
             face_index += 1
@@ -309,10 +322,9 @@ def processFacesHighestDim(faces, topology, features: dict, meshes, no_use_gmsh,
                 for index in tri_faces_dict.keys():
                     face_indices.append(int(index))
 
-                assert meshes[fake_index] == None
-                meshes[fake_index] = {"vertices": np.array(verts), "faces": np.array(triangles)}
+                meshes.append({"vertices": np.array(verts), "faces": np.array(triangles)})
             except Exception as e:
-                meshes[fake_index] = {"vertices": np.array([]), "faces": np.array([])}
+                meshes.append({"vertices": np.array([]), "faces": np.array([])})
                 continue
 
             fake_index += 1
@@ -365,8 +377,8 @@ def generateFeatureByDim(shape, features: dict, meshes, no_use_gmsh, use_highest
         mesh.Perform()
         assert mesh.IsDone()
 
-        nr_faces = topology.number_of_faces()
-        meshes = [None]*nr_faces   
+        # nr_faces = topology.number_of_faces()
+        # meshes = [None]*nr_faces   
     # *** Setup para geração da mesh com PythonOCC *** # 
 
     if use_highest_dim:
