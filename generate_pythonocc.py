@@ -89,9 +89,12 @@ def generatePlaneFeature(shape, face_indices=[]) -> dict:
             'face_indices': face_indices,
         }
 
-    feature = {**f1, **f2}
+        feature = {**f1, **f2}
 
-    return {**feature}
+        return {**feature}
+    else:
+        return {**f1}
+
 
 # Generate cylinders information
 def generateCylinderFeature(shape, face_indices=[]) -> dict:
@@ -112,12 +115,17 @@ def generateCylinderFeature(shape, face_indices=[]) -> dict:
             'face_indices': face_indices,
         }
 
-    feature = {**f1, **f2}
+        feature = {**f1, **f2}
 
-    if feature['radius'] == 0:
-        return None
+        if feature['radius'] == 0:
+            return None
+        else:
+            return {**feature}
     else:
-        return {**feature}
+        if f1['radius'] == 0:
+            return None
+        else:
+            return {**f1}
 
 # Generate cones information
 def generateConeFeature(shape, face_indices=[]) -> dict:
@@ -140,12 +148,17 @@ def generateConeFeature(shape, face_indices=[]) -> dict:
             'face_indices': face_indices,
         }
 
-    feature = {**f1, **f2}
+        feature = {**f1, **f2}
 
-    if feature['radius'] == 0:
-        return None
+        if feature['radius'] == 0:
+            return None
+        else:
+            return {**feature}
     else:
-        return {**feature}
+        if f1['radius'] == 0:
+            return None
+        else:
+            return {**f1}
 
 # Generate spheres information
 def generateSphereFeature(shape, face_indices=[]) -> dict:
@@ -170,12 +183,17 @@ def generateSphereFeature(shape, face_indices=[]) -> dict:
             'face_indices': face_indices,
         }
 
-    feature = {**f1, **f2}
+        feature = {**f1, **f2}
 
-    if feature['radius'] == 0:
-        return None
+        if feature['radius'] == 0:
+            return None
+        else:
+            return {**feature}
     else:
-        return {**feature}
+        if f1['radius'] == 0:
+            return None
+        else:
+            return {**f1}
 
 # Generate torus information
 def generateTorusFeature(shape, face_indices=[]) -> dict:
@@ -197,12 +215,17 @@ def generateTorusFeature(shape, face_indices=[]) -> dict:
             'face_indices': face_indices,
         }
 
-    feature = {**f1, **f2}
+        feature = {**f1, **f2}
 
-    if feature['max_radius'] == 0 or feature['min_radius'] == 0:
-        return None
+        if feature['max_radius'] == 0 or feature['min_radius'] == 0:
+            return None
+        else:
+            return {**feature}
     else:
-        return {**feature}
+        if f1['max_radius'] == 0 or f1['min_radius'] == 0:
+            return None
+        else:
+            return {**f1}
 
 # Call function by type
 def generateFeature(type: str, shape, face_indices=[]):
@@ -282,7 +305,7 @@ def _process_face(face, vert_index, face_index):
     return verts, triangle, faces, face_index
 
 
-def processFacesHighestDim(faces, topology, features: dict, meshes, no_use_gmsh, faces_dict={}, use_tqdm=False):
+def processFacesHighestDim(faces, topology, features: dict, meshes, no_use_gmsh, vertex_counter, faces_dict={}, use_tqdm=False):
     edges_dict = {}
     count = 0
 
@@ -292,9 +315,8 @@ def processFacesHighestDim(faces, topology, features: dict, meshes, no_use_gmsh,
         FIRST_VERT_INDEX = 0
         face_index = FIRST_FACE_INDEX
         fake_index = 0
-        vertex_counter = 0
     # *** Setup para geração da mesh com PythonOCC *** #
-
+    
     for face in faces if not use_tqdm else tqdm(faces):
 
         face_hc = face.HashCode(MAX_INT)
@@ -313,22 +335,21 @@ def processFacesHighestDim(faces, topology, features: dict, meshes, no_use_gmsh,
             faces_dict[face_hc] = [face]
         
         # *** Generate mesh with OCC *** #
+        face_indices = []
         if no_use_gmsh:
             # fake_index seria o index da surface, e não face do triangulo
             try:
                 verts, triangles, tri_faces_dict, face_index = _process_face(face, vert_index=vertex_counter, face_index=face_index)
 
-                face_indices = []
                 for index in tri_faces_dict.keys():
                     face_indices.append(int(index))
-
                 meshes.append({"vertices": np.array(verts), "faces": np.array(triangles)})
             except Exception as e:
                 meshes.append({"vertices": np.array([]), "faces": np.array([])})
                 continue
 
             fake_index += 1
-            vertex_counter += len(verts) 
+            vertex_counter += len(verts)
         # *** Generate mesh with OCC *** #
 
         surface = BRepAdaptor_Surface(face, True)
@@ -359,7 +380,10 @@ def processFacesHighestDim(faces, topology, features: dict, meshes, no_use_gmsh,
         #     vertex_counter += len(verts) 
         # # *** Generate mesh with OCC *** #
 
-    return count, meshes
+    if no_use_gmsh:
+        return count, meshes, verts
+    else:
+        return count, [], []
 
 # Generate features by dimensions
 def generateFeatureByDim(shape, features: dict, meshes, no_use_gmsh, use_highest_dim=True):
@@ -369,9 +393,9 @@ def generateFeatureByDim(shape, features: dict, meshes, no_use_gmsh, use_highest
     topology = TopologyExplorer(shape)
 
     # *** Setup para geração da mesh com PythonOCC *** #
+    vertex_counter = 0
     if no_use_gmsh:
         fake_index = 0
-        vertex_counter = 0
         mesh = BRepMesh_IncrementalMesh(shape, 0.01, True, 0.1, True)
         mesh.SetShape(shape)
         mesh.Perform()
@@ -386,16 +410,19 @@ def generateFeatureByDim(shape, features: dict, meshes, no_use_gmsh, use_highest
         faces_dict = {}
         count_solids = 0
         for solid in tqdm(topology.solids()):
-            _, meshes = processFacesHighestDim(topology.faces_from_solids(solid), topology, features, meshes, no_use_gmsh=no_use_gmsh, faces_dict=faces_dict)         
+            _, meshes, verts = processFacesHighestDim(topology.faces_from_solids(solid), topology, features, meshes, no_use_gmsh=no_use_gmsh, vertex_counter = vertex_counter, faces_dict=faces_dict)     
+            vertex_counter += len(verts)    
             count_solids += 1
 
         if count_solids == 0:
             print('\n[PythonOCC] There are no Solids, using Faces as highest dim...')
-            count_faces, meshes = processFacesHighestDim(topology.faces(), topology, features, meshes, no_use_gmsh=no_use_gmsh, use_tqdm=True)
+            count_faces, meshes, verts = processFacesHighestDim(topology.faces(), topology, features, meshes, no_use_gmsh=no_use_gmsh, vertex_counter = vertex_counter, use_tqdm=True)
+            vertex_counter += len(verts)    
 
             if count_faces == 0:
                 print('\n[PythonOCC] There are no Faces, using Curves as highest dim...')
-                count_edges, meshes = processFacesHighestDim(topology.edges(), features, meshes, no_use_gmsh=no_use_gmsh, use_tqdm=True,)
+                count_edges, meshes, verts = processFacesHighestDim(topology.edges(), features, meshes, no_use_gmsh=no_use_gmsh, vertex_counter = vertex_counter, use_tqdm=True)
+                vertex_counter += len(verts)    
 
                 if count_edges == 0:
                     print('\n[PythonOCC] There are no Curves to use...')
