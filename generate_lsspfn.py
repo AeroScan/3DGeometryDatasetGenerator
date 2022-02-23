@@ -27,7 +27,7 @@ def generateFace2PrimitiveMap(features_data, max_face=0):
             face_2_primitive[face] = i
             face_primitive_count[face] += 1
     if len(np.unique(face_primitive_count)) > 2:
-        print('There is faces that lies to more than one primitive.')
+        print('[LSSPFN] There is faces that lies to more than one primitive.')
     return face_2_primitive
 
 LSSPFN_FEATURES = {
@@ -140,9 +140,9 @@ def generateH52LSSPFN(pc_filename, features_data, h5_filename, noise_limit):
 def generateLSSPFN(features_folder_name, mesh_folder_name, pc_folder_name, h5_folder_name, mps_ns, noise_limit, surface_types):
     if exists(features_folder_name):
         features_files = sorted([f for f in listdir(features_folder_name) if isfile(join(features_folder_name, f))])
-        print(f'\nGenerating dataset for {len(features_files)} features files...\n')
+        print(f'\n[LSSPFN] Generating dataset for {len(features_files)} features files...\n')
     else:
-        print('\nThere is no features folder.\n')
+        print('\n[LSSPFN] There is no features folder.\n')
         return False
     
     if not exists(h5_folder_name):
@@ -166,7 +166,7 @@ def generateLSSPFN(features_folder_name, mesh_folder_name, pc_folder_name, h5_fo
             generatePCD2LSSPFN(pc_filename, mps_ns, mesh_filename=mesh_filename)
 
         else:
-            print(f'\nFeature {filename} has no PCD or OBJ to use.')
+            print(f'\n[LSSPFN] Feature {filename} has no PCD or OBJ to use.')
             continue
 
         feature_ext =  features_filename[(point_position + 1):]
@@ -177,5 +177,4 @@ def generateLSSPFN(features_folder_name, mesh_folder_name, pc_folder_name, h5_fo
         
         generateH52LSSPFN(pc_filename, features_data['surfaces'], h5_filename, noise_limit)
     
-    print()
     return True

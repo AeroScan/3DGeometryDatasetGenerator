@@ -36,6 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('--mesh_size', type=float, default=1e22, help='mesh size max. Default: 1e+22.')
     parser.add_argument('--no_use_highest_dim', action='store_false', help='use highest dim to explore file topology. Default: True.')
     parser.add_argument('--features_file_type', type=str, default='json', help='type of the file to save the dict of features. Default: json. Possible types: json, yaml and pkl.')
+    parser.add_argument('--no_use_debug', action='store_false', help='use debug mode in PythonOCC and GMSH libraries. Default: True.')
     args = vars(parser.parse_args())
 
     input_path = args['input_path']
@@ -45,6 +46,7 @@ if __name__ == '__main__':
     mesh_size = args['mesh_size']
     use_highest_dim = args['no_use_highest_dim']
     features_file_type = args['features_file_type']
+    use_debug = args['no_use_debug']
 
     # Test the directories
     if os.path.exists(input_path):
@@ -53,7 +55,7 @@ if __name__ == '__main__':
         else:
             files = [input_path]
     else:
-        print('input path not found')
+        print('[Generator Error] Input path not found')
         exit()
 
     if not os.path.isdir(output_directory):
@@ -76,20 +78,20 @@ if __name__ == '__main__':
         output_name = output_name_converter(file)
 
         try:
-            print('\nProcessing file ' + file + '...')
+            print('\n[Generator] Processing file ' + file + '...')
 
             print('\n+-----------PythonOCC----------+')
-            shape, features = processPythonOCC(file, use_highest_dim=use_highest_dim)
+            shape, features = processPythonOCC(file, use_highest_dim=use_highest_dim, debug=use_debug)
 
             print('\n+-------------GMSH-------------+')
             mesh_name = os.path.join(mesh_folder_dir, output_name)
-            processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim)
+            processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
 
-            print('\nWriting Features...')
+            print(f'\nWriting Features in {features_file_type} format...')
             features_name = os.path.join(features_folder_dir, output_name)
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
-            print('\nProcess done.')
-            
+            print('\n[Generator] Process done.')
+
         except Exception as e:
             print(colored(f'\nError   : {e}', 'red'))
             processorErrors.append(file)
@@ -103,3 +105,11 @@ if __name__ == '__main__':
     print(f'List of unprocessed files: {processorErrors}')
     print(f'Time used: {time_finish - time_initial}')
     print('+----------------------------+')
+
+    if processorErrors:
+        with open('./files_unprocessed.txt', 'w') as f:
+            for item in processorErrors:
+                s = ''
+                s = str(item) + '\n'
+                f.write(s)
+        print(colored('\n[LOG] Unprocessed files listed in: files_unprocessed.txt\n', 'blue'))

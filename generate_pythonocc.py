@@ -244,13 +244,13 @@ def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, use_t
 
 # Generate features by dimensions
 def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
-    print('\nTopology Exploration to Generate Features by Dimension')
+    print('\n[PythonOCC] Topology Exploration to Generate Features by Dimension')
     features['curves'] = []
     features['surfaces'] = []
     topology = TopologyExplorer(shape)
 
     if use_highest_dim:
-        print('\nUsing Highest Dim Only, trying with Solids...')
+        print('\n[PythonOCC] Using Highest Dim Only, trying with Solids...')
         faces_dict = {}
         count_solids = 0
         for solid in tqdm(topology.solids()):
@@ -258,18 +258,18 @@ def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
             count_solids += 1
 
         if count_solids == 0:
-            print('\nThere are no Solids, using Faces as highest dim...')
+            print('\n[PythonOCC] There are no Solids, using Faces as highest dim...')
             count_faces = processFacesHighestDim(topology.faces(), topology, features, use_tqdm=True)
 
             if count_faces == 0:
-                print('\nThere are no Faces, using Curves as highest dim...')
+                print('\n[PythonOCC] There are no Faces, using Curves as highest dim...')
                 count_edges = processFacesHighestDim(topology.edges(), features, use_tqdm=True)
 
                 if count_edges == 0:
-                    print('\nThere are no Curves to use...')
+                    print('\n[PythonOCC] There are no Curves to use...')
 
     else:
-        print('\nUsing all the Shapes')
+        print('\n[PythonOCC] Using all the Shapes')
         for edge in tqdm(topology.edges()):
             curve = BRepAdaptor_Curve(edge)
             tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
@@ -291,13 +291,11 @@ def generateFeatureByDim(shape, features: dict, use_highest_dim=True):
                 features['surfaces'].append(None)          
 
 # Main function
-def processPythonOCC(input_name: str, use_highest_dim=True) -> dict:
+def processPythonOCC(input_name: str, use_highest_dim=True, debug=True) -> dict:
     features = {}
 
-    shape = read_step_file(input_name)
+    shape = read_step_file(input_name, verbosity=debug)
     generateFeatureByDim(shape, features, use_highest_dim=use_highest_dim)
-
-    print('\nNumber of shapes: (curves = ' + str(len(features['curves'])) + ') (surfaces = ' + str(len(features['surfaces'])) + ')\n')
 
     return shape, features 
 
