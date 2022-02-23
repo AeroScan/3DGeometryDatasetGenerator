@@ -1,100 +1,107 @@
 import numpy as np 
 
-from OCC.Core import BRepBuilderAPI
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.TopLoc import TopLoc_Location
-from OCC.Extend.TopologyUtils import TopologyExplorer
-from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
 
-MAX_INT = 2**31 - 1
+def _process_face(face, vert_index, face_index):
+    """ 
+    @params
+    face: Surface to process.
+    vert_index: Index of the next vertex. For the first surface vert_index is equal to FIRST_VERT_INDEX.
+    face_index: Index of the next face. For the first surface face_index is equal to FIRST_FACE_INDEX.
 
-def get_hashcode(entity):
-    return entity.HashCode(MAX_INT)
+    @returns
+    verts: Array of the vertices present in the surface.
+    faces: Array of the faces present in the surface.
+    face_index: Number to create the list of faces of the shape.
+    """
 
-def process_face(face, first_vertex=0):
-    print(face)
-    face_orientation_wrt_surface_normal = face.Orientation()
+    face_orientation = face.Orientation()
 
     brep_tool = BRep_Tool()
     location = TopLoc_Location()
     mesh = brep_tool.Triangulation(face, location)
+    """ object.Triangulation returns the triangulation present on the face """
     verts = []
-    triangle = []
-    # normals = []
-    # centroids = []
-    if mesh != None:
+    faces = []
+    faces_d = {}
 
-        num_vertices = mesh.NbNodes()
-        for i in range(1, num_vertices + 1):
+    if mesh != None:
+        number_vertices = mesh.NbNodes()
+        """ NbNodes returns the number of vertices in the face """
+        for i in range(1, number_vertices + 1):
             verts.append(list(mesh.Node(i).Coord()))        
         verts = np.array(verts)
 
-        num_tris = mesh.NbTriangles()
-        for i in range(1, num_tris + 1):
-            index1, index2, index3 = mesh.Triangle(i).Get()
-            if face_orientation_wrt_surface_normal == 0:
-             triangle.append([first_vertex + index1 - 1, first_vertex + index2 - 1, first_vertex + index3 - 1])
-            elif face_orientation_wrt_surface_normal == 1:
-             triangle.append([first_vertex + index3 - 1, first_vertex + index2 - 1, first_vertex + index1 - 1])
+        number_faces = mesh.NbTriangles()
+        """ NbTriangles returns the number of triangles in the face """
+        for i in range(1, number_faces + 1):
+            i1, i2, i3 = mesh.Triangle(i).Get()
+            """ object.Triangle(index_face).Get() returns the indices of the nodes of THIS triangle """
+            if face_orientation == 0:
+                verts_of_face = [vert_index + i1 - 1, vert_index + i2 - 1, vert_index + i3 - 1]
+                faces.append(verts_of_face)
+            elif face_orientation == 1:
+                verts_of_face = [vert_index + i3 - 1, vert_index + i2 - 1, vert_index + i1 - 1]
+                faces.append(verts_of_face)
             else:
-                print("Broken face orientation", face_orientation_wrt_surface_normal)
+                print("Broken face orientation", face_orientation)
         
-        # # Get mesh normals
-        # pt1, pt2, pt3 = verts[index1 - 1], verts[index2 - 1], verts[index3 - 1]
-        # centroid = (pt1 + pt2 + pt3) / 3
-        # centroids.append(centroid)
-        # normal = np.cross(pt2-pt1, pt3-pt1)
-        # norm = np.linalg.norm(normal)
-        # if not np.isclose(norm, 0):
-        #     normal /= norm
-        # if face_orientation_wrt_surface_normal == 1:
-        #     normal -= normal
-        # normals.append(normal)
+        for fc in faces:
+            faces_d[str(face_index)] = fc
+            face_index += 1
 
-    return verts, triangle
+    return verts, faces, face_index, faces_d
 
-def generateMeshOcc(shapes):
-    parts = []
+def generateMeshHighestDim(face, meshes, vert_init_of_face, face_init_indice):
+    """ 
+    @params
+    face: Surface to process.
+    meshes: Meshes' list of the shape. For the first face meshes is a empty list.
+    vert_init_of_face: Vertice indice for the face. For the first face vert_init_of_face is equal
+                       to FIRST_VERT_INDEX of the generateFeatureByDim function.
+    face_init_indice: Face indice for the list of indices. For the first face face_init_indice is
+                       to FIRST_FACE_INDEX of the generateFeatureByDim function.
 
-    # parts = load_parts_from_step_files(pathname) # return list of the TopoDS
-    parts = [shapes]
+    @returns
+    meshes: List of meshes of already processed faces of the shape.
+    nbVerts: Number of vertices of mesh.
+    faces: Dict of all faces of the shape.
+    last_face_indice: Last indice of the face. Used for update the face_init_indice variable.
+    """
+    pass
+
+def generateMeshAllShapes(face, meshes, vert_init_of_face, face_init_indice):
+    """ 
+    @params
+    face: Surface to process.
+    meshes: Meshes' list of the shape. For the first face meshes is a empty list.
+    vert_init_of_face: Vertice indice for the face. For the first face vert_init_of_face is equal
+                       to FIRST_VERT_INDEX of the generateFeatureByDim function.
+    face_init_indice: Face indice for the list of indices. For the first face face_init_indice is
+                       to FIRST_FACE_INDEX of the generateFeatureByDim function.
+
+    @returns
+    meshes: List of meshes of already processed faces of the shape.
+    nbVerts: Number of vertices of mesh.
+    faces_indices: Dict of all faces of the shape.
+    last_face_index: Last indice of the face. Used for update the face_init_indice variable.
+    """
+    try:
+        verts, faces, face_index, faces_d = _process_face(face, vert_init_of_face, face_init_indice)
+
+        nbVerts = len(verts)
+
+        face_indices = []
+        for index in faces_d.keys():
+            face_indices.append(int(index))
+
+        last_face_index = face_index
+
+        meshes.append({"vertices": np.array(verts), "faces": np.array(faces)})
+    except Exception as e:
+        meshes.append({"vertices": np.array([]), "faces": np.array([])})
     
-    indices = range(len(parts))
-    meshes = []
-    vertex_count = 0
-    for index in indices:
-
-        part = parts[index]
-        print(f'TIPO DA PARTE: {type(part)}')
-
-        explorer = TopologyExplorer(part, ignore_orientation=False)
-
-        # constructor
-        mesh = BRepMesh_IncrementalMesh(part, 0.01, True, 0.1, True)
-        # set the shape that will go tringulated 
-        mesh.SetShape(part)
-        mesh.Perform()
-        assert mesh.IsDone()
-
-        nr_faces = explorer.number_of_faces()
-        meshes = [None]*nr_faces
-
-        faces = explorer.faces()
-        fake_index = 0
-        for face in faces:
-            expected_face_index = get_hashcode(face)
-
-            try:
-                verts, triangle = process_face(face, first_vertex=vertex_count)
-                assert meshes[fake_index] == None
-                meshes[fake_index] = {"vertices": np.array(verts), "faces": np.array(triangle)}
-            except Exception as e:
-                meshes[fake_index] = {"vertices": np.array([]), "faces": np.array([])}
-                continue
-                
-            fake_index += 1 ## arrumar o indice da face baseado no indice dado pelo OCC 
-                            # importante para garantir a mesma ordem entre processMesh e processFeatures
-            vertex_count += len(verts) ## a confirmar
-            
-            ## verts indices; faces indices; verts params
-    return meshes
+    return meshes, nbVerts, face_indices, last_face_index, verts
+        
+        

@@ -1,6 +1,5 @@
 from tools import writeFeatures, write_mesh_obj
 from generate_gmsh import processGMSH
-from generate_mesh_occ import generateMeshOcc
 from generate_pythonocc import processPythonOCC
 
 import os
@@ -10,7 +9,7 @@ from pathlib import Path
 
 from termcolor import colored
 
-INPUT_FORMATS = ['.step', '.stp']
+INPUT_FORMATS = ['.step', '.stp', '.STEP']
 
 def list_files(input_dir: str) -> list:
     files = []
@@ -83,30 +82,29 @@ if __name__ == '__main__':
 
         try:
             print('\n[Generator] Processing file ' + file + '...')
-
-            print('\n+-----------PythonOCC----------+')
-            shape, features, meshes = processPythonOCC(file, no_use_gmsh=no_use_gmsh, use_highest_dim=use_highest_dim, debug=use_debug)
-    
-            # if no_use_gmsh:
-            #     print('\n+-------------OCC--------------+')    
-            #     mesh_name = os.path.join(mesh_folder_dir, output_name)
-            #     mesh = generateMeshOcc(shape)
-            #     write_mesh_obj(mesh_name, mesh)
             
             if not no_use_gmsh:
+                print('\n+-----------PythonOCC----------+')
+                shape, features = processPythonOCC(file, no_use_gmsh, use_highest_dim=use_highest_dim, debug=use_debug)
+
                 print('\n+-------------GMSH-------------+')
-                mesh_name = os.path.join(mesh_folder_dir, output_name)
                 processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
 
-            print(f'\nWriting Features in {features_file_type} format...')
-            features_name = os.path.join(features_folder_dir, output_name)
-            writeFeatures(features_name=features_name, features=features, tp=features_file_type)
+                print(f'\nWriting Features in {features_file_type} format...')
+                features_name = os.path.join(features_folder_dir, output_name)
+                writeFeatures(features_name=features_name, features=features, tp=features_file_type)
             
-            # *** Salva a malha caso tenha sido gerado pelo PythonOCC *** #
-            if meshes:
-                print(f'\nWriting meshes in obj file...')
-                write_mesh_obj(mesh_name, meshes)
-            # *** Salva a malha caso tenha sido gerado pelo PythonOCC *** #
+            else:
+                print('\n+-----------PythonOCC----------+')
+                shape, features, meshes = processPythonOCC(file, no_use_gmsh, use_highest_dim=use_highest_dim, debug=use_debug)
+
+                print(f'\nWriting Features in {features_file_type} format...')
+                features_name = os.path.join(features_folder_dir, output_name)
+                writeFeatures(features_name=features_name, features=features, tp=features_file_type)
+            
+                if meshes:
+                    print(f'\nWriting meshes in obj file...')
+                    write_mesh_obj(mesh_name, meshes)
 
             print('\n[Generator] Process done.')
 
