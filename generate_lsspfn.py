@@ -15,7 +15,7 @@ import gc
 
 from tools import loadFeatures, filterFeaturesData
 
-from normalization import centralize, align_canonical, add_noise, cube_rescale
+from normalization import centralize, add_noise
 
 def generateFace2PrimitiveMap(features_data, max_face=0):
     for feat in features_data:
@@ -53,10 +53,8 @@ def filterFeature2LSSPFN(feature, name):
 
 def normalize2LSSPFN(point_cloud, features=[], noise_limit = 10):
     point_cloud, features = centralize(point_cloud, features)
-    point_cloud, features = align_canonical(point_cloud, features)
     if noise_limit != 0:
        point_cloud = add_noise(point_cloud, limit=noise_limit)
-    point_cloud, features = cube_rescale(point_cloud, features)
     for i in range(0, len(features)):
         features[i]['normalized'] = True
     return point_cloud, features
@@ -151,6 +149,7 @@ def generateLSSPFN(features_folder_name, mesh_folder_name, pc_folder_name, h5_fo
         mkdir(h5_folder_name)
 
     for features_filename in tqdm(features_files):
+        print(features_filename )
         point_position = features_filename.rfind('.')
         filename = features_filename[:point_position]
 
