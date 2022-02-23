@@ -3,6 +3,8 @@ import numpy as np
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.TopLoc import TopLoc_Location
 
+MAX_INT = 2**31 - 1
+
 def _process_face(face, vert_index, face_index):
     """ 
     @params
@@ -21,6 +23,7 @@ def _process_face(face, vert_index, face_index):
     brep_tool = BRep_Tool()
     location = TopLoc_Location()
     mesh = brep_tool.Triangulation(face, location)
+    transform = location.Transformation()
     """ object.Triangulation returns the triangulation present on the face """
     verts = []
     faces = []
@@ -30,7 +33,9 @@ def _process_face(face, vert_index, face_index):
         number_vertices = mesh.NbNodes()
         """ NbNodes returns the number of vertices in the face """
         for i in range(1, number_vertices + 1):
-            verts.append(list(mesh.Node(i).Coord()))        
+            pnt = mesh.Node(i)
+            pnt.Transform(transform)
+            verts.append(list(pnt.Coord()))        
         verts = np.array(verts)
 
         number_faces = mesh.NbTriangles()

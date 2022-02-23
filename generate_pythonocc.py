@@ -309,12 +309,6 @@ def generateFeatureByDim(shape, features: dict, meshes = [], no_use_gmsh=False, 
 
             if tp in POSSIBLE_SURFACE_TYPES:
                 feature = generateFeature(type=tp, shape=surface)
-
-                print('--------')
-                print(f'Location: {feature["location"]}')
-                print(f'Location mean: {np.mean(feature["location"])}')
-                print(f'Vertices mean: {np.mean(verts, axis=0)}')
-
                 features['surfaces'].append(feature)
             else:
                 features['surfaces'].append(None)
