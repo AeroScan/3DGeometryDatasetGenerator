@@ -11,7 +11,7 @@ from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
 from functools import reduce
 
 from tools import gpXYZ2List
-from generate_mesh_occ import generateMeshAllShapes
+from generate_mesh_occ import registerFaceMeshInGlobalMesh
 
 from tqdm import tqdm
 import numpy as np
@@ -240,27 +240,28 @@ def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, use_t
     return count
 
 # Generate features by dimensions
-def generateFeatureByDim(shape, features: dict, meshes = [], no_use_gmsh=False, use_highest_dim=True):
+def generateFeatureByDim(shape, features: dict, mesh = {}, no_use_gmsh=False, use_highest_dim=True):
     print('\n[PythonOCC] Topology Exploration to Generate Features by Dimension')
     features['curves'] = []
     features['surfaces'] = []
     topology = TopologyExplorer(shape)
 
+
+
     if no_use_gmsh:
-        FIRST_VERTEX_INDEX = 0
-        vertex_index = FIRST_VERTEX_INDEX
-        FIRST_FACE_INDEX = 0
-        face_index = FIRST_FACE_INDEX
+        mesh['vertices'] = np.array([])
+        mesh['faces'] = np.array([])
+        mesh['vertices_hashcode'] = {}
 
         linear_deflection = 0.01
         isRelative = True
         angular_deflection = 0.1
         isInParallel = True
 
-        mesh = BRepMesh_IncrementalMesh(shape, linear_deflection, isRelative, angular_deflection, isInParallel)
-        mesh.SetShape(shape)
-        mesh.Perform()
-        assert mesh.IsDone()
+        brep_mesh = BRepMesh_IncrementalMesh(shape, linear_deflection, isRelative, angular_deflection, isInParallel)
+        brep_mesh.SetShape(shape)
+        brep_mesh.Perform()
+        assert brep_mesh.IsDone()
     
     if use_highest_dim:
         print('\n[PythonOCC] Using Highest Dim Only, trying with Solids...')
@@ -299,10 +300,7 @@ def generateFeatureByDim(shape, features: dict, meshes = [], no_use_gmsh=False, 
                 args[0]: Meshes list.
                 args[1]: no_use_gmsh.
                 """
-                meshes, nbVerts, face_indices, last_face_index, verts = generateMeshAllShapes(face, meshes, vertex_index, face_index)
-
-                vertex_index += nbVerts
-                face_index = last_face_index
+                mesh = registerFaceMeshInGlobalMesh(face, mesh)
 
             surface = BRepAdaptor_Surface(face, True)
             tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
@@ -314,7 +312,7 @@ def generateFeatureByDim(shape, features: dict, meshes = [], no_use_gmsh=False, 
                 features['surfaces'].append(None)
 
         if no_use_gmsh:
-            return meshes
+            return mesh
 
 # Main function
 def processPythonOCC(input_name: str, no_use_gmsh, use_highest_dim=True, debug=True) -> dict:
@@ -323,9 +321,8 @@ def processPythonOCC(input_name: str, no_use_gmsh, use_highest_dim=True, debug=T
     shape = read_step_file(input_name, verbosity=debug)
 
     if no_use_gmsh:
-        meshes = []
-        meshes = generateFeatureByDim(shape, features, meshes, no_use_gmsh, use_highest_dim=use_highest_dim)
-        return shape, features, meshes
+        mesh = generateFeatureByDim(shape, features, no_use_gmsh=no_use_gmsh, use_highest_dim=use_highest_dim)
+        return shape, features, mesh
     else:
         _ = generateFeatureByDim(shape, features, use_highest_dim=use_highest_dim)
-        return shape, features
+        return shape, features, None

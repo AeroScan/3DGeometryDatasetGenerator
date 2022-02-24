@@ -1,11 +1,35 @@
+from encodings import search_function
 import numpy as np 
 
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.TopLoc import TopLoc_Location
+from OCC.Core.gp import gp_Pnt
+from OCC.Core.STEPConstruct import STEPConstruct_PointHasher
 
 MAX_INT = 2**31 - 1
 
-def _process_face(face, vert_index, face_index):
+def findPointInList(point, points_list):
+    index = -1
+    try:
+        index = points_list.index(point)
+    except ValueError:
+        index = -1
+    return index
+
+def findPointInListWithHashCode(point, points, hash_codes):
+    hc = STEPConstruct_PointHasher.HashCode(point, MAX_INT)
+    index = -1
+    if hc in hash_codes:
+        index = -2
+        for i in hash_codes[hc]:
+            array = points[i]
+            point2 = gp_Pnt(array[0], array[1], array[2])
+            if STEPConstruct_PointHasher.IsEqual(point, point2):
+                index = i
+                break
+    return index, hc
+
+def computeNewVerticesAndFaces(face, old_verts, old_verts_hc=None):
     """ 
     @params
     face: Surface to process.
@@ -25,58 +49,61 @@ def _process_face(face, vert_index, face_index):
     mesh = brep_tool.Triangulation(face, location)
     transform = location.Transformation()
     """ object.Triangulation returns the triangulation present on the face """
-    verts = []
-    faces = []
-    faces_d = {}
+    
+    new_verts = []
+    new_verts_index = []
+    new_verts_hc = {}
 
     if mesh != None:
         number_vertices = mesh.NbNodes()
-        """ NbNodes returns the number of vertices in the face """
+
         for i in range(1, number_vertices + 1):
             pnt = mesh.Node(i)
             pnt.Transform(transform)
-            verts.append(list(pnt.Coord()))        
-        verts = np.array(verts)
-
+            pnt_array = np.array(pnt.Coord()) 
+            if old_verts_hc is None:
+                index = findPointInList(pnt_array, old_verts)
+                if index == -1:
+                    new_verts.append(pnt_array)
+                    new_index = len(old_verts) + len(new_verts)
+                    new_verts_index.append(new_index)             
+                else:
+                    new_verts_index.append(index)
+            else:
+                index, hc = findPointInListWithHashCode(pnt, old_verts, old_verts_hc)
+                if index < 0:
+                    new_verts.append(pnt_array)
+                    new_index = len(old_verts) + len(new_verts) - 1
+                    new_verts_index.append(new_index) 
+                    if index == -2:
+                        new_verts_hc[hc] = old_verts_hc[hc]
+                        new_verts_hc[hc].append(new_index)
+                    else:
+                        new_verts_hc[hc] = [new_index]
+                else:
+                    new_verts_index.append(index)
+                    
+        new_faces = []
+    
         number_faces = mesh.NbTriangles()
         """ NbTriangles returns the number of triangles in the face """
         for i in range(1, number_faces + 1):
             i1, i2, i3 = mesh.Triangle(i).Get()
-            """ object.Triangle(index_face).Get() returns the indices of the nodes of THIS triangle """
+            i1 = new_verts_index[i1 - 1]
+            i2 = new_verts_index[i2 - 1]
+            i3 = new_verts_index[i3 - 1]
             if face_orientation == 0:
-                verts_of_face = [vert_index + i1 - 1, vert_index + i2 - 1, vert_index + i3 - 1]
-                faces.append(verts_of_face)
+                verts_of_face = [i1 , i2, i3]
+                new_faces.append(verts_of_face)
             elif face_orientation == 1:
-                verts_of_face = [vert_index + i3 - 1, vert_index + i2 - 1, vert_index + i1 - 1]
-                faces.append(verts_of_face)
+                verts_of_face = [i3, i2, i1]
+                new_faces.append(verts_of_face)
             else:
                 print("Broken face orientation", face_orientation)
-        
-        for fc in faces:
-            faces_d[str(face_index)] = fc
-            face_index += 1
 
-    return verts, faces, face_index, faces_d
+    return np.array(new_verts), np.array(new_faces), new_verts_hc
 
-def generateMeshHighestDim(face, meshes, vert_init_of_face, face_init_indice):
-    """ 
-    @params
-    face: Surface to process.
-    meshes: Meshes' list of the shape. For the first face meshes is a empty list.
-    vert_init_of_face: Vertice indice for the face. For the first face vert_init_of_face is equal
-                       to FIRST_VERT_INDEX of the generateFeatureByDim function.
-    face_init_indice: Face indice for the list of indices. For the first face face_init_indice is
-                       to FIRST_FACE_INDEX of the generateFeatureByDim function.
-
-    @returns
-    meshes: List of meshes of already processed faces of the shape.
-    nbVerts: Number of vertices of mesh.
-    faces: Dict of all faces of the shape.
-    last_face_indice: Last indice of the face. Used for update the face_init_indice variable.
-    """
-    pass
-
-def generateMeshAllShapes(face, meshes, vert_init_of_face, face_init_indice):
+def registerFaceMeshInGlobalMesh(face, mesh):
     """ 
     @params
     face: Surface to process.
@@ -92,21 +119,19 @@ def generateMeshAllShapes(face, meshes, vert_init_of_face, face_init_indice):
     faces_indices: Dict of all faces of the shape.
     last_face_index: Last indice of the face. Used for update the face_init_indice variable.
     """
-    try:
-        verts, faces, face_index, faces_d = _process_face(face, vert_init_of_face, face_init_indice)
+    verts, faces, hashcodes = computeNewVerticesAndFaces(face, mesh['vertices'], mesh['vertices_hashcode'])
 
-        nbVerts = len(verts)
+    if len(mesh['vertices']) == 0:
+        mesh['vertices'] = np.array(verts)
+    elif len(verts) > 0:
+       mesh['vertices'] = np.concatenate((mesh['vertices'], verts))
+    if len(mesh['faces']) == 0:
+        mesh['faces'] = np.array(faces)
+    elif len(faces) > 0:
+        mesh['faces'] = np.concatenate((mesh['faces'], faces))
+    if len(hashcodes) > 0:
+        mesh['vertices_hashcode'].update(hashcodes)
 
-        face_indices = []
-        for index in faces_d.keys():
-            face_indices.append(int(index))
-
-        last_face_index = face_index
-
-        meshes.append({"vertices": np.array(verts), "faces": np.array(faces)})
-    except Exception as e:
-        meshes.append({"vertices": np.array([]), "faces": np.array([])})
-    
-    return meshes, nbVerts, face_indices, last_face_index, verts
+    return mesh
         
         
