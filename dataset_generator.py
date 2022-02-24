@@ -1,4 +1,4 @@
-from tools import writeFeatures
+from tools import writeFeatures, writeMeshOBJ
 from generate_gmsh import processGMSH
 from generate_pythonocc import processPythonOCC
 
@@ -9,7 +9,7 @@ from pathlib import Path
 
 from termcolor import colored
 
-INPUT_FORMATS = ['.step', '.stp']
+INPUT_FORMATS = ['.step', '.stp', '.STEP']
 
 def list_files(input_dir: str) -> list:
     files = []
@@ -31,6 +31,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset Generator')
     parser.add_argument('input_path', type=str, default='.', help='path to input directory or input file.')
     parser.add_argument('output_dir', type=str, default='./results/', help='results directory.')
+    parser.add_argument('--no_use_gmsh', action='store_true', help='occ or gmsh. Default: GMSH')
     parser.add_argument('--mesh_folder_name', type=str, default = 'mesh', help='mesh folder name. Default: mesh.')
     parser.add_argument('--features_folder_name', type=str, default = 'features', help='features folder name. Default: features.')
     parser.add_argument('--mesh_size', type=float, default=1e22, help='mesh size max. Default: 1e+22.')
@@ -47,6 +48,7 @@ if __name__ == '__main__':
     use_highest_dim = args['no_use_highest_dim']
     features_file_type = args['features_file_type']
     use_debug = args['no_use_debug']
+    no_use_gmsh = args['no_use_gmsh']
 
     # Test the directories
     if os.path.exists(input_path):
@@ -76,26 +78,40 @@ if __name__ == '__main__':
     for file in files:
         file = str(file)
         output_name = output_name_converter(file)
+        mesh_name = os.path.join(mesh_folder_dir, output_name)
 
-        try:
-            print('\n[Generator] Processing file ' + file + '...')
-
+        #try:
+        print('\n[Generator] Processing file ' + file + '...')
+        
+        if not no_use_gmsh:
             print('\n+-----------PythonOCC----------+')
-            shape, features = processPythonOCC(file, use_highest_dim=use_highest_dim, debug=use_debug)
+            shape, features = processPythonOCC(file, no_use_gmsh, use_highest_dim=use_highest_dim, debug=use_debug)
 
             print('\n+-------------GMSH-------------+')
-            mesh_name = os.path.join(mesh_folder_dir, output_name)
             processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
 
             print(f'\nWriting Features in {features_file_type} format...')
             features_name = os.path.join(features_folder_dir, output_name)
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
+        
+        else:
+            print('\n+-----------PythonOCC----------+')
+            shape, features, mesh = processPythonOCC(file, no_use_gmsh, use_highest_dim=use_highest_dim, debug=use_debug)
+
+            print(f'\nWriting Features in {features_file_type} format...')
+            features_name = os.path.join(features_folder_dir, output_name)
+            writeFeatures(features_name=features_name, features=features, tp=features_file_type)
+        
+            if mesh:
+                print(f'\nWriting meshes in obj file...')
+                writeMeshOBJ(mesh_name, mesh)
+
             print('\n[Generator] Process done.')
 
-        except Exception as e:
-            print(colored(f'\nError   : {e}', 'red'))
-            processorErrors.append(file)
-            error_counter += 1
+        #except Exception as e:
+        #    print(colored(f'\nError   : {e}', 'red'))
+        #    processorErrors.append(file)
+        #    error_counter += 1
 
     time_finish = time.time()
     
