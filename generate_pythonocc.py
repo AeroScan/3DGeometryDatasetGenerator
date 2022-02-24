@@ -246,8 +246,6 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, no_use_gmsh=False, us
     features['surfaces'] = []
     topology = TopologyExplorer(shape)
 
-
-
     if no_use_gmsh:
         mesh['vertices'] = np.array([])
         mesh['faces'] = np.array([])
@@ -295,18 +293,24 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, no_use_gmsh=False, us
                 features['curves'].append(None)
 
         for face in tqdm(topology.faces()):
+            feature = {}
             if no_use_gmsh:
                 """
                 args[0]: Meshes list.
                 args[1]: no_use_gmsh.
                 """
-                mesh = registerFaceMeshInGlobalMesh(face, mesh)
+                mesh, vert_indices, face_indices, vert_params = registerFaceMeshInGlobalMesh(face, mesh)
+                feature = {
+                    'vert_indices': vert_indices.tolist(),
+                    'vert_parameters': vert_params.tolist(),
+                    'face_indices': face_indices.tolist(),
+                }
 
             surface = BRepAdaptor_Surface(face, True)
             tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
 
             if tp in POSSIBLE_SURFACE_TYPES:
-                feature = generateFeature(type=tp, shape=surface)
+                feature.update(generateFeature(type=tp, shape=surface))
                 features['surfaces'].append(feature)
             else:
                 features['surfaces'].append(None)
