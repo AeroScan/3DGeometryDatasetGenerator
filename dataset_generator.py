@@ -85,7 +85,7 @@ if __name__ == '__main__':
         
         if not no_use_gmsh:
             print('\n+-----------PythonOCC----------+')
-            shape, features = processPythonOCC(file, no_use_gmsh, use_highest_dim=use_highest_dim, debug=use_debug)
+            shape, features, _ = processPythonOCC(file, no_use_gmsh, use_highest_dim=use_highest_dim, debug=use_debug)
 
             print('\n+-------------GMSH-------------+')
             processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)

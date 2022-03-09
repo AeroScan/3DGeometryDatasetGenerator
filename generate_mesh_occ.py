@@ -103,11 +103,11 @@ def computeNewVerticesAndFaces(face, mesh):
             if face_orientation == 0:
                 verts_of_face = [i1 , i2, i3]
                 new_faces.append(verts_of_face)
-                face_indices.append(len(old_faces) + i)
+                face_indices.append(len(old_faces) + i - 1)
             elif face_orientation == 1:
                 verts_of_face = [i3, i2, i1]
                 new_faces.append(verts_of_face)
-                face_indices.append(len(old_faces) + i)
+                face_indices.append(len(old_faces) + i - 1)
             else:
                 print("Broken face orientation", face_orientation)
 
@@ -129,6 +129,7 @@ def registerFaceMeshInGlobalMesh(face, mesh):
     faces_indices: Dict of all faces of the shape.
     last_face_index: Last indice of the face. Used for update the face_init_indice variable.
     """
+
     new_verts, new_faces, new_hashcodes, vert_indices, face_indices, uv_params = computeNewVerticesAndFaces(face, mesh)
 
     if len(mesh['vertices']) == 0:
@@ -141,7 +142,7 @@ def registerFaceMeshInGlobalMesh(face, mesh):
         mesh['faces'] = np.concatenate((mesh['faces'], new_faces))
     if len(new_hashcodes) > 0:
         mesh['vertices_hashcode'].update(new_hashcodes)
-
+    
     return mesh, vert_indices, face_indices, uv_params
         
         
