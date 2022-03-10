@@ -1,4 +1,4 @@
-from tools import gpXYZ2List
+from lib.tools import gpXYZ2List
 
 from lib.primitives.base_surface_feature import BaseSurfaceFeature
 
@@ -8,7 +8,7 @@ class Torus(BaseSurfaceFeature):
     def primitiveType():
         return 'Torus'
 
-    def __init__(self, shape):
+    def __init__(self, shape, params=None):
         super().__init__()
         self.shape = shape.Torus()
         self.location = None
@@ -17,7 +17,7 @@ class Torus(BaseSurfaceFeature):
         self.z_axis = None
         self.max_radius = None
         self.min_radius = None
-        self.fromShape()
+        self.fromShape(params)
     
     def getLocation(self):
         return gpXYZ2List(self.shape.Location())
@@ -31,7 +31,9 @@ class Torus(BaseSurfaceFeature):
     def getRadius(self):
         return [self.shape.MajorRadius(), self.shape.MinorRadius()]
 
-    def fromShape(self):
+    def fromShape(self, params):
+        if params is not None:
+            super().fromDict(params)
         self.location = self.getLocation()
         self.x_axis = self.getAxis()[0]
         self.y_axis = self.getAxis()[1]

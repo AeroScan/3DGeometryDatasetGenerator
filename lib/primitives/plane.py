@@ -1,4 +1,4 @@
-from tools import gpXYZ2List
+from lib.tools import gpXYZ2List
 
 from lib.primitives.base_surface_feature import BaseSurfaceFeature
 
@@ -8,7 +8,7 @@ class Plane(BaseSurfaceFeature):
     def primitiveType():
         return 'Plane'
     
-    def __init__(self, shape):
+    def __init__(self, shape, params=None):
         super().__init__()
         self.shape = shape.Plane()
         self.location = None
@@ -17,7 +17,7 @@ class Plane(BaseSurfaceFeature):
         self.z_axis = None
         self.coefficients = None
         self.normal = None
-        self.fromShape()
+        self.fromShape(params)
     
     def getLocation(self):
         return gpXYZ2List(self.shape.Location())
@@ -34,10 +34,24 @@ class Plane(BaseSurfaceFeature):
     def getNormal(self):
         return gpXYZ2List(self.shape.Axis().Direction())
 
-    def fromShape(self):
+    def fromShape(self, params):
+        if params is not None:
+            super().fromDict(params)
         self.location = self.getLocation()
         self.x_axis = self.getAxis()[0]
         self.y_axis = self.getAxis()[1]
         self.z_axis = self.getAxis()[2]
         self.coefficients = self.getCoefficients()
         self.normal = self.getNormal()
+
+    def toDict(self):
+        features = super().toDict()
+        features['type'] = Plane.primitiveType()
+        features['location'] = self.location
+        features['x_axis'] = self.x_axis
+        features['y_axis'] = self.y_axis
+        features['z_axix'] = self.z_axis
+        features['coefficients'] = self.coefficients
+        features['normal'] = self.normal
+
+        return features

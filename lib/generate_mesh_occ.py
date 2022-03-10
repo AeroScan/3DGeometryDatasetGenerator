@@ -117,6 +117,8 @@ def registerFaceMeshInGlobalMesh(face, mesh):
     if len(new_hashcodes) > 0:
         mesh['vertices_hashcode'].update(new_hashcodes)
 
-    return mesh, vert_indices, face_indices, uv_params
+    mesh_params_of_the_face = {'vert_indices': vert_indices.tolist(), 'vert_parameters': uv_params.tolist(), 'face_indices': face_indices.tolist()}
+
+    return mesh, mesh_params_of_the_face
         
         

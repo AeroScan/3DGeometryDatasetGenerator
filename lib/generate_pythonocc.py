@@ -2,7 +2,6 @@ from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
-from TopologyUtils import TopologyExplorer
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Extend.TopologyUtils import TopologyExplorer
@@ -11,8 +10,9 @@ from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
 from functools import reduce
 from lib.features_factory import FeaturesFactory
 
-from tools import gpXYZ2List
-from generate_mesh_occ import registerFaceMeshInGlobalMesh
+from lib.tools import gpXYZ2List
+from lib.generate_mesh_occ import registerFaceMeshInGlobalMesh
+from lib.TopologyUtils import TopologyExplorer
 
 from tqdm import tqdm
 import numpy as np
@@ -215,15 +215,17 @@ def processEdgesHighestDim(edges, features: dict, edges_dict={}, use_tqdm=False)
         curve = BRepAdaptor_Curve(edge)
         tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
 
-        if tp in POSSIBLE_CURVE_TYPES:
-            feature = FeaturesFactory(type_=tp, shape=curve).getFeatureByType()
-            features['curves'].append(feature)
-        else:
-            features['curves'].append(None)
+        features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, params=None))
+
+        # if tp in POSSIBLE_CURVE_TYPES:
+        #     feature = FeaturesFactory(type_=tp, shape=curve).getFeatureByType()
+        #     features['curves'].append(feature)
+        # else:
+        #     features['curves'].append(None)
         count += 1
     return count
 
-def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, mesh={}, no_use_gmsh=False, use_tqdm=False):
+def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, mesh={}, mesh_generator='occ', use_tqdm=False):
     edges_dict = {}
     count = 0
     
@@ -243,24 +245,26 @@ def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, mesh=
                 faces_list.append(face) 
         else:
             faces_dict[face_hc] = [face]
-        
-        feature = {}
-        if no_use_gmsh:
-            mesh, vert_indices, face_indices, vert_params = registerFaceMeshInGlobalMesh(face, mesh)
-            feature = {
-                'vert_indices': vert_indices.tolist(),
-                'vert_parameters': vert_params.tolist(),
-                'face_indices': face_indices.tolist(),
-            }
 
         surface = BRepAdaptor_Surface(face, True)
         tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
-
-        if tp in POSSIBLE_SURFACE_TYPES:
-            feature.update(FeaturesFactory(type_=tp, shape=surface).getFeatureByType())
-            features['surfaces'].append(feature)
+        
+        feature = {}
+        if mesh_generator == 'occ':
+            mesh, mesh_params = registerFaceMeshInGlobalMesh(face, mesh)
+            
+            features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=mesh_params))
         else:
-            features['surfaces'].append(None)
+            features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=None))
+
+        # surface = BRepAdaptor_Surface(face, True)
+        # tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
+
+        # if tp in POSSIBLE_SURFACE_TYPES:
+        #     feature.update(FeaturesFactory(type_=tp, shape=surface).getFeatureByType())
+        #     features['surfaces'].append(feature)
+        # else:
+        #     features['surfaces'].append(None)
 
         processEdgesHighestDim(topology.edges_from_face(face), features, edges_dict=edges_dict)
 
@@ -269,13 +273,13 @@ def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, mesh=
     return count
 
 # Generate features by dimensions
-def generateFeatureByDim(shape, features: dict, mesh = {}, no_use_gmsh=False, use_highest_dim=True):
+def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ', use_highest_dim=True):
     print('\n[PythonOCC] Topology Exploration to Generate Features by Dimension')
     features['curves'] = []
     features['surfaces'] = []
     topology = TopologyExplorer(shape)
 
-    if no_use_gmsh:
+    if mesh_generator == 'occ':
         mesh['vertices'] = np.array([])
         mesh['faces'] = np.array([])
         mesh['vertices_hashcode'] = {}
@@ -295,16 +299,16 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, no_use_gmsh=False, us
         faces_dict = {}
         count_solids = 0
         for solid in tqdm(topology.solids()):
-            processFacesHighestDim(topology.faces_from_solids(solid), topology, features, mesh=mesh, no_use_gmsh=no_use_gmsh, faces_dict=faces_dict)   
+            processFacesHighestDim(topology.faces_from_solids(solid), topology, features, mesh=mesh, mesh_generator=mesh_generator, faces_dict=faces_dict)   
             count_solids += 1
 
         if count_solids == 0:
             print('\n[PythonOCC] There are no Solids, using Faces as highest dim...')
-            count_faces = processFacesHighestDim(topology.faces(), topology, features, mesh=mesh, no_use_gmsh=no_use_gmsh, use_tqdm=True)
+            count_faces = processFacesHighestDim(topology.faces(), topology, features, mesh=mesh, mesh_generator=mesh_generator, use_tqdm=True)
 
             if count_faces == 0:
                 print('\n[PythonOCC] There are no Faces, using Curves as highest dim...')
-                count_edges = processFacesHighestDim(topology.edges(), features, no_use_gmsh=no_use_gmsh, use_tqdm=True) 
+                count_edges = processFacesHighestDim(topology.edges(), features, mesh_generator=mesh_generator, use_tqdm=True) 
 
                 if count_edges == 0:
                     print('\n[PythonOCC] There are no Curves to use...')
@@ -315,44 +319,49 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, no_use_gmsh=False, us
             curve = BRepAdaptor_Curve(edge)
             tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
 
-            if tp in POSSIBLE_CURVE_TYPES:
-                feature = FeaturesFactory(type_=tp, shape=curve).getFeatureByType()
-                features['curves'].append(feature)
-            else:
-                features['curves'].append(None)
+            features['curve'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve))
+
+            # if tp in POSSIBLE_CURVE_TYPES:
+            #     feature = FeaturesFactory(type_=tp, shape=curve).getFeatureByType()
+            #     features['curves'].append(feature)
+            # else:
+            #     features['curves'].append(None)
 
         for face in tqdm(topology.faces()):
-            feature = {}
-            if no_use_gmsh:
-                mesh, vert_indices, face_indices, vert_params = registerFaceMeshInGlobalMesh(face, mesh)
-                
-                feature = {
-                    'vert_indices': vert_indices.tolist(),
-                    'vert_parameters': vert_params.tolist(),
-                    'face_indices': face_indices.tolist(),
-                }
-
             surface = BRepAdaptor_Surface(face, True)
             tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
 
-            if tp in POSSIBLE_SURFACE_TYPES:
-                feature.update(FeaturesFactory(type_=tp, shape=surface).getFeatureByType())
-                features['surfaces'].append(feature)
+            feature = {}
+            if mesh_generator == 'occ':
+                mesh, mesh_params = registerFaceMeshInGlobalMesh(face, mesh)
+                
+                features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=mesh_params))
             else:
-                features['surfaces'].append(None)
+                features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=None))
 
-    if no_use_gmsh:
+            # surface = BRepAdaptor_Surface(face, True)
+            # tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
+
+            # if tp in POSSIBLE_SURFACE_TYPES:
+            #     feature.update(FeaturesFactory(type_=tp, shape=surface).getFeatureByType())
+            #     features['surfaces'].append(feature)
+            # else:
+            #     features['surfaces'].append(None)
+
+    if mesh_generator == 'occ':
         return mesh
 
 # Main function
-def processPythonOCC(input_name: str, no_use_gmsh, use_highest_dim=True, debug=True) -> dict:
+def processPythonOCC(input_name: str, mesh_generator, use_highest_dim=True, debug=True) -> dict:
     features = {}
 
     shape = read_step_file(input_name, verbosity=debug)
 
-    if no_use_gmsh:
-        mesh = generateFeatureByDim(shape, features, no_use_gmsh=no_use_gmsh, use_highest_dim=use_highest_dim)
+    if mesh_generator == 'occ':
+        mesh = generateFeatureByDim(shape, features, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim)
         return shape, features, mesh
-    else:
+    elif mesh_generator == 'gmsh':
         _ = generateFeatureByDim(shape, features, use_highest_dim=use_highest_dim)
         return shape, features, None
+    else:
+        raise Exception('Mesh Generator not available')

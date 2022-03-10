@@ -15,10 +15,17 @@ class BaseSurfaceFeature:
         self.vert_parameters = None
         self.face_indices = None
 
-    def fromDict(self, params={}):
+    def fromDict(self, params):
         self.vert_indices = params['vert_indices'] if 'vert_indices' in params.keys() else None
         self.vert_parameters = params['vert_parameters'] if 'vert_parameters' in params.keys() else None
         self.face_indices = params['face_indices'] if 'face_indices' in params.keys() else None
+    
+    def toDict(self):
+        features = {}
+        features['vert_indices'] = self.vert_indices
+        features['vert_parameters'] = self.vert_parameters
+        features['face_indices'] = self.face_indices
+        return features
 
     def createBaseDict(self):
         features = {}

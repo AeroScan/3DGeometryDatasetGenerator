@@ -14,27 +14,32 @@ class FeaturesFactory:
         'ellipse': Ellipse,
     }
     
-    def getPrimitiveObject(type, shape):
+    def getPrimitiveObject(type, shape, params):
         type = type.lower()
         assert type in FeaturesFactory.SURFACES_TYPES.keys() or type in FeaturesFactory.CURVES_TYPES.keys()
         geometry = 'curve' if type in FeaturesFactory.CURVES_TYPES.keys() else 'surface'
         if geometry == 'curve':
-            FeaturesFactory.CURVES_TYPES[type](shape)
+            return FeaturesFactory.CURVES_TYPES[type](shape, params)
         elif geometry == 'surface':
-            FeaturesFactory.SURFACES_TYPES[type](shape)
+            return FeaturesFactory.SURFACES_TYPES[type](shape, params)
         else:
-            pass
+            return None
 
     def getDictFromPrimitive(primitive):
         feature = {}
         feature = primitive.toDict()
         return feature
 
-    def getListOfDictFromPrimitive(primitive_list):
+    def readListOfDictOfPrimitives(geometries, primitives: dict):
+        if not geometries:
+            raise Exception('No feature to write.')
+        
+
+    def getListOfDictFromPrimitive(primitives: dict):
         features = {}
-        features['surfaces'] = []
-        features['curves'] = []
-        for primitive in primitive_list:
+        geometries = [geometry for geometry in primitives.keys()]
+
+        for primitive in primitives:
             if issubclass(primitive, BaseCurveFeature):
                 features['curves'].append(FeaturesFactory.getDictFromPrimitive(primitive))
             elif issubclass(primitive, BaseSurfaceFeature):

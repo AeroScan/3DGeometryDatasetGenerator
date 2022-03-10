@@ -1,5 +1,4 @@
-from tools import gpXYZ2List
-
+from lib.tools import gpXYZ2List
 from lib.primitives.base_surface_feature import BaseSurfaceFeature
 
 class Cone(BaseSurfaceFeature):
@@ -8,7 +7,7 @@ class Cone(BaseSurfaceFeature):
     def primitiveType():
         return 'Cone'
 
-    def __init__(self, shape):
+    def __init__(self, shape, params=None):
         super().__init__()
         self.shape = shape.Cone()
         self.location = None
@@ -19,7 +18,7 @@ class Cone(BaseSurfaceFeature):
         self.radius = None
         self.angle = None
         self.apex = None
-        self.fromShape()
+        self.fromShape(params)
     
     def getLocation(self):
         return gpXYZ2List(self.shape.Location())
@@ -42,7 +41,9 @@ class Cone(BaseSurfaceFeature):
     def getApex(self):
         return gpXYZ2List(self.shape.Apex())
 
-    def fromShape(self):
+    def fromShape(self, params):
+        if params is not None:
+            super().fromDict(params)
         self.location = self.getLocation()
         self.x_axis = self.getAxis()[0]
         self.y_axis = self.getAxis()[1]

@@ -2,7 +2,7 @@ import gmsh
 
 import numpy as np
 
-from tools import float2str
+from lib.tools import float2str
 
 from tqdm import tqdm
 

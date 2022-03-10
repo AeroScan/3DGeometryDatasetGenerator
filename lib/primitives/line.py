@@ -1,6 +1,6 @@
 from lib.primitives.base_curve_feature import BaseCurveFeature
 
-from tools import gpXYZ2List
+from lib.tools import gpXYZ2List
 
 class Line(BaseCurveFeature):
 
@@ -8,7 +8,7 @@ class Line(BaseCurveFeature):
     def primitiveType():
         return 'Line'
     
-    def __init__(self, shape):
+    def __init__(self, shape, params=None):
         super().__init__()
         self.shape = shape.Line()
         self.location = None
@@ -24,3 +24,11 @@ class Line(BaseCurveFeature):
     def fromShape(self):
         self.location = self.getLocation()
         self.direction = self.getDirection()
+
+    def toDict(self):
+        features = super().toDict()
+        features['type'] = Line.primitiveType()
+        features['location'] = self.location
+        features['direction'] = self.direction
+
+        return features

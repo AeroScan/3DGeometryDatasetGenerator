@@ -1,6 +1,6 @@
 from lib.primitives.base_curve_feature import BaseCurveFeature
 
-from tools import gpXYZ2List
+from lib.tools import gpXYZ2List
 
 class Ellipse(BaseCurveFeature):
 
@@ -8,7 +8,7 @@ class Ellipse(BaseCurveFeature):
     def primitiveType():
         return 'Ellipse'
     
-    def __init__(self, shape):
+    def __init__(self, shape, params=None):
         super().__init__()
         self.shape = shape.Ellipse()
         self.focus1 = None

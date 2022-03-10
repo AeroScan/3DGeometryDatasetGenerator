@@ -88,7 +88,7 @@ if __name__ == '__main__':
         
         if mesh_generator == 'gmsh':
             print('\n+-----------PythonOCC----------+')
-            shape, features, _ = processPythonOCC(file, no_use_gmsh=False, use_highest_dim=use_highest_dim, debug=use_debug)
+            shape, features, _ = processPythonOCC(file, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim, debug=use_debug)
 
             print('\n+-------------GMSH-------------+')
             processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         
         elif mesh_generator == 'occ':
             print('\n+-----------PythonOCC----------+')
-            shape, features, mesh = processPythonOCC(file, no_use_gmsh=True, use_highest_dim=use_highest_dim, debug=use_debug)
+            shape, features, mesh = processPythonOCC(file, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim, debug=use_debug)
 
             print(f'\nWriting Features in {features_file_type} format...')
             features_name = os.path.join(features_folder_dir, output_name)

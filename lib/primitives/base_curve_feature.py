@@ -13,11 +13,17 @@ class BaseCurveFeature:
         self.vert_parameters = None
         self.createBaseDict()
 
+    def fromDict(self, params):
+        self.vert_indices = params['vert_indices']
+        self.vert_parameters = params['vert_parameters']
+
+    def toDict(self):
+        features = {}
+        features['vert_indices'] = self.vert_indices
+        features['vert_parameters'] = self.vert_parameters
+        return features
+    
     def createBaseDict(self):
         self.features = {}
         for value in BaseCurveFeature.PRIMITIVES_PARAMS[self.class_child]:
             self.features[value] = None
-
-    def fromDict(self, params):
-        self.vert_indices = params['vert_indices']
-        self.vert_parameters = params['vert_parameters']

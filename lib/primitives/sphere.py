@@ -1,5 +1,5 @@
 import numpy as np
-from tools import gpXYZ2List
+from lib.tools import gpXYZ2List
 
 from lib.primitives.base_surface_feature import BaseSurfaceFeature
 
@@ -9,7 +9,7 @@ class Sphere(BaseSurfaceFeature):
     def primitiveType():
         return 'Sphere'
 
-    def __init__(self, shape):
+    def __init__(self, shape, params=None):
         super().__init__()
         self.shape = shape.Sphere()
         self.location = None
@@ -18,7 +18,7 @@ class Sphere(BaseSurfaceFeature):
         self.z_axis = None
         self.coefficients = None
         self.radius = None
-        self.fromShape()
+        self.fromShape(params)
     
     def getLocation(self):
         return gpXYZ2List(self.shape.Location())
@@ -35,7 +35,9 @@ class Sphere(BaseSurfaceFeature):
     def getRadius(self):
         return self.shape.Radius()
     
-    def fromShape(self):
+    def fromShape(self, params):
+        if params is not None:
+            super().fromDict(params)
         self.location = self.getLocation()
         self.x_axis = self.getAxis()[0]
         self.y_axis = self.getAxis()[1]

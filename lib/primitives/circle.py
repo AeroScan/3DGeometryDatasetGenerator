@@ -1,6 +1,6 @@
 from lib.primitives.base_curve_feature import BaseCurveFeature
 
-from tools import gpXYZ2List
+from lib.tools import gpXYZ2List
 
 class Circle(BaseCurveFeature):
 
@@ -8,7 +8,7 @@ class Circle(BaseCurveFeature):
     def primitiveType():
         return 'Circle'
     
-    def __init__(self, shape):
+    def __init__(self, shape, params=None):
         super().__init__()
         self.shape = shape.Circle()
         self.location = None
