@@ -19,181 +19,6 @@ import numpy as np
 
 MAX_INT = 2**31 - 1
 
-POSSIBLE_CURVE_TYPES = ['line', 'circle', 'ellipse']
-POSSIBLE_SURFACE_TYPES = ['plane', 'cylinder', 'cone', 'sphere', 'torus']
-
-# # Generate lines information
-# def generateLineFeature(shape) -> dict:
-#     # shape = shape.Line()
-
-#     # feature = {
-#     #     'type': 'Line',
-#     #     'location': gpXYZ2List(shape.Location()),
-#     #     'direction': gpXYZ2List(shape.Direction()),
-#     # }
-#     feature = Line(shape).getFeatures()
-
-#     return {**feature}
-
-# # Generate circles information
-# def generateCircleFeature(shape) -> dict:
-#     # shape = shape.Circle()
-
-#     # feature = {
-#     #     'type': 'Circle',
-#     #     'location': gpXYZ2List(shape.Location()),
-#     #     'z_axis': gpXYZ2List(shape.Axis().Direction()),
-#     #     'radius': shape.Radius(),
-#     #     'x_axis': gpXYZ2List(shape.XAxis().Direction()),
-#     #     'y_axis': gpXYZ2List(shape.YAxis().Direction()),
-#     # }
-
-#     # if feature['radius'] == 0:
-#     #     return None
-#     # else:
-#     #     return {**feature}
-#     feature = Circle(shape).getFeatures()
-
-#     return {**feature} if feature is not None else None
-
-# # Generate ellipses information
-# def generateEllipseFeature(shape) -> dict:
-#     # shape = shape.Ellipse()
-
-#     # feature = {
-#     #     'type': 'Ellipse',
-#     #     'focus1': gpXYZ2List(shape.Focus1()),
-#     #     'focus2': gpXYZ2List(shape.Focus2()),
-#     #     'x_axis': gpXYZ2List(shape.XAxis().Direction()),
-#     #     'y_axis': gpXYZ2List(shape.YAxis().Direction()),
-#     #     'z_axis': gpXYZ2List(shape.Axis().Direction()),
-#     #     'x_radius': shape.MajorRadius(),
-#     #     'y_radius': shape.MinorRadius(),
-#     # }
-
-#     # if feature['x_radius'] == 0 or feature['y_radius'] == 0:
-#     #     return None
-#     # else:
-#     #     return {**feature}
-
-#     feature = Ellipse(shape).getFeatures()
-
-#     return {**feature} if feature is not None else None
-
-# # Generate planes information
-# def generatePlaneFeature(shape) -> dict:
-#     # shape = shape.Plane()
-
-#     # feature = {
-#     #     'type': 'Plane',
-#     #     'location': gpXYZ2List(shape.Location()),
-#     #     'normal': gpXYZ2List(shape.Axis().Direction()),
-#     #     'x_axis': gpXYZ2List(shape.XAxis().Direction()),
-#     #     'y_axis': gpXYZ2List(shape.YAxis().Direction()),
-#     #     'z_axis': gpXYZ2List(shape.Axis().Direction()),
-#     #     'coefficients': list(shape.Coefficients()),
-#     # }
-
-#     feature = Plane(shape).getFeatures()
-
-#     return {**feature}
-
-
-# # Generate cylinders information
-# def generateCylinderFeature(shape) -> dict:
-#     # shape = shape.Cylinder()
-
-#     # feature = {
-#     #     'type': 'Cylinder',
-#     #     'location': gpXYZ2List(shape.Location()),
-#     #     'x_axis': gpXYZ2List(shape.XAxis().Direction()),
-#     #     'y_axis': gpXYZ2List(shape.YAxis().Direction()),
-#     #     'z_axis': gpXYZ2List(shape.Axis().Direction()),
-#     #     'coefficients': list(shape.Coefficients()),
-#     #     'radius': shape.Radius(),
-#     # }
-
-#     feature = Cylinder(shape).getFeatures()
-
-#     return {**feature}
-
-# # Generate cones information
-# def generateConeFeature(shape) -> dict:
-#     # shape = shape.Cone()
-
-#     # feature = {
-#     #     'type': 'Cone',
-#     #     'location': gpXYZ2List(shape.Location()),
-#     #     'x_axis': gpXYZ2List(shape.XAxis().Direction()),
-#     #     'y_axis': gpXYZ2List(shape.YAxis().Direction()),
-#     #     'z_axis': gpXYZ2List(shape.Axis().Direction()),
-#     #     'coefficients': list(shape.Coefficients()),
-#     #     'radius': shape.RefRadius(),
-#     #     'angle': shape.SemiAngle(),
-#     #     'apex': gpXYZ2List(shape.Apex()),
-#     # }
-
-#     feature = Cone(shape).getFeatures()
-
-#     return {**feature}
-
-# # Generate spheres information
-# def generateSphereFeature(shape) -> dict:
-#     # shape = shape.Sphere()
-
-#     # x_axis = np.array(gpXYZ2List(shape.XAxis().Direction()))
-#     # y_axis = np.array(gpXYZ2List(shape.YAxis().Direction()))
-#     # z_axis = np.cross(x_axis, y_axis)
-
-#     # feature = {
-#     #     'type': 'Sphere',
-#     #     'location': gpXYZ2List(shape.Location()),
-#     #     'x_axis': x_axis.tolist(),
-#     #     'y_axis': y_axis.tolist(),
-#     #     'z_axis': z_axis.tolist(),
-#     #     'coefficients': list(shape.Coefficients()),
-#     #     'radius': shape.Radius(),
-#     # }
-
-#     feature = Sphere(shape).getFeatures()
-
-#     return {**feature}
-
-# # Generate torus information
-# def generateTorusFeature(shape) -> dict:
-#     # shape = shape.Torus()
-
-#     # feature = {
-#     #     'type': 'Torus',
-#     #     'location': gpXYZ2List(shape.Location()),
-#     #     'x_axis': gpXYZ2List(shape.XAxis().Direction()),
-#     #     'y_axis': gpXYZ2List(shape.YAxis().Direction()),
-#     #     'z_axis': gpXYZ2List(shape.Axis().Direction()),
-#     #     # 'coefficients': list(shape.Coefficients()),
-#     #     'max_radius': shape.MajorRadius(),
-#     #     'min_radius': shape.MinorRadius(),
-#     # }
-#     feature = Torus(shape).getFeatures()
-
-#     return {**feature}
-
-# # Call function by type
-# def generateFeature(type, shape):
-#     # generate_functions_dict = {
-#     #     'line': generateLineFeature,
-#     #     'circle': generateCircleFeature,
-#     #     'ellipse': generateEllipseFeature,
-#     #     'plane': generatePlaneFeature,
-#     #     'cylinder': generateCylinderFeature,
-#     #     'cone': generateConeFeature,
-#     #     'sphere': generateSphereFeature,
-#     #     'torus': generateTorusFeature,
-#     # }
-#     # if type.lower() in generate_functions_dict.keys():
-#     #     return generate_functions_dict[type.lower()](shape)
-    
-#     return FeaturesFactory(type, shape).getFeatureByType()
-
 def processEdgesHighestDim(edges, features: dict, edges_dict={}, use_tqdm=False):
     count = 0
     for edge in edges if not use_tqdm else tqdm(edges):
@@ -217,11 +42,6 @@ def processEdgesHighestDim(edges, features: dict, edges_dict={}, use_tqdm=False)
 
         features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, params=None))
 
-        # if tp in POSSIBLE_CURVE_TYPES:
-        #     feature = FeaturesFactory(type_=tp, shape=curve).getFeatureByType()
-        #     features['curves'].append(feature)
-        # else:
-        #     features['curves'].append(None)
         count += 1
     return count
 
@@ -249,22 +69,12 @@ def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, mesh=
         surface = BRepAdaptor_Surface(face, True)
         tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
         
-        feature = {}
         if mesh_generator == 'occ':
             mesh, mesh_params = registerFaceMeshInGlobalMesh(face, mesh)
             
             features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=mesh_params))
         else:
             features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=None))
-
-        # surface = BRepAdaptor_Surface(face, True)
-        # tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
-
-        # if tp in POSSIBLE_SURFACE_TYPES:
-        #     feature.update(FeaturesFactory(type_=tp, shape=surface).getFeatureByType())
-        #     features['surfaces'].append(feature)
-        # else:
-        #     features['surfaces'].append(None)
 
         processEdgesHighestDim(topology.edges_from_face(face), features, edges_dict=edges_dict)
 
@@ -321,32 +131,16 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ',
 
             features['curve'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve))
 
-            # if tp in POSSIBLE_CURVE_TYPES:
-            #     feature = FeaturesFactory(type_=tp, shape=curve).getFeatureByType()
-            #     features['curves'].append(feature)
-            # else:
-            #     features['curves'].append(None)
-
         for face in tqdm(topology.faces()):
             surface = BRepAdaptor_Surface(face, True)
             tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
 
-            feature = {}
             if mesh_generator == 'occ':
                 mesh, mesh_params = registerFaceMeshInGlobalMesh(face, mesh)
                 
                 features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=mesh_params))
             else:
                 features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=None))
-
-            # surface = BRepAdaptor_Surface(face, True)
-            # tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
-
-            # if tp in POSSIBLE_SURFACE_TYPES:
-            #     feature.update(FeaturesFactory(type_=tp, shape=surface).getFeatureByType())
-            #     features['surfaces'].append(feature)
-            # else:
-            #     features['surfaces'].append(None)
 
     if mesh_generator == 'occ':
         return mesh

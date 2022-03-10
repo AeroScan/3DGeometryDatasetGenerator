@@ -30,23 +30,17 @@ class FeaturesFactory:
         return feature
 
     def getListOfDictFromPrimitive(primitives: dict):
-        features = {}
 
-        features['curves'] = []
-        features['surfaces'] = []
+        for i in range(0, len(primitives['curves'])):
+            if primitives['curves'][i] is not None:
+                primitives['curves'][i] = FeaturesFactory.getDictFromPrimitive(primitives['curves'][i])
+        for i in range(0, len(primitives['surfaces'])):
+            if primitives['surfaces'][i] is not None:
+                primitives['surfaces'][i] = FeaturesFactory.getDictFromPrimitive(primitives['surfaces'][i])
         
-        curves = primitives['curves']
-        surfaces = primitives['surfaces']
-
-        for curve in curves:
-            if curve is not None:
-                features['curves'].append(FeaturesFactory.getDictFromPrimitive(curve))
-        for surface in surfaces:
-            if surface is not None:
-                features['surfaces'].append(FeaturesFactory.getDictFromPrimitive(surface))
+        features = {
+            'curves': primitives['curves'],
+            'surfaces': primitives['surfaces']
+        }
 
         return features
-
-
-
-        
