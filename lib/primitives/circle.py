@@ -37,4 +37,16 @@ class Circle(BaseCurveFeature):
         self.y_axis = self.getAxis()[1]
         self.z_axis = self.getAxis()[2]
         self.radius = self.getRadius()
+
+    def toDict(self):
+        features = super().toDict()
+        features['type'] = Circle.primitiveType()
+        features['location'] = self.location
+        features['x_axis'] = self.x_axis
+        features['y_axis'] = self.y_axis
+        features['z_axix'] = self.z_axis
+        features['radius'] = self.radius
+
+        return features
+        
         

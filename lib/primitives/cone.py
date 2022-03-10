@@ -52,3 +52,17 @@ class Cone(BaseSurfaceFeature):
         self.radius = self.getRadius()
         self.angle = self.getAngle()
         self.apex = self.getApex()
+
+    def toDict(self):
+        features = super().toDict()
+        features['type'] = Cone.primitiveType()
+        features['location'] = self.location
+        features['x_axis'] = self.x_axis
+        features['y_axis'] = self.y_axis
+        features['z_axix'] = self.z_axis
+        features['coefficients'] = self.coefficients
+        features['radius'] = self.radius
+        features['angle'] = self.angle
+        features['apex'] = self.apex
+
+        return features

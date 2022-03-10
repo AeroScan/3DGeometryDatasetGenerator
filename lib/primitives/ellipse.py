@@ -41,3 +41,16 @@ class Ellipse(BaseCurveFeature):
         self.z_axis = self.getAxis()[2]
         self.x_radius = self.getRadius()[0]
         self.y_radius = self.getRadius()[1]
+
+    def toDict(self):
+        features = super().toDict()
+        features['type'] = Ellipse.primitiveType()
+        features['focus1'] = self.focus1
+        features['focus2'] = self.focus2
+        features['x_axis'] = self.x_axis
+        features['y_axis'] = self.y_axis
+        features['z_axix'] = self.z_axis
+        features['x_radius'] = self.x_radius
+        features['y_radius'] = self.y_radius
+
+        return features

@@ -40,3 +40,15 @@ class Torus(BaseSurfaceFeature):
         self.z_axis = self.getAxis()[2]
         self.max_radius = self.getRadius()[0]
         self.min_radius = self.getRadius()[1]
+
+    def toDict(self):
+        features = super().toDict()
+        features['type'] = Torus.primitiveType()
+        features['location'] = self.location
+        features['x_axis'] = self.x_axis
+        features['y_axis'] = self.y_axis
+        features['z_axix'] = self.z_axis
+        features['max_radius'] = self.max_radius
+        features['min_radius'] = self.min_radius
+
+        return features

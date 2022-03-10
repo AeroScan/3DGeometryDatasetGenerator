@@ -1,3 +1,4 @@
+from typing import SupportsFloat
 from .primitives import *
 
 class FeaturesFactory:
@@ -16,12 +17,10 @@ class FeaturesFactory:
     
     def getPrimitiveObject(type, shape, params):
         type = type.lower()
-        assert type in FeaturesFactory.SURFACES_TYPES.keys() or type in FeaturesFactory.CURVES_TYPES.keys()
-        geometry = 'curve' if type in FeaturesFactory.CURVES_TYPES.keys() else 'surface'
-        if geometry == 'curve':
-            return FeaturesFactory.CURVES_TYPES[type](shape, params)
-        elif geometry == 'surface':
+        if type in FeaturesFactory.SURFACES_TYPES.keys(): 
             return FeaturesFactory.SURFACES_TYPES[type](shape, params)
+        elif type in FeaturesFactory.CURVES_TYPES.keys():
+            return FeaturesFactory.CURVES_TYPES[type](shape, params)
         else:
             return None
 
@@ -30,22 +29,21 @@ class FeaturesFactory:
         feature = primitive.toDict()
         return feature
 
-    def readListOfDictOfPrimitives(geometries, primitives: dict):
-        if not geometries:
-            raise Exception('No feature to write.')
-        
-
     def getListOfDictFromPrimitive(primitives: dict):
         features = {}
-        geometries = [geometry for geometry in primitives.keys()]
 
-        for primitive in primitives:
-            if issubclass(primitive, BaseCurveFeature):
-                features['curves'].append(FeaturesFactory.getDictFromPrimitive(primitive))
-            elif issubclass(primitive, BaseSurfaceFeature):
-                features['surfaces'].append(FeaturesFactory.getDictFromPrimitive(primitive))
-            else:
-                pass
+        features['curves'] = []
+        features['surfaces'] = []
+        
+        curves = primitives['curves']
+        surfaces = primitives['surfaces']
+
+        for curve in curves:
+            if curve is not None:
+                features['curves'].append(FeaturesFactory.getDictFromPrimitive(curve))
+        for surface in surfaces:
+            if surface is not None:
+                features['surfaces'].append(FeaturesFactory.getDictFromPrimitive(surface))
 
         return features
 

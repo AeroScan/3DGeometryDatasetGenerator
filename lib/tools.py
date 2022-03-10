@@ -94,7 +94,6 @@ def writePKL(features_name: str, features: dict):
         pickle.dump(features, f)
 
 def writeFeatures(features_name: str, features: dict, tp: str):
-    FeaturesFactory.getListOfDictFromPrimitive(features)
     if tp.lower() in YAML_NAMES:
         writeYAML(f'{features_name}.{tp}', features)
     elif tp.lower() in PKL_NAMES:

@@ -44,3 +44,15 @@ class Sphere(BaseSurfaceFeature):
         self.z_axis = self.getAxis()[2]
         self.coefficients = self.getCoefficients()
         self.radius = self.getRadius()
+
+    def toDict(self):
+        features = super().toDict()
+        features['type'] = Sphere.primitiveType()
+        features['location'] = self.location
+        features['x_axis'] = self.x_axis
+        features['y_axis'] = self.y_axis
+        features['z_axix'] = self.z_axis
+        features['coefficients'] = self.coefficients
+        features['radius'] = self.radius
+
+        return features

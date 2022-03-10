@@ -359,6 +359,7 @@ def processPythonOCC(input_name: str, mesh_generator, use_highest_dim=True, debu
 
     if mesh_generator == 'occ':
         mesh = generateFeatureByDim(shape, features, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim)
+        features = FeaturesFactory.getListOfDictFromPrimitive(features)
         return shape, features, mesh
     elif mesh_generator == 'gmsh':
         _ = generateFeatureByDim(shape, features, use_highest_dim=use_highest_dim)
