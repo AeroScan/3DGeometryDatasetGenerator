@@ -25,6 +25,7 @@ class BaseSurfaceFeature:
         features['vert_indices'] = self.vert_indices
         features['vert_parameters'] = self.vert_parameters
         features['face_indices'] = self.face_indices
+        
         return features
 
     def createBaseDict(self):

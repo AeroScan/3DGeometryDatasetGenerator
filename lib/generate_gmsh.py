@@ -3,6 +3,7 @@ import gmsh
 import numpy as np
 
 from lib.tools import float2str
+from lib.features_factory import FeaturesFactory
 
 from tqdm import tqdm
 
@@ -92,8 +93,10 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
                  
                 if features['curves'][i] is not None:
                     feature = generateGMSHCurveFeature(dimension, tag)
+                    
+                    FeaturesFactory.updatePrimitiveWithMeshParams(primitive=features['curves'][i], params=feature)
 
-                    features['curves'][i].update(feature)
+                    # features['curves'][i].update(feature)
         if dimension == 2:
             for i in tqdm(range(0, len(features['surfaces']))):
                 tag = entities[dimension][i]
@@ -101,7 +104,9 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
                 if features['surfaces'][i] is not None:
                     feature = generateGMSHSurfaceFeature(dimension, tag)
 
-                    features['surfaces'][i].update(feature)
+                    FeaturesFactory.updatePrimitiveWithMeshParams(primitive=features['surfaces'][i], params=feature)
+
+                    # features['surfaces'][i].update(feature)
 
     for key in features.keys():
         i = 0
@@ -132,19 +137,6 @@ def setupGMSH(mesh_size: float, use_debug=True):
         gmsh.option.setNumber("General.Verbosity", 99)
     else:
         gmsh.option.setNumber("General.Verbosity", 0)
-
-    # gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)
-    # gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 1)
-    # gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 0)
-
-    # Defines the algorithm to be used 
-    # gmsh.option.setNumber("Mesh.Algorithm", 6) # Default 6 - Frontal Delaunay
-
-    # Define the number of threads for mesh generate
-    # gmsh.option.setNumber("Mesh.MaxNumThreads2D", 8)
-
-    # gmsh.option.setNumber("Mesh.RefineSteps", 20)
-    # gmsh.option.setNumber("Mesh.Smoothing", 20)
 
 # Write a string in OBJ format
 def writeOBJ(output_name: str):

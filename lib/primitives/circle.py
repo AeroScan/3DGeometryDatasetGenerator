@@ -49,4 +49,7 @@ class Circle(BaseCurveFeature):
 
         return features
         
+    def updateWithMeshParams(self, params):
+        super().fromDict(params)
         
+        return True

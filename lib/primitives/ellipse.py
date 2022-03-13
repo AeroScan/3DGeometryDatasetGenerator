@@ -54,3 +54,8 @@ class Ellipse(BaseCurveFeature):
         features['y_radius'] = self.y_radius
 
         return features
+
+    def updateWithMeshParams(self, params):
+        super().fromDict(params)
+        
+        return True

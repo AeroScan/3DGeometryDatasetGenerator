@@ -55,3 +55,8 @@ class Plane(BaseSurfaceFeature):
         features['normal'] = self.normal
 
         return features
+
+    def updateWithMeshParams(self, params):
+        super().fromDict(params)
+        
+        return True

@@ -1,4 +1,3 @@
-from typing import SupportsFloat
 from .primitives import *
 
 class FeaturesFactory:
@@ -30,7 +29,6 @@ class FeaturesFactory:
         return feature
 
     def getListOfDictFromPrimitive(primitives: dict):
-
         for i in range(0, len(primitives['curves'])):
             if primitives['curves'][i] is not None:
                 primitives['curves'][i] = FeaturesFactory.getDictFromPrimitive(primitives['curves'][i])
@@ -44,3 +42,7 @@ class FeaturesFactory:
         }
 
         return features
+
+    def updatePrimitiveWithMeshParams(primitive, params):
+        return primitive.updateWithMeshParams(params)
+

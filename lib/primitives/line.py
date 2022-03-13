@@ -32,3 +32,8 @@ class Line(BaseCurveFeature):
         features['direction'] = self.direction
 
         return features
+
+    def updateWithMeshParams(self, params):
+        super().fromDict(params)
+        
+        return True

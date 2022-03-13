@@ -55,3 +55,8 @@ class Cylinder(BaseSurfaceFeature):
         features['radius'] = self.radius
 
         return features
+
+    def updateWithMeshParams(self, params):
+        super().fromDict(params)
+        
+        return True

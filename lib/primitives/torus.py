@@ -52,3 +52,8 @@ class Torus(BaseSurfaceFeature):
         features['min_radius'] = self.min_radius
 
         return features
+
+    def updateWithMeshParams(self, params):
+        super().fromDict(params)
+        
+        return True

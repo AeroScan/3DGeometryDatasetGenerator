@@ -1,6 +1,7 @@
 from lib.tools import writeFeatures, writeMeshOBJ
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
+from lib.features_factory import FeaturesFactory
 
 import os
 import time
@@ -93,6 +94,8 @@ if __name__ == '__main__':
             print('\n+-------------GMSH-------------+')
             processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
 
+            features = FeaturesFactory.getListOfDictFromPrimitive(features)
+
             print(f'\nWriting Features in {features_file_type} format...')
             features_name = os.path.join(features_folder_dir, output_name)
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
@@ -100,6 +103,8 @@ if __name__ == '__main__':
         elif mesh_generator == 'occ':
             print('\n+-----------PythonOCC----------+')
             shape, features, mesh = processPythonOCC(file, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim, debug=use_debug)
+
+            features = FeaturesFactory.getListOfDictFromPrimitive(features)
 
             print(f'\nWriting Features in {features_file_type} format...')
             features_name = os.path.join(features_folder_dir, output_name)

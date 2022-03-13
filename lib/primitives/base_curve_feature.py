@@ -9,16 +9,19 @@ class BaseCurveFeature:
     def __init__(self):
         self.class_child = self.__class__.__name__
         assert self.class_child in BaseCurveFeature.PRIMITIVES_PARAMS.keys()
+        self.sharp = None
         self.vert_indices = None
         self.vert_parameters = None
         self.createBaseDict()
 
     def fromDict(self, params):
+        self.sharp = params['sharp'] if 'sharp' in params.keys() else 'true'
         self.vert_indices = params['vert_indices']
         self.vert_parameters = params['vert_parameters']
 
     def toDict(self):
         features = {}
+        features['sharp'] = self.sharp
         features['vert_indices'] = self.vert_indices
         features['vert_parameters'] = self.vert_parameters
         return features

@@ -66,3 +66,8 @@ class Cone(BaseSurfaceFeature):
         features['apex'] = self.apex
 
         return features
+
+    def updateWithMeshParams(self, params):
+        super().fromDict(params)
+        
+        return True
