@@ -47,7 +47,7 @@ class Torus(BaseSurfaceFeature):
         features['location'] = self.location
         features['x_axis'] = self.x_axis
         features['y_axis'] = self.y_axis
-        features['z_axix'] = self.z_axis
+        features['z_axis'] = self.z_axis
         features['max_radius'] = self.max_radius
         features['min_radius'] = self.min_radius
 

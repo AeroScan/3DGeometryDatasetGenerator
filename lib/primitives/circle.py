@@ -44,7 +44,7 @@ class Circle(BaseCurveFeature):
         features['location'] = self.location
         features['x_axis'] = self.x_axis
         features['y_axis'] = self.y_axis
-        features['z_axix'] = self.z_axis
+        features['z_axis'] = self.z_axis
         features['radius'] = self.radius
 
         return features

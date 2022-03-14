@@ -49,7 +49,7 @@ class Ellipse(BaseCurveFeature):
         features['focus2'] = self.focus2
         features['x_axis'] = self.x_axis
         features['y_axis'] = self.y_axis
-        features['z_axix'] = self.z_axis
+        features['z_axis'] = self.z_axis
         features['x_radius'] = self.x_radius
         features['y_radius'] = self.y_radius
 
