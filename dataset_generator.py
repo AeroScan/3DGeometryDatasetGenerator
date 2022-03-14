@@ -12,6 +12,7 @@ from termcolor import colored
 
 INPUT_FORMATS = ['.step', '.stp', '.STEP']
 
+POSSIBLE_MESH_GENERATORS = ['occ' , 'gmsh']
 
 def list_files(input_dir: str) -> list:
     files = []
@@ -53,7 +54,9 @@ if __name__ == '__main__':
     use_highest_dim = args['no_use_highest_dim']
     features_file_type = args['features_file_type']
     use_debug = args['no_use_debug']
-    mesh_generator = args['mesh_generator']
+    mesh_generator = args['mesh_generator'].lower()
+
+    assert mesh_generator in POSSIBLE_MESH_GENERATORS
 
     # Test the directories
     if os.path.exists(input_path):
@@ -84,37 +87,24 @@ if __name__ == '__main__':
         file = str(file)
         output_name = output_name_converter(file)
         mesh_name = os.path.join(mesh_folder_dir, output_name)
-
         print('\n[Generator] Processing file ' + file + '...')
         
-        if mesh_generator == 'gmsh':
-            print('\n+-----------PythonOCC----------+')
-            shape, features, _ = processPythonOCC(file, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim, debug=use_debug)
+        print('\n+-----------PythonOCC----------+')
+        shape, features, mesh = processPythonOCC(file, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim, debug=use_debug)
 
+        if mesh_generator == 'gmsh':
             print('\n+-------------GMSH-------------+')
             processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
-
-            features = FeaturesFactory.getListOfDictFromPrimitive(features)
-
-            print(f'\nWriting Features in {features_file_type} format...')
-            features_name = os.path.join(features_folder_dir, output_name)
-            writeFeatures(features_name=features_name, features=features, tp=features_file_type)
-        
         elif mesh_generator == 'occ':
-            print('\n+-----------PythonOCC----------+')
-            shape, features, mesh = processPythonOCC(file, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim, debug=use_debug)
-
-            features = FeaturesFactory.getListOfDictFromPrimitive(features)
-
-            print(f'\nWriting Features in {features_file_type} format...')
-            features_name = os.path.join(features_folder_dir, output_name)
-            writeFeatures(features_name=features_name, features=features, tp=features_file_type)
-        
-            if mesh:
+            if mesh is not {}:
                 print(f'\nWriting meshes in obj file...')
                 writeMeshOBJ(mesh_name, mesh)
 
-            print('\n[Generator] Process done.')
+    features = FeaturesFactory.getListOfDictFromPrimitive(features)
+    print(f'\nWriting Features in {features_file_type} format...')
+    features_name = os.path.join(features_folder_dir, output_name)
+    writeFeatures(features_name=features_name, features=features, tp=features_file_type)
+    print('\n[Generator] Process done.')
 
     time_finish = time.time()
     
