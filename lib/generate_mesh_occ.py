@@ -92,11 +92,11 @@ def computeNewVerticesAndFaces(face, mesh):
             if face_orientation == 0:
                 verts_of_face = [i1 , i2, i3]
                 new_faces.append(verts_of_face)
-                face_indices.append(len(old_faces) + i)
+                face_indices.append(len(old_faces) + i - 1)
             elif face_orientation == 1:
                 verts_of_face = [i3, i2, i1]
                 new_faces.append(verts_of_face)
-                face_indices.append(len(old_faces) + i)
+                face_indices.append(len(old_faces) + i - 1)
             else:
                 print("Broken face orientation", face_orientation)
 
