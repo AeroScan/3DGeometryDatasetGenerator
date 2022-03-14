@@ -129,7 +129,7 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ',
             curve = BRepAdaptor_Curve(edge)
             tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
 
-            features['curve'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve))
+            features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, params=None))
 
         for face in tqdm(topology.faces()):
             surface = BRepAdaptor_Surface(face, True)
