@@ -8,22 +8,17 @@ class Line(BaseCurveFeature):
     def primitiveType():
         return 'Line'
     
-    def __init__(self, shape, params=None):
-        super().__init__()
-        self.shape = shape.Line()
+    def __init__(self):
         self.location = None
         self.direction = None
-        self.fromShape()
 
-    def getLocation(self):
-        return gpXYZ2List(self.shape.Location())
-    
-    def getDirection(self):
-        return gpXYZ2List(self.shape.Direction())
+    def fromShape(self, shape):
+        shape = shape.Line()
+        self.location = gpXYZ2List(shape.Location())
+        self.direction = gpXYZ2List(shape.Direction())
 
-    def fromShape(self):
-        self.location = self.getLocation()
-        self.direction = self.getDirection()
+    def fromMesh(self, mesh):
+        super().fromMesh(mesh)
 
     def toDict(self):
         features = super().toDict()
@@ -32,8 +27,3 @@ class Line(BaseCurveFeature):
         features['direction'] = self.direction
 
         return features
-
-    def updateWithMeshParams(self, params):
-        super().fromDict(params)
-        
-        return True

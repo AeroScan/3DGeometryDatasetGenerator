@@ -17,9 +17,9 @@ class FeaturesFactory:
     def getPrimitiveObject(type, shape, params):
         type = type.lower()
         if type in FeaturesFactory.SURFACES_TYPES.keys(): 
-            return FeaturesFactory.SURFACES_TYPES[type](shape, params)
+            return FeaturesFactory.SURFACES_TYPES[type]()
         elif type in FeaturesFactory.CURVES_TYPES.keys():
-            return FeaturesFactory.CURVES_TYPES[type](shape, params)
+            return FeaturesFactory.CURVES_TYPES[type]()
         else:
             return None
 

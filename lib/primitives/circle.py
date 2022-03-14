@@ -8,35 +8,24 @@ class Circle(BaseCurveFeature):
     def primitiveType():
         return 'Circle'
     
-    def __init__(self, shape, params=None):
+    def __init__(self):
         super().__init__()
-        self.shape = shape.Circle()
         self.location = None
         self.x_axis = None
         self.y_axis = None
         self.z_axis = None
         self.radius = None
-        self.fromShape()
 
-    def getLocation(self):
-        return gpXYZ2List(self.shape.Location())
+    def fromShape(self, shape):
+        shape = shape.Circle()
+        self.location = gpXYZ2List(shape.Location())
+        self.x_axis = gpXYZ2List(shape.XAxis().Direction())
+        self.y_axis = gpXYZ2List(shape.YAxis().Direction())
+        self.z_axis = gpXYZ2List(shape.Axis().Direction())
+        self.radius = shape.Radius()
 
-    def getAxis(self):
-        x_axis = gpXYZ2List(self.shape.XAxis().Direction())
-        y_axis = gpXYZ2List(self.shape.YAxis().Direction())
-        z_axis = gpXYZ2List(self.shape.Axis().Direction())
-
-        return [x_axis, y_axis, z_axis]
-    
-    def getRadius(self):
-        return self.shape.Radius()
-
-    def fromShape(self):
-        self.location = self.getLocation()
-        self.x_axis = self.getAxis()[0]
-        self.y_axis = self.getAxis()[1]
-        self.z_axis = self.getAxis()[2]
-        self.radius = self.getRadius()
+    def fromMesh(self, mesh):
+        super().fromMesh(mesh)
 
     def toDict(self):
         features = super().toDict()
@@ -48,8 +37,3 @@ class Circle(BaseCurveFeature):
         features['radius'] = self.radius
 
         return features
-        
-    def updateWithMeshParams(self, params):
-        super().fromDict(params)
-        
-        return True

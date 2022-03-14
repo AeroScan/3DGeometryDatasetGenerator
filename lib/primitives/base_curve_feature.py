@@ -7,17 +7,15 @@ class BaseCurveFeature:
     }
 
     def __init__(self):
-        self.class_child = self.__class__.__name__
-        assert self.class_child in BaseCurveFeature.PRIMITIVES_PARAMS.keys()
         self.sharp = None
         self.vert_indices = None
         self.vert_parameters = None
         self.createBaseDict()
 
-    def fromDict(self, params):
+    def fromMesh(self, params):
         self.sharp = params['sharp'] if 'sharp' in params.keys() else 'true'
-        self.vert_indices = params['vert_indices']
-        self.vert_parameters = params['vert_parameters']
+        self.vert_indices = params['vert_indices'] if 'vert_indices' in params.keys() else []
+        self.vert_parameters = params['vert_parameters'] if 'vert_parameters' in params.keys() else []
 
     def toDict(self):
         features = {}
