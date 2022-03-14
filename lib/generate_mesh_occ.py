@@ -30,17 +30,6 @@ def findPointInListWithHashCode(point, points, hash_codes):
     return index, hc
 
 def computeNewVerticesAndFaces(face, mesh):
-    """ 
-    @params
-    face: Surface to process.
-    vert_index: Index of the next vertex. For the first surface vert_index is equal to FIRST_VERT_INDEX.
-    face_index: Index of the next face. For the first surface face_index is equal to FIRST_FACE_INDEX.
-
-    @returns
-    verts: Array of the vertices present in the surface.
-    faces: Array of the faces present in the surface.
-    face_index: Number to create the list of faces of the shape.
-    """
 
     assert 'vertices' in mesh.keys() and 'faces' in mesh.keys()
 
@@ -114,21 +103,6 @@ def computeNewVerticesAndFaces(face, mesh):
     return np.array(new_verts), np.array(new_faces), new_verts_hc, np.array(vert_indices), np.array(face_indices), np.array(uv_params)
 
 def registerFaceMeshInGlobalMesh(face, mesh):
-    """ 
-    @params
-    face: Surface to process.
-    meshes: Meshes' list of the shape. For the first face meshes is a empty list.
-    vert_init_of_face: Vertice indice for the face. For the first face vert_init_of_face is equal
-                       to FIRST_VERT_INDEX of the generateFeatureByDim function.
-    face_init_indice: Face indice for the list of indices. For the first face face_init_indice is
-                       to FIRST_FACE_INDEX of the generateFeatureByDim function.
-
-    @returns
-    meshes: List of meshes of already processed faces of the shape.
-    nbVerts: Number of vertices of mesh.
-    faces_indices: Dict of all faces of the shape.
-    last_face_index: Last indice of the face. Used for update the face_init_indice variable.
-    """
 
     new_verts, new_faces, new_hashcodes, vert_indices, face_indices, uv_params = computeNewVerticesAndFaces(face, mesh)
 
@@ -142,7 +116,9 @@ def registerFaceMeshInGlobalMesh(face, mesh):
         mesh['faces'] = np.concatenate((mesh['faces'], new_faces))
     if len(new_hashcodes) > 0:
         mesh['vertices_hashcode'].update(new_hashcodes)
-    
-    return mesh, vert_indices, face_indices, uv_params
+
+    mesh_params_of_the_face = {'vert_indices': vert_indices.tolist(), 'vert_parameters': uv_params.tolist(), 'face_indices': face_indices.tolist()}
+
+    return mesh, mesh_params_of_the_face
         
         
