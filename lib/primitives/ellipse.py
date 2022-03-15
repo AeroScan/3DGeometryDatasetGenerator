@@ -7,10 +7,13 @@ class Ellipse(BaseCurveFeature):
     @staticmethod
     def primitiveType():
         return 'Ellipse'
+
+    @staticmethod
+    def getPrimitiveParams():
+        return ['type', 'focus1', 'focus2', 'x_axis', 'y_axis', 'z_axis', 'x_radius', 'y_radius', 'sharp', 'vert_indices', 'vert_parameters']
     
-    def __init__(self, shape, params=None):
+    def __init__(self, shape = None, mesh: dict = None):
         super().__init__()
-        self.shape = shape.Ellipse()
         self.focus1 = None
         self.focus2 = None
         self.x_axis = None
@@ -18,29 +21,23 @@ class Ellipse(BaseCurveFeature):
         self.z_axis = None
         self.x_radius = None
         self.y_radius = None
-        self.fromShape()
+        if shape is not None:
+            self.fromShape(shape=shape)
+        if mesh is not None:
+            self.fromMesh(mesh=mesh)
 
-    def getFocus(self):
-        return [gpXYZ2List(self.shape.Focus1()), gpXYZ2List(self.shape.Focus2())]
+    def fromShape(self, shape):
+        shape = shape.Ellipse()
+        self.focus1 = gpXYZ2List(shape.Focus1())
+        self.focus2 = gpXYZ2List(shape.Focus2())
+        self.x_axis = gpXYZ2List(shape.XAxis().Direction())
+        self.y_axis = gpXYZ2List(shape.YAxis().Direction())
+        self.z_axis = gpXYZ2List(shape.Axis().Direction())
+        self.x_radius = shape.MajorRadius()
+        self.y_radius = shape.MinorRadius()
 
-    def getAxis(self):
-        x_axis = gpXYZ2List(self.shape.XAxis().Direction())
-        y_axis = gpXYZ2List(self.shape.YAxis().Direction())
-        z_axis = gpXYZ2List(self.shape.Axis().Direction())
-
-        return [x_axis, y_axis, z_axis]
-
-    def getRadius(self):
-        return [self.shape.MajorRadius(), self.shape.MinorRadius()]
-
-    def fromShape(self):
-        self.focus1 = self.getFocus()[0]
-        self.focus2 = self.getFocus()[1]
-        self.x_axis = self.getAxis()[0]
-        self.y_axis = self.getAxis()[1]
-        self.z_axis = self.getAxis()[2]
-        self.x_radius = self.getRadius()[0]
-        self.y_radius = self.getRadius()[1]
+    def fromMesh(self, mesh):
+        super().fromMesh(mesh)
 
     def toDict(self):
         features = super().toDict()
@@ -54,8 +51,3 @@ class Ellipse(BaseCurveFeature):
         features['y_radius'] = self.y_radius
 
         return features
-
-    def updateWithMeshParams(self, params):
-        super().fromDict(params)
-        
-        return True
