@@ -90,8 +90,8 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ',
     topology = TopologyExplorer(shape)
 
     if mesh_generator == 'occ':
-        mesh['vertices'] = np.array([])
-        mesh['faces'] = np.array([])
+        mesh['vertices'] = []
+        mesh['faces'] = []
         mesh['vertices_hashcode'] = {}
 
         linear_deflection = 0.01
@@ -142,6 +142,10 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ',
             else:
                 features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=None))
 
+    if mesh is not {}:
+        mesh['vertices'] = np.asarray(mesh['vertices'])
+        mesh['faces'] = np.asarray(mesh['faces'])
+
     return mesh
 
 # Main function
@@ -151,4 +155,5 @@ def processPythonOCC(input_name: str, mesh_generator, use_highest_dim=True, debu
     shape = read_step_file(input_name, verbosity=debug)
 
     mesh = generateFeatureByDim(shape, features, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim)
+    
     return shape, features, mesh
