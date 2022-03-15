@@ -142,8 +142,7 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ',
             else:
                 features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=None))
 
-    if mesh_generator == 'occ':
-        return mesh
+    return mesh
 
 # Main function
 def processPythonOCC(input_name: str, mesh_generator, use_highest_dim=True, debug=True) -> dict:
@@ -151,11 +150,5 @@ def processPythonOCC(input_name: str, mesh_generator, use_highest_dim=True, debu
 
     shape = read_step_file(input_name, verbosity=debug)
 
-    if mesh_generator == 'occ':
-        mesh = generateFeatureByDim(shape, features, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim)
-        return shape, features, mesh
-    elif mesh_generator == 'gmsh':
-        _ = generateFeatureByDim(shape, features, use_highest_dim=use_highest_dim)
-        return shape, features, None
-    else:
-        raise Exception('Mesh Generator not available')
+    mesh = generateFeatureByDim(shape, features, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim)
+    return shape, features, mesh
