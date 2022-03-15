@@ -7,8 +7,12 @@ class Ellipse(BaseCurveFeature):
     @staticmethod
     def primitiveType():
         return 'Ellipse'
+
+    @staticmethod
+    def getPrimitiveParams():
+        return ['type', 'focus1', 'focus2', 'x_axis', 'y_axis', 'z_axis', 'x_radius', 'y_radius', 'sharp', 'vert_indices', 'vert_parameters']
     
-    def __init__(self):
+    def __init__(self, shape = None, mesh: dict = None):
         super().__init__()
         self.focus1 = None
         self.focus2 = None
@@ -17,6 +21,10 @@ class Ellipse(BaseCurveFeature):
         self.z_axis = None
         self.x_radius = None
         self.y_radius = None
+        if shape is not None:
+            self.fromShape(shape=shape)
+        if mesh is not None:
+            self.fromMesh(mesh=mesh)
 
     def fromShape(self, shape):
         shape = shape.Ellipse()

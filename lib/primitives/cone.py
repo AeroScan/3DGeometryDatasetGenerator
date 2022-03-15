@@ -7,7 +7,11 @@ class Cone(BaseSurfaceFeature):
     def primitiveType():
         return 'Cone'
 
-    def __init__(self):
+    @staticmethod
+    def getPrimitiveParams():
+        return ['type', 'location', 'x_axis', 'y_axis', 'z_axis', 'coefficients', 'radius', 'angle', 'apex', 'vert_indices', 'vert_parameters', 'face_indices']
+
+    def __init__(self, shape = None, mesh: dict = None):
         super().__init__()
         self.location = None
         self.x_axis = None
@@ -17,6 +21,10 @@ class Cone(BaseSurfaceFeature):
         self.radius = None
         self.angle = None
         self.apex = None
+        if shape is not None:
+            self.fromShape(shape=shape)
+        if mesh is not None:
+            self.fromMesh(mesh=mesh)
 
     def fromShape(self, shape):
         shape = shape.Cone()

@@ -7,14 +7,22 @@ class Circle(BaseCurveFeature):
     @staticmethod
     def primitiveType():
         return 'Circle'
+
+    @staticmethod
+    def getPrimitiveParams():
+        return ['type', 'location', 'x_axis', 'y_axis', 'z_axis', 'radius', 'sharp', 'vert_indices', 'vert_parameters']
     
-    def __init__(self):
+    def __init__(self, shape = None, mesh: dict = None):
         super().__init__()
         self.location = None
         self.x_axis = None
         self.y_axis = None
         self.z_axis = None
         self.radius = None
+        if shape is not None:
+            self.fromShape(shape=shape)
+        if mesh is not None:
+            self.fromMesh(mesh=mesh)
 
     def fromShape(self, shape):
         shape = shape.Circle()

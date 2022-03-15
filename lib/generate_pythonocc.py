@@ -40,7 +40,8 @@ def processEdgesHighestDim(edges, features: dict, edges_dict={}, use_tqdm=False)
         curve = BRepAdaptor_Curve(edge)
         tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
 
-        features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, params=None))
+        # Change the mesh value to mesh_params when processing curves
+        features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, mesh={}))
 
         count += 1
     return count
@@ -72,9 +73,9 @@ def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, mesh=
         if mesh_generator == 'occ':
             mesh, mesh_params = registerFaceMeshInGlobalMesh(face, mesh)
             
-            features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=mesh_params))
+            features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=mesh_params))
         else:
-            features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=None))
+            features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=None))
 
         processEdgesHighestDim(topology.edges_from_face(face), features, edges_dict=edges_dict)
 
@@ -129,7 +130,8 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ',
             curve = BRepAdaptor_Curve(edge)
             tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
 
-            features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, params=None))
+            # Change the mesh value to mesh_params when processing curves
+            features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, mesh={}))
 
         for face in tqdm(topology.faces()):
             surface = BRepAdaptor_Surface(face, True)
@@ -138,9 +140,9 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ',
             if mesh_generator == 'occ':
                 mesh, mesh_params = registerFaceMeshInGlobalMesh(face, mesh)
                 
-                features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=mesh_params))
+                features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=mesh_params))
             else:
-                features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, params=None))
+                features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=None))
 
     return mesh
 

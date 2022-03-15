@@ -94,7 +94,7 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
                 if features['curves'][i] is not None:
                     feature = generateGMSHCurveFeature(dimension, tag)
                     
-                    FeaturesFactory.updatePrimitiveWithMeshParams(primitive=features['curves'][i], params=feature)
+                    FeaturesFactory.updatePrimitiveWithMeshParams(primitive=features['curves'][i], mesh=feature)
 
                     # features['curves'][i].update(feature)
         if dimension == 2:
@@ -104,17 +104,9 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
                 if features['surfaces'][i] is not None:
                     feature = generateGMSHSurfaceFeature(dimension, tag)
 
-                    FeaturesFactory.updatePrimitiveWithMeshParams(primitive=features['surfaces'][i], params=feature)
+                    FeaturesFactory.updatePrimitiveWithMeshParams(primitive=features['surfaces'][i], mesh=feature)
 
                     # features['surfaces'][i].update(feature)
-
-    for key in features.keys():
-        i = 0
-        while i < len(features[key]):
-            if features[key][i] is None:
-                features[key].pop(i)
-            else:
-                i = i + 1
 
 # Configure the GMSH
 def setupGMSH(mesh_size: float, use_debug=True):

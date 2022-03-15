@@ -9,7 +9,11 @@ class Sphere(BaseSurfaceFeature):
     def primitiveType():
         return 'Sphere'
 
-    def __init__(self):
+    @staticmethod
+    def getPrimitiveParams():
+        return ['type', 'location', 'x_axis', 'y_axis', 'z_axis', 'coefficients', 'radius', 'vert_indices', 'vert_parameters', 'face_indices']
+
+    def __init__(self, shape = None, mesh: dict = None):
         super().__init__()
         self.location = None
         self.x_axis = None
@@ -17,6 +21,10 @@ class Sphere(BaseSurfaceFeature):
         self.z_axis = None
         self.coefficients = None
         self.radius = None
+        if shape is not None:
+            self.fromShape(shape=shape)
+        if mesh is not None:
+            self.fromMesh(mesh=mesh)
 
     def getAxis(shape):
         x_axis = np.array(gpXYZ2List(shape.XAxis().Direction()))

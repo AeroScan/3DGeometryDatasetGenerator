@@ -7,8 +7,12 @@ class Plane(BaseSurfaceFeature):
     @staticmethod
     def primitiveType():
         return 'Plane'
+
+    @staticmethod
+    def getPrimitiveParams():
+        return ['type', 'location', 'normal', 'x_axis', 'y_axis', 'z_axis', 'coefficients', 'vert_indices', 'vert_parameters', 'face_indices']
     
-    def __init__(self):
+    def __init__(self, shape = None, mesh: dict = None):
         super().__init__()
         self.location = None
         self.x_axis = None
@@ -16,6 +20,10 @@ class Plane(BaseSurfaceFeature):
         self.z_axis = None
         self.coefficients = None
         self.normal = None
+        if shape is not None:
+            self.fromShape(shape=shape)
+        if mesh is not None:
+            self.fromMesh(mesh=mesh)
 
     def fromShape(self, shape):
         shape = shape.Plane()

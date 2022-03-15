@@ -8,7 +8,11 @@ class Cylinder(BaseSurfaceFeature):
     def primitiveType():
         return 'Cylinder'
 
-    def __init__(self):
+    @staticmethod
+    def getPrimitiveParams():
+        return ['type', 'location', 'x_axis', 'y_axis', 'z_axis', 'coefficients', 'radius', 'vert_indices', 'vert_parameters', 'face_indices']
+
+    def __init__(self, shape = None, mesh: dict = None):
         super().__init__()
         self.location = None
         self.x_axis = None
@@ -16,6 +20,10 @@ class Cylinder(BaseSurfaceFeature):
         self.z_axis = None
         self.coefficients = None
         self.radius = None
+        if shape is not None:
+            self.fromShape(shape=shape)
+        if mesh is not None:
+            self.fromMesh(mesh=mesh)
 
     def fromShape(self, shape):
         shape = shape.Cylinder()

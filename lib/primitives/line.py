@@ -7,10 +7,19 @@ class Line(BaseCurveFeature):
     @staticmethod
     def primitiveType():
         return 'Line'
+
+    @staticmethod
+    def getPrimitiveParams():
+        return ['type', 'location', 'direction', 'sharp', 'vert_indices', 'vert_parameters']
     
-    def __init__(self):
+    def __init__(self, shape = None, mesh: dict = None):
+        super().__init__()
         self.location = None
         self.direction = None
+        if shape is not None:
+            self.fromShape(shape=shape)
+        if mesh is not None:
+            self.fromMesh(mesh=mesh)
 
     def fromShape(self, shape):
         shape = shape.Line()
