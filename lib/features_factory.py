@@ -28,7 +28,18 @@ class FeaturesFactory:
         feature = primitive.toDict()
         return feature
 
-    def getListOfDictFromPrimitive(primitives: dict) -> dict:
+    def _removeNoneValuesOfDict(d: dict) -> dict:
+        for key in d.keys():
+            i = 0
+            while i < len(d[key]):
+                if d[key][i] is None:
+                    d[key].pop(i)
+                else:
+                    i = i + 1
+
+        return d
+
+    def getListOfDictFromPrimitive(self, primitives: dict) -> dict:
         for i in range(0, len(primitives['curves'])):
             if primitives['curves'][i] is not None:
                 primitives['curves'][i] = FeaturesFactory.getDictFromPrimitive(primitives['curves'][i])
@@ -41,13 +52,7 @@ class FeaturesFactory:
             'surfaces': primitives['surfaces']
         }
 
-        for key in features.keys():
-            i = 0
-            while i < len(features[key]):
-                if features[key][i] is None:
-                    features[key].pop(i)
-                else:
-                    i = i + 1
+        features = self._removeNoneValuesOfDict(d=features)
 
         return features
 
