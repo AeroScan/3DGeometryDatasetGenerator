@@ -14,6 +14,7 @@ class FeaturesFactory:
         'ellipse': Ellipse,
     }
     
+    @staticmethod
     def getPrimitiveObject(type, shape, mesh: dict):
         type = type.lower()
         if type in FeaturesFactory.SURFACES_TYPES.keys(): 
@@ -23,12 +24,14 @@ class FeaturesFactory:
         else:
             return None
 
+    @staticmethod
     def getDictFromPrimitive(primitive) -> dict:
         feature = {}
         feature = primitive.toDict()
         return feature
 
-    def _removeNoneValuesOfDict(d: dict) -> dict:
+    @staticmethod
+    def removeNoneValuesOfDict(d: dict) -> dict:
         for key in d.keys():
             i = 0
             while i < len(d[key]):
@@ -39,7 +42,8 @@ class FeaturesFactory:
 
         return d
 
-    def getListOfDictFromPrimitive(self, primitives: dict) -> dict:
+    @staticmethod
+    def getListOfDictFromPrimitive(primitives: dict) -> dict:
         for i in range(0, len(primitives['curves'])):
             if primitives['curves'][i] is not None:
                 primitives['curves'][i] = FeaturesFactory.getDictFromPrimitive(primitives['curves'][i])
@@ -52,10 +56,10 @@ class FeaturesFactory:
             'surfaces': primitives['surfaces']
         }
 
-        features = self._removeNoneValuesOfDict(d=features)
+        features = FeaturesFactory.removeNoneValuesOfDict(d=features)
 
         return features
 
+    @staticmethod
     def updatePrimitiveWithMeshParams(primitive, mesh: dict):
         return primitive.fromMesh(mesh)
-

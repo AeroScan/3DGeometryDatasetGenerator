@@ -26,7 +26,7 @@ class Sphere(BaseSurfaceFeature):
         if mesh is not None:
             self.fromMesh(mesh=mesh)
 
-    def getAxis(shape):
+    def getAxis(self, shape):
         x_axis = np.array(gpXYZ2List(shape.XAxis().Direction()))
         y_axis = np.array(gpXYZ2List(shape.YAxis().Direction()))
         z_axis = np.cross(x_axis, y_axis)
