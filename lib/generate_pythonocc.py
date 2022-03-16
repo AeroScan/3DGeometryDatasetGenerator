@@ -144,7 +144,7 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ',
             else:
                 features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=None))
 
-    if mesh is not {}:
+    if mesh_generator == 'occ':
         mesh['vertices'] = np.asarray(mesh['vertices'])
         mesh['faces'] = np.asarray(mesh['faces'])
 
