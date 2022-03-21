@@ -90,7 +90,7 @@ if __name__ == '__main__':
         print('\n[Generator] Processing file ' + file + '...')
         
         print('\n+-----------PythonOCC----------+')
-        shape, features, mesh = processPythonOCC(file, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim, debug=use_debug)
+        shape, features, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=='occ'), use_highest_dim=use_highest_dim, debug=use_debug)
 
         if mesh_generator == 'gmsh':
             print('\n+-------------GMSH-------------+')
