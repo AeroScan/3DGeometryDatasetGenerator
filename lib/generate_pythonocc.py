@@ -62,16 +62,37 @@ def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, mesh=
 
     return count
 
-def processHighestDim(faces, topology, features: dict, faces_dict={}, mesh={}, mesh_generator='occ', use_tqdm=False):
-    print('\n[PythonOCC] Using Highest Dim Only, trying with Solids...')
-    count_solids = 0
-    for solid in tqdm(topology.solids()):
-        processFacesHighestDim(topology.faces_from_solids(solid), topology, features, mesh=mesh, mesh_generator=mesh_generator, faces_dict=faces_dict)   
-        count_solids += 1
+def addFacesAndEdgesHighestDim(faces, topology, faces_dict, edges_dict):
+    for face in faces:
+        face_hc = face.HashCode(MAX_INT)
+        search_code = searchEntityByHashCode(face, face_hc, faces_dict)
+        if search_code == 2:
+            continue
+        else:
+            faces_dict = updateEntitiesDictBySearchCode(face, face_hc, search_code, faces_dict)
+            for edge in topology.edges_from_face(face):
+                edge_hc = edge.HashCode(MAX_INT)
+                search_code = searchEntityByHashCode(edge, edge_hc, edges_dict)
+                if search_code == 2:
+                    continue
+                else:
+                    edges_dict = updateEntitiesDictBySearchCode(edge, edge_hc, search_code, edges_dict)
+    return faces_dict, edges_dict
 
-    if count_solids == 0:
+def processHighestDim(topology, generate_mesh):
+    print('\n[PythonOCC] Using Highest Dim Only, trying with Solids...')
+    faces_dict = {}
+    edges_dict = {}
+
+    done = False
+    for solid in tqdm(topology.solids()):
+        faces_dict, edges_dict = addFacesAndEdgesHighestDim(topology.faces_from_solids(solid), topology, faces_dict, edges_dict)   
+        done = True
+
+    if not done:
         print('\n[PythonOCC] There are no Solids, using Faces as highest dim...')
-        count_faces = processFacesHighestDim(topology.faces(), topology, features, mesh=mesh, mesh_generator=mesh_generator, use_tqdm=True)
+        faces_dict, edges_dict = addFacesAndEdgesHighestDim(topology.faces(), topology, faces_dict, edges_dict)
+        
 
         if count_faces == 0:
             print('\n[PythonOCC] There are no Faces, using Curves as highest dim...')
@@ -168,20 +189,3 @@ def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, 
     features, mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
     
     return shape, features, mesh
-
-
-
-
-
-
-
-
-
-
-
-
-
-''''
-
-
-'''
