@@ -1,17 +1,13 @@
+from pyexpat import features
 from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
-from OCC.Core.BRep import BRep_Tool
-from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Extend.TopologyUtils import TopologyExplorer
 from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
-
-from functools import reduce
+from OCC.Core.IMeshTools import IMeshTools_Parameters
 from lib.features_factory import FeaturesFactory
-
-from lib.tools import gpXYZ2List
-from lib.generate_mesh_occ import registerFaceMeshInGlobalMesh
+from lib.generate_mesh_occ import registerEdgeMeshInGlobalMesh, registerFaceMeshInGlobalMesh
 from lib.TopologyUtils import TopologyExplorer
 
 from tqdm import tqdm
@@ -19,143 +15,175 @@ import numpy as np
 
 MAX_INT = 2**31 - 1
 
-def processEdgesHighestDim(edges, features: dict, edges_dict={}, use_tqdm=False):
-    count = 0
-    for edge in edges if not use_tqdm else tqdm(edges):
-        edge_hc = edge.HashCode(MAX_INT)
-        if edge_hc in edges_dict:
-            edges_list = edges_dict[edge_hc]
-            unique = True
-            for f in edges_list:
-                if edge.IsSame(f):
-                    unique = False
-                    break
-            if not unique:
-                continue
-            else:
-               edges_list.append(edge)  
-        else:
-            edges_dict[edge_hc] = [edge]
+def searchEntityByHashCode(entity, hash_code, dictionary):
+    search_code = 0 # 0: not_found; 1: not_found_but_hashcode_exists; 2: found
+    if hash_code in dictionary:
+        search_code = 1
+        entities_list = dictionary[hash_code]
+        for f in entities_list:
+            if entity.IsSame(f):
+                search_code = 2
+                break
+    return search_code
 
+def updateEntitiesDictBySearchCode(entity, hash_code, search_code, dictionary):
+    if search_code == 0:
+        dictionary[hash_code] = [entity]
+    elif search_code == 1:
+        dictionary[hash_code].append(entity) 
+    return dictionary
+
+def processEdgesAndFaces(edges, faces, topology, generate_mesh):
+    features = {}
+    features['curves'] = []
+    features['surfaces'] = []
+
+    mesh = {'vertices': [], 'faces': [], 'vertices_hcs': {}}
+    edges_data = {}
+
+    i = 0
+    for edge in tqdm(edges):
         curve = BRepAdaptor_Curve(edge)
         tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
 
-        # Change the mesh value to mesh_params when processing curves
-        features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, mesh={}))
-
-        count += 1
-    return count
-
-def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, mesh={}, mesh_generator='occ', use_tqdm=False):
-    edges_dict = {}
-    count = 0
-    
-    for face in faces if not use_tqdm else tqdm(faces):
-
-        face_hc = face.HashCode(MAX_INT)
-        if face_hc in faces_dict:
-            faces_list = faces_dict[face_hc]
-            unique = True
-            for f in faces_list:
-                if face.IsSame(f):
-                    unique = False
-                    break
-            if not unique:
-                continue
+        edge_mesh_data = {}
+        if generate_mesh:
+            hc = edge.HashCode(MAX_INT)
+            edge_mesh_data = registerEdgeMeshInGlobalMesh(edge, mesh)
+            edge_full_data = {'index': i, 'entity': edge, 'mesh_data': edge_mesh_data}
+            if hc in edges_data:
+                edges_data[hc].append(edge_full_data)
             else:
-                faces_list.append(face) 
-        else:
-            faces_dict[face_hc] = [face]
+                edges_data[hc] = [edge_full_data]
 
+        features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, mesh=edge_mesh_data))
+        i += 1
+
+    for face in tqdm(faces):
         surface = BRepAdaptor_Surface(face, True)
         tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
-        
-        if mesh_generator == 'occ':
-            mesh, mesh_params = registerFaceMeshInGlobalMesh(face, mesh)
-            
-            features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=mesh_params))
+
+        face_mesh_data = {}
+        if generate_mesh:
+            face_mesh_data, out_edges_data = registerFaceMeshInGlobalMesh(face, mesh, topology.edges_from_face(face), edges_data)    
+            for key in out_edges_data:
+                for i in range(len(out_edges_data[key])):
+                    edges_data[key][out_edges_data[key][i]['hc_list_index']]['mesh_data'] = out_edges_data[key][i]['mesh_data']
+                    if features['curves'][out_edges_data[key][i]['index']] is not None:
+                        features['curves'][out_edges_data[key][i]['index']].fromMesh(out_edges_data[key][i]['mesh_data'])
+
+        features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=face_mesh_data))
+
+    return features, mesh
+
+def addEdgesToDict(edges, edges_dict):
+    for edge in edges:
+        edge_hc = edge.HashCode(MAX_INT)
+        search_code = searchEntityByHashCode(edge, edge_hc, edges_dict)
+        if search_code == 2:
+            continue
         else:
-            features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=None))
+            edges_dict = updateEntitiesDictBySearchCode(edge, edge_hc, search_code, edges_dict)
+    return edges_dict
 
-        processEdgesHighestDim(topology.edges_from_face(face), features, edges_dict=edges_dict)
+def addFacesAndAssociatedEdgesToDict(faces, topology, faces_dict, edges_dict):
+    for face in faces:
+        face_hc = face.HashCode(MAX_INT)
+        search_code = searchEntityByHashCode(face, face_hc, faces_dict)
+        if search_code == 2:
+            continue
+        else:
+            edges_dict = addEdgesToDict(topology.edges_from_face(face), edges_dict)
+            faces_dict = updateEntitiesDictBySearchCode(face, face_hc, search_code, faces_dict)
+   
+    return faces_dict, edges_dict
 
-        count += 1
+def processHighestDim(topology, generate_mesh):
+    print('\n[PythonOCC] Using Highest Dim Only, trying with Solids...')
+    faces_dict = {}
+    edges_dict = {}
 
-    return count
+    done = False
+    for solid in tqdm(topology.solids()):
+        faces_dict, edges_dict = addFacesAndAssociatedEdgesToDict(topology.faces_from_solids(solid), topology, faces_dict, edges_dict)   
+        done = True
+
+    if not done:
+        print('\n[PythonOCC] There are no Solids, using Faces as highest dim...')
+        faces_dict, edges_dict = addFacesAndAssociatedEdgesToDict(topology.faces(), topology, faces_dict, edges_dict)
+        done = (faces_dict != {})
+
+        if not done == 0:
+            print('\n[PythonOCC] There are no Faces, using Curves as highest dim...')
+            edges_dict = addEdgesToDict(topology.edges(), edges_dict) 
+            done = (edges_dict != {})
+
+            if not done == 0:
+                print('\n[PythonOCC] There are no Entities to use...')
+
+    edges= []
+    for key in edges_dict:
+        edges += edges_dict[key]
+
+    faces = []
+    for key in faces_dict:
+        faces += faces_dict[key]
+
+    features, mesh = processEdgesAndFaces(edges, faces, topology, generate_mesh)
+
+    return features, mesh
+    
+
+def processNoHighestDim(topology, generate_mesh):
+    print('\n[PythonOCC] Using all the Shapes')
+
+    edges = [e for e in topology.edges()]
+    faces = [f for f in topology.faces()]
+
+    features, mesh = processEdgesAndFaces(edges, faces, topology, generate_mesh)
+
+    return features, mesh
 
 # Generate features by dimensions
-def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ', use_highest_dim=True):
+def process(shape, generate_mesh=True, use_highest_dim=True):
     print('\n[PythonOCC] Topology Exploration to Generate Features by Dimension')
-    features['curves'] = []
-    features['surfaces'] = []
+
     topology = TopologyExplorer(shape)
 
-    if mesh_generator == 'occ':
+    if generate_mesh:
+        print('\n[PythonOCC] Mesh Generation')
+        mesh = {}
         mesh['vertices'] = []
         mesh['faces'] = []
-        mesh['vertices_hashcode'] = {}
 
-        linear_deflection = 0.01
-        isRelative = True
-        angular_deflection = 0.1
-        isInParallel = True
+        parameters = IMeshTools_Parameters()
 
-        brep_mesh = BRepMesh_IncrementalMesh(shape, linear_deflection, isRelative, angular_deflection, isInParallel)
-        brep_mesh.SetShape(shape)
+        #Ref: https://dev.opencascade.org/doc/refman/html/struct_i_mesh_tools___parameters.html#a3027dc569da3d3e3fcd76e0615befb27
+        parameters.MeshAlgo = -1
+        parameters.Angle = 0.1
+        parameters.Deflection = 0.01
+        # parameters.MinSize = 0.1
+        parameters.Relative = True
+        parameters.InParallel = True
+
+        brep_mesh = BRepMesh_IncrementalMesh(shape, parameters)
         brep_mesh.Perform()
         assert brep_mesh.IsDone()
     
     if use_highest_dim:
-        print('\n[PythonOCC] Using Highest Dim Only, trying with Solids...')
-        faces_dict = {}
-        count_solids = 0
-        for solid in tqdm(topology.solids()):
-            processFacesHighestDim(topology.faces_from_solids(solid), topology, features, mesh=mesh, mesh_generator=mesh_generator, faces_dict=faces_dict)   
-            count_solids += 1
-
-        if count_solids == 0:
-            print('\n[PythonOCC] There are no Solids, using Faces as highest dim...')
-            count_faces = processFacesHighestDim(topology.faces(), topology, features, mesh=mesh, mesh_generator=mesh_generator, use_tqdm=True)
-
-            if count_faces == 0:
-                print('\n[PythonOCC] There are no Faces, using Curves as highest dim...')
-                count_edges = processFacesHighestDim(topology.edges(), features, mesh_generator=mesh_generator, use_tqdm=True) 
-
-                if count_edges == 0:
-                    print('\n[PythonOCC] There are no Curves to use...')
-
+        features, mesh = processHighestDim(topology, generate_mesh)
     else:
-        print('\n[PythonOCC] Using all the Shapes')
-        for edge in tqdm(topology.edges()):
-            curve = BRepAdaptor_Curve(edge)
-            tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
+        features, mesh = processNoHighestDim(topology, generate_mesh)
 
-            # Change the mesh value to mesh_params when processing curves
-            features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, mesh={}))
-
-        for face in tqdm(topology.faces()):
-            surface = BRepAdaptor_Surface(face, True)
-            tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
-
-            if mesh_generator == 'occ':
-                mesh, mesh_params = registerFaceMeshInGlobalMesh(face, mesh)
-                
-                features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=mesh_params))
-            else:
-                features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=None))
-
-    if mesh_generator == 'occ':
+    if mesh != {}:
         mesh['vertices'] = np.asarray(mesh['vertices'])
         mesh['faces'] = np.asarray(mesh['faces'])
+    
+    return features, mesh
 
-    return mesh
-
-# Main function
-def processPythonOCC(input_name: str, mesh_generator, use_highest_dim=True, debug=True) -> dict:
-    features = {}
-
+def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, debug=True) -> dict:
     shape = read_step_file(input_name, verbosity=debug)
 
-    mesh = generateFeatureByDim(shape, features, mesh_generator=mesh_generator, use_highest_dim=use_highest_dim)
+    features, mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
     
     return shape, features, mesh
