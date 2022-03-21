@@ -90,8 +90,8 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
                     edge = edge_data['entity']
                     if face_edge.IsSame(edge):
                         found_edge = True
-                        l = TopLoc_Location()
-                        poly_on_triang = brep_tool.PolygonOnTriangulation(face_edge, brep_mesh, l)
+                        #l = TopLoc_Location()
+                        poly_on_triang = brep_tool.PolygonOnTriangulation(face_edge, brep_mesh, location)
                         if poly_on_triang is not None:
                             poly_nodes = list(poly_on_triang.Nodes())
                             edge_index = edge_data['index']
@@ -99,8 +99,7 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
 
                             if edge_mesh_data == {}:
                                 edge_vert_indices = copy(poly_nodes)
-                                #how-to do params?
-                                edge_vert_parameters = []
+                                edge_vert_parameters = list(poly_on_triang.Parameters())
                                 out_edges_mesh_data = {'vert_indices': edge_vert_indices, 'vert_parameters': edge_vert_parameters}
                                 out_edge_data = {'index': edge_index, 'hc_list_index': i, 'mesh_data': out_edges_mesh_data}
                                 if hc in out_edges_data:

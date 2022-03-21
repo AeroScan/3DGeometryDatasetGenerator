@@ -150,23 +150,15 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
         brep_mesh.Perform()
         assert brep_mesh.IsDone()
     
-        if use_highest_dim:
-            pass
-            #features, mesh = processHighestDim(topology, generate_mesh)
-        else:
-            features, mesh = processNoHighestDim(topology, generate_mesh)
-
-        if mesh is not {}:
-            mesh['vertices'] = np.asarray(mesh['vertices'])
-            mesh['faces'] = np.asarray(mesh['faces'])
-
+    if use_highest_dim:
+        pass
+        #features, mesh = processHighestDim(topology, generate_mesh)
     else:
-        if use_highest_dim:
-            pass
-            #features, mesh = processHighestDim(topology, generate_mesh)
-        else:
-            features, mesh = processNoHighestDim(topology, generate_mesh)
+        features, mesh = processNoHighestDim(topology, generate_mesh)
 
+    if mesh != {}:
+        mesh['vertices'] = np.asarray(mesh['vertices'])
+        mesh['faces'] = np.asarray(mesh['faces'])
     
     return features, mesh
 
