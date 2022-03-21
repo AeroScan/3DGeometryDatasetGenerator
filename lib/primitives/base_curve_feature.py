@@ -7,7 +7,7 @@ class BaseCurveFeature:
         self.vert_parameters = None
 
     def fromMesh(self, mesh: dict) -> None:
-        self.sharp = mesh['sharp'] if 'sharp' in mesh.keys() else 'true'
+        self.sharp = mesh['sharp'] if 'sharp' in mesh.keys() else True
         self.vert_indices = mesh['vert_indices'] if 'vert_indices' in mesh.keys() else []
         self.vert_parameters = mesh['vert_parameters'] if 'vert_parameters' in mesh.keys() else []
 
