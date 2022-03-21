@@ -74,7 +74,8 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
 
     face_mesh_data = {}
     out_edges_data = {}
-    if brep_mesh != None:
+    
+    if brep_mesh is not None:
         verts = mesh['vertices']  
 
         vert_parameters = []
@@ -147,6 +148,8 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
             i1 = vert_indices[i1 - 1]
             i2 = vert_indices[i2 - 1]
             i3 = vert_indices[i3 - 1]
+            # if i1 == i2 or i2 == i3 or i1 == i3:
+            #     print(f'WARNING: face {len(faces)} has two vertices with the same index.')
             if face_orientation == 0:
                 verts_of_face = np.array([i1 , i2, i3])
                 faces.append(verts_of_face)
