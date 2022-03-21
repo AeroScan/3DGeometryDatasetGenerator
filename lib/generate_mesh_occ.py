@@ -47,7 +47,7 @@ def registerFaceMeshInGlobalMesh(face, mesh):
     uv_params = []
     vert_indices = []
 
-    if brep_mesh != None:
+    if brep_mesh is not None:
         number_vertices = brep_mesh.NbNodes()
 
         for i in range(1, number_vertices + 1):
@@ -85,6 +85,8 @@ def registerFaceMeshInGlobalMesh(face, mesh):
             i1 = vert_indices[i1 - 1]
             i2 = vert_indices[i2 - 1]
             i3 = vert_indices[i3 - 1]
+            # if i1 == i2 or i2 == i3 or i1 == i3:
+            #     print(f'WARNING: face {len(faces)} has two vertices with the same index.')
             if face_orientation == 0:
                 verts_of_face = np.array([i1 , i2, i3])
                 faces.append(verts_of_face)
@@ -96,8 +98,11 @@ def registerFaceMeshInGlobalMesh(face, mesh):
             else:
                 print("Broken face orientation", face_orientation)
 
-    mesh_params_of_the_face = {'vert_indices': vert_indices, 'vert_parameters': uv_params, 'face_indices': face_indices}
+        mesh_params_of_the_face = {'vert_indices': vert_indices, 'vert_parameters': uv_params, 'face_indices': face_indices}
 
-    return mesh, mesh_params_of_the_face
+        return mesh, mesh_params_of_the_face
         
+    else:
+        print('Could not generate mesh for surface')
+        return None
         

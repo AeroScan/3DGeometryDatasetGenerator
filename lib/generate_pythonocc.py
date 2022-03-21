@@ -71,8 +71,10 @@ def processFacesHighestDim(faces, topology, features: dict, faces_dict={}, mesh=
         tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
         
         if mesh_generator == 'occ':
-            mesh, mesh_params = registerFaceMeshInGlobalMesh(face, mesh)
-            
+            result = registerFaceMeshInGlobalMesh(face, mesh)
+            if result is None:
+                continue
+            mesh, mesh_params = result
             features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=mesh_params))
         else:
             features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=None))
@@ -101,7 +103,6 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ',
         isInParallel = True
 
         brep_mesh = BRepMesh_IncrementalMesh(shape, linear_deflection, isRelative, angular_deflection, isInParallel)
-        brep_mesh.SetShape(shape)
         brep_mesh.Perform()
         assert brep_mesh.IsDone()
     
@@ -138,8 +139,11 @@ def generateFeatureByDim(shape, features: dict, mesh = {}, mesh_generator='occ',
             tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
 
             if mesh_generator == 'occ':
-                mesh, mesh_params = registerFaceMeshInGlobalMesh(face, mesh)
-                
+                result = registerFaceMeshInGlobalMesh(face, mesh)
+                if result is None:
+                    continue
+                mesh, mesh_params = result
+
                 features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=mesh_params))
             else:
                 features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=None))
