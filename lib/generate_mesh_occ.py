@@ -91,7 +91,6 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
                     edge = edge_data['entity']
                     if face_edge.IsSame(edge):
                         found_edge = True
-                        #l = TopLoc_Location()
                         poly_on_triang = brep_tool.PolygonOnTriangulation(face_edge, brep_mesh, location)
                         if poly_on_triang is not None:
                             poly_nodes = list(poly_on_triang.Nodes())

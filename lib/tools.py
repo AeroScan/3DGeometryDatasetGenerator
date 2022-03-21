@@ -4,27 +4,6 @@ import json
 import yaml
 import igl
 
-def searchEntityByHashCode(entity, hash_code, dictionary, compare_func=None):
-    compare_func = entity.IsSame if compare_func is None else compare_func
-    search_code = 0 # 0: not_found; 1: not_found_but_hashcode_exists; 2: found
-    if hash_code in dictionary:
-        entities_list = dictionary[hash_code]
-        unique = True
-        for f in entities_list:
-            if compare_func(f):
-                search_code = 2
-                break
-        if not unique:
-            search_code = 1
-    return search_code
-
-def updateEntitiesDictBySearchCode(entity, hash_code, search_code, dictionary):
-    if search_code == 0:
-        dictionary[hash_code] = [entity]
-    elif search_code == 1:
-        dictionary[hash_code].append(entity) 
-    return dictionary
-
 # Convert a float to string
 def float2str(number, limit = 10) -> str:
     if abs(number) >= 10**limit:
