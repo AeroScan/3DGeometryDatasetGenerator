@@ -96,37 +96,50 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
                             if 'vert_parameters' not in edge_data['mesh_data']:
                                 edge_data['mesh_data']['vert_parameters'] = []
 
-                            poly_nodes = np.array(poly_on_triang.Nodes(), dtype=np.int64) - 1
-                            poly_parmeters = np.array(poly_on_triang.Parameters())
+                            poly_nodes = list(poly_on_triang.Nodes())
+                            poly_parmeters = list(poly_on_triang.Parameters())
 
-                            vert_indices_curr = np.array(edge_data['mesh_data']['vert_indices'], dtype=np.int64)
-                            vert_parameters_curr = np.array(edge_data['mesh_data']['vert_parameters'])
-                            
-                            verts_info = [[vert_parameters_curr[i], vert_indices_curr[i], -1] for i in range(len(vert_indices_curr))]
-                            
-                            for i in range(len(poly_nodes)):
-                                find_param = np.where(vert_parameters_curr == poly_parmeters[i])[0]
-                                if len(find_param) > 0:
-                                    find_param = find_param[0]
-                                    verts_info[find_param][2] = poly_nodes[i]
-                                    vert_indices[poly_nodes[i]] = vert_indices_curr[find_param]
-                                else:
-                                    verts_info.append([poly_parmeters[i], -1, poly_nodes[i]])
+                            vert_indices_curr = edge_data['mesh_data']['vert_indices']
+                            vert_parameters_curr = edge_data['mesh_data']['vert_parameters']
 
-                            verts_info = sorted(verts_info)
-
-                            vert_indices_curr = np.zeros(len(verts_info), dtype=np.int64)
-                            vert_local_indices_curr = np.zeros(len(verts_info), dtype=np.int64)
-                            vert_parameters_curr = np.zeros(len(verts_info))
-
+                            vert_indices_curr_final = []
+                            vert_local_indices_curr_final = []
+                            vert_parameters_curr_final = []
+                                                        
                             i = 0
-                            for v_param, v_index, v_local_index in verts_info:
-                                vert_parameters_curr[i] = v_param
-                                vert_indices_curr[i] = v_index
-                                vert_local_indices_curr[i] = v_local_index
+                            j = 0
+                            while i < len(poly_nodes) and j < len(vert_indices_curr):
+                                if poly_parmeters[i] == vert_parameters_curr[j]:
+                                    vert_indices_curr_final.append(vert_indices_curr[j])
+                                    vert_local_indices_curr_final.append(-1)
+                                    vert_parameters_curr_final.append(poly_parmeters[i])
+                                    vert_indices[poly_nodes[i] - 1] = vert_indices_curr[j]
+                                    j += 1
+                                    i += 1
+                                elif poly_parmeters[i] > vert_parameters_curr[j]:
+                                    vert_indices_curr_final.append(vert_indices_curr[j])
+                                    vert_local_indices_curr_final.append(-1)
+                                    vert_parameters_curr_final.append(vert_parameters_curr[j])
+                                    j += 1
+                                else:
+                                    vert_indices_curr_final.append(-1)
+                                    vert_local_indices_curr_final.append(poly_nodes[i] - 1)
+                                    vert_parameters_curr_final.append(poly_parmeters[i])
+                                    i += 1
+                            
+                            while i < len(poly_nodes):
+                                vert_indices_curr_final.append(-1)
+                                vert_local_indices_curr_final.append(poly_nodes[i] - 1)
+                                vert_parameters_curr_final.append(poly_parmeters[i])
                                 i += 1
-
-                            new_edge_mesh_data = {'vert_indices': vert_indices_curr.tolist(), 'vert_local_indices': vert_local_indices_curr.tolist(), 'vert_parameters': vert_parameters_curr.tolist()}
+                            
+                            while j < len(vert_indices_curr):
+                                vert_indices_curr_final.append(vert_indices_curr[j])
+                                vert_local_indices_curr_final.append(-1)
+                                vert_parameters_curr_final.append(vert_parameters_curr[j])
+                                j += 1
+                                
+                            new_edge_mesh_data = {'vert_indices': vert_indices_curr_final, 'vert_local_indices': vert_local_indices_curr_final, 'vert_parameters': vert_parameters_curr_final}
 
                             edges_data[hc][ind]['mesh_data'] = new_edge_mesh_data
 
