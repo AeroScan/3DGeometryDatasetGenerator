@@ -73,8 +73,7 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
     transform = location.Transformation()
 
     face_mesh_data = {}
-    out_edges_data = {}
-    
+    modified_edges_data = []
     if brep_mesh is not None:
         verts = mesh['vertices']  
 
@@ -87,30 +86,51 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
 
             if hc in edges_data:
                 found_edge = False
-                for i, edge_data in enumerate(edges_data[hc]):
-                    edge = edge_data['entity']
-                    if face_edge.IsSame(edge):
+                for ind, edge_data in enumerate(edges_data[hc]):
+                    if face_edge.IsSame(edge_data['entity']):
                         found_edge = True
                         poly_on_triang = brep_tool.PolygonOnTriangulation(face_edge, brep_mesh, location)
                         if poly_on_triang is not None:
-                            poly_nodes = list(poly_on_triang.Nodes())
-                            edge_index = edge_data['index']
-                            edge_mesh_data = edge_data['mesh_data']
+                            if 'vert_indices' not in edge_data['mesh_data']:
+                                edge_data['mesh_data']['vert_indices'] = []
+                            if 'vert_parameters' not in edge_data['mesh_data']:
+                                edge_data['mesh_data']['vert_parameters'] = []
 
-                            if edge_mesh_data == {}:
-                                edge_vert_indices = copy(poly_nodes)
-                                edge_vert_parameters = list(poly_on_triang.Parameters())
-                                out_edges_mesh_data = {'vert_indices': edge_vert_indices, 'vert_parameters': edge_vert_parameters}
-                                out_edge_data = {'index': edge_index, 'hc_list_index': i, 'mesh_data': out_edges_mesh_data}
-                                if hc in out_edges_data:
-                                    out_edges_data[hc].append(out_edge_data)
+                            poly_nodes = np.array(poly_on_triang.Nodes(), dtype=np.int64) - 1
+                            poly_parmeters = np.array(poly_on_triang.Parameters())
+
+                            vert_indices_curr = np.array(edge_data['mesh_data']['vert_indices'], dtype=np.int64)
+                            vert_parameters_curr = np.array(edge_data['mesh_data']['vert_parameters'])
+                            
+                            verts_info = [[vert_parameters_curr[i], vert_indices_curr[i], -1] for i in range(len(vert_indices_curr))]
+                            
+                            for i in range(len(poly_nodes)):
+                                find_param = np.where(vert_parameters_curr == poly_parmeters[i])[0]
+                                if len(find_param) > 0:
+                                    find_param = find_param[0]
+                                    verts_info[find_param][2] = poly_nodes[i]
+                                    vert_indices[poly_nodes[i]] = vert_indices_curr[find_param]
                                 else:
-                                    out_edges_data[hc] = [out_edge_data]
-                            else:
-                                poly_nodes_arr = np.array(poly_nodes, dtype=np.int64) - 1
-                                edge_vert_indices_arr = np.array(edge_mesh_data['vert_indices'], dtype=np.int64)
-                                assert len(poly_nodes_arr) == len(edge_vert_indices_arr)
-                                vert_indices[poly_nodes_arr] = edge_vert_indices_arr   
+                                    verts_info.append([poly_parmeters[i], -1, poly_nodes[i]])
+
+                            verts_info = sorted(verts_info)
+
+                            vert_indices_curr = np.zeros(len(verts_info), dtype=np.int64)
+                            vert_local_indices_curr = np.zeros(len(verts_info), dtype=np.int64)
+                            vert_parameters_curr = np.zeros(len(verts_info))
+
+                            i = 0
+                            for v_param, v_index, v_local_index in verts_info:
+                                vert_parameters_curr[i] = v_param
+                                vert_indices_curr[i] = v_index
+                                vert_local_indices_curr[i] = v_local_index
+                                i += 1
+
+                            new_edge_mesh_data = {'vert_indices': vert_indices_curr.tolist(), 'vert_local_indices': vert_local_indices_curr.tolist(), 'vert_parameters': vert_parameters_curr.tolist()}
+
+                            edges_data[hc][ind]['mesh_data'] = new_edge_mesh_data
+
+                            modified_edges_data.append((hc, ind))
                         else:
                             print('ERROR: none polygon on triangulation.')
                         break
@@ -119,7 +139,7 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
             else:
                 print('ERROR: some edge has not been computed before. (HashCode Error)')
 
-        face
+        
         for i in range(1, number_vertices + 1):
             pnt = brep_mesh.Node(i)
             pnt.Transform(transform)
@@ -132,11 +152,11 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
             uv_node = brep_mesh.UVNode(i)
             vert_parameters.append(list(uv_node.Coord()))
         
-        for key in out_edges_data:
-            for i in range(len(out_edges_data[key])):
-                out_edges_data[key][i]['mesh_data']['vert_indices'] = [int(vert_indices[j - 1]) for j in out_edges_data[key][i]['mesh_data']['vert_indices']]
-
-        vert_indices = vert_indices.tolist()
+        for hc, ind in modified_edges_data:
+            for i in range(len(edges_data[hc][ind]['mesh_data']['vert_indices'])):
+                if edges_data[hc][ind]['mesh_data']['vert_indices'][i] == -1:
+                    edges_data[hc][ind]['mesh_data']['vert_indices'][i] = int(vert_indices[edges_data[hc][ind]['mesh_data']['vert_local_indices'][i]])
+            edges_data[hc][ind]['mesh_data'].pop('vert_local_indices')
 
         faces = mesh['faces']           
         face_indices = []
@@ -147,8 +167,6 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
             i1 = vert_indices[i1 - 1]
             i2 = vert_indices[i2 - 1]
             i3 = vert_indices[i3 - 1]
-            # if i1 == i2 or i2 == i3 or i1 == i3:
-            #     print(f'WARNING: face {len(faces)} has two vertices with the same index.')
             if face_orientation == 0:
                 verts_of_face = np.array([i1 , i2, i3])
                 faces.append(verts_of_face)
@@ -160,6 +178,6 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
             else:
                 print("Broken face orientation", face_orientation)
 
-            face_mesh_data = {'vert_indices': vert_indices, 'vert_parameters': vert_parameters, 'face_indices': face_indices}
+            face_mesh_data = {'vert_indices': vert_indices.tolist(), 'vert_parameters': vert_parameters, 'face_indices': face_indices}
 
-    return face_mesh_data, out_edges_data
+    return face_mesh_data, edges_data

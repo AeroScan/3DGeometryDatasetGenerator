@@ -46,7 +46,6 @@ def processEdgesAndFaces(edges, faces, topology, generate_mesh):
         curve = BRepAdaptor_Curve(edge)
         tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
 
-        edge_mesh_data = {}
         if generate_mesh:
             hc = edge.HashCode(MAX_INT)
             edge_mesh_data = registerEdgeMeshInGlobalMesh(edge, mesh)
@@ -56,7 +55,7 @@ def processEdgesAndFaces(edges, faces, topology, generate_mesh):
             else:
                 edges_data[hc] = [edge_full_data]
 
-        features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, mesh=edge_mesh_data))
+        features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, mesh={}))
         i += 1
 
     for face in tqdm(faces):
@@ -65,14 +64,14 @@ def processEdgesAndFaces(edges, faces, topology, generate_mesh):
 
         face_mesh_data = {}
         if generate_mesh:
-            face_mesh_data, out_edges_data = registerFaceMeshInGlobalMesh(face, mesh, topology.edges_from_face(face), edges_data)    
-            for key in out_edges_data:
-                for i in range(len(out_edges_data[key])):
-                    edges_data[key][out_edges_data[key][i]['hc_list_index']]['mesh_data'] = out_edges_data[key][i]['mesh_data']
-                    if features['curves'][out_edges_data[key][i]['index']] is not None:
-                        features['curves'][out_edges_data[key][i]['index']].fromMesh(out_edges_data[key][i]['mesh_data'])
+            face_mesh_data, edges_data = registerFaceMeshInGlobalMesh(face, mesh, topology.edges_from_face(face), edges_data)    
 
         features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=face_mesh_data))
+
+    for key in edges_data:
+        for i in range(len(edges_data[key])):
+            if features['curves'][edges_data[key][i]['index']] is not None:
+                features['curves'][edges_data[key][i]['index']].fromMesh(edges_data[key][i]['mesh_data'])
 
     return features, mesh
 
