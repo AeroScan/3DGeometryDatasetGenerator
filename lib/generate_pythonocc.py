@@ -70,8 +70,9 @@ def processEdgesAndFaces(edges, faces, topology, generate_mesh):
 
     for key in edges_data:
         for i in range(len(edges_data[key])):
-            if features['curves'][edges_data[key][i]['index']] is not None:
-                features['curves'][edges_data[key][i]['index']].fromMesh(edges_data[key][i]['mesh_data'])
+            curve = features['curves'][edges_data[key][i]['index']]
+            if curve is not None:
+                curve.fromMesh(edges_data[key][i]['mesh_data'])
 
     return features, mesh
 

@@ -139,7 +139,7 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
                                 vert_parameters_curr_final.append(vert_parameters_curr[j])
                                 j += 1
                                 
-                            new_edge_mesh_data = {'vert_indices': vert_indices_curr_final, 'vert_local_indices': vert_local_indices_curr_final, 'vert_parameters': vert_parameters_curr_final}
+                            new_edge_mesh_data = {'vert_indices': np.asarray(vert_indices_curr_final), 'vert_local_indices': np.asarray(vert_local_indices_curr_final), 'vert_parameters': vert_parameters_curr_final}
 
                             edges_data[hc][ind]['mesh_data'] = new_edge_mesh_data
 
@@ -166,9 +166,10 @@ def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
             vert_parameters.append(list(uv_node.Coord()))
         
         for hc, ind in modified_edges_data:
-            for i in range(len(edges_data[hc][ind]['mesh_data']['vert_indices'])):
-                if edges_data[hc][ind]['mesh_data']['vert_indices'][i] == -1:
-                    edges_data[hc][ind]['mesh_data']['vert_indices'][i] = int(vert_indices[edges_data[hc][ind]['mesh_data']['vert_local_indices'][i]])
+            mesh_data = edges_data[hc][ind]['mesh_data']
+            mask = (mesh_data['vert_indices'] == -1)
+            mesh_data['vert_indices'][mask] = vert_indices[mesh_data['vert_local_indices'][mask]]
+            mesh_data['vert_indices'] = mesh_data['vert_indices'].tolist()
             edges_data[hc][ind]['mesh_data'].pop('vert_local_indices')
 
         faces = mesh['faces']           
