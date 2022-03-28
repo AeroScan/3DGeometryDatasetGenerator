@@ -9,8 +9,6 @@ from OCC.Core.STEPConstruct import STEPConstruct_PointHasher
 from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
 from OCC.Core.IMeshTools import IMeshTools_Parameters
 
-from sortedcontainers import SortedSet
-
 from tqdm import tqdm
 
 MAX_INT = 2**31 - 1
