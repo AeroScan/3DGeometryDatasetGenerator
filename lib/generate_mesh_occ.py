@@ -47,7 +47,7 @@ def computeMeshData(edges, faces, topology):
     edges_mesh_data = []
     edges_map = {}
     print('\n[PythonOCC] Mapping Edges...')
-    for i, edge in tqdm(enumerate(edges)):
+    for i, edge in enumerate(tqdm(edges)):
         edges_mesh_data.append({'vert_indices': [], 'vert_parameters': []})
         addEntityToMap(i, edge, edges_map)
 
@@ -55,7 +55,7 @@ def computeMeshData(edges, faces, topology):
     face_edges_map = []
     faces_map = {}
     print('\n[PythonOCC] Mapping Faces...')
-    for i, face in tqdm(enumerate(faces)):
+    for i, face in enumerate(tqdm(faces)):
         faces_mesh_data.append(None)
         addEntityToMap(i, face, faces_map)
         edges_indices = [searchEntityInMap(edge, edges_map) for edge in topology.edges_from_face(face)]
@@ -64,7 +64,7 @@ def computeMeshData(edges, faces, topology):
     mesh_vertices = []
     mesh_faces = []
     print('\n[PythonOCC] Generating Mesh Data...')
-    for face_index, face in tqdm(enumerate(faces)):     
+    for face_index, face in enumerate(tqdm(faces)):     
         face_orientation = face.Orientation()
 
         brep_tool = BRep_Tool()
