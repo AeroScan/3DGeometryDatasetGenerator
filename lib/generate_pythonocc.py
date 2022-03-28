@@ -36,24 +36,25 @@ def processEdgesAndFaces(edges, faces, topology, generate_mesh):
     features['curves'] = []
     features['surfaces'] = []
 
-    mesh = {'vertices': [], 'faces': [], 'vertices_hcs': {}}
-    edges_data = {}
+    mesh = {}
+    edges_mesh_data = [{} for x in edges]
+    faces_mesh_data = [{} for x in edges]
 
     if generate_mesh:
-        computeMeshData(edges, faces, topology)
-
+        mesh['vertices'], mesh['faces'], edges_mesh_data, faces_mesh_data  = computeMeshData(edges, faces, topology)
+    
     print('\n[PythonOCC] Generating Features...')
-    for edge in tqdm(edges):
+    for i, edge in tqdm(enumerate(edges)):
         curve = BRepAdaptor_Curve(edge)
         tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
 
-        features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, mesh={}))
+        features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, mesh=edges_mesh_data[i]))
 
-    for face in tqdm(faces):
+    for i, face in tqdm(enumerate(faces)):
         surface = BRepAdaptor_Surface(face, True)
         tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
 
-        features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh={}))
+        features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=faces_mesh_data[i]))
 
     return features, mesh
 
