@@ -11,6 +11,8 @@ from pathlib import Path
 
 from termcolor import colored
 
+import gc
+
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.OBJ', '.obj']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
@@ -126,6 +128,10 @@ if __name__ == '__main__':
         features_name = os.path.join(features_folder_dir, output_name)
         writeFeatures(features_name=features_name, features=features, tp=features_file_type)
         print('\n[Generator] Process done.')
+
+        del features
+        del mesh
+        gc.collect()
 
     time_finish = time.time()
     
