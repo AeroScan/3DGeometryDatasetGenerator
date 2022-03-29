@@ -3,6 +3,7 @@ from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.features_factory import FeaturesFactory
 
+import shutil
 import os
 import time
 import argparse
@@ -10,23 +11,27 @@ from pathlib import Path
 
 from termcolor import colored
 
-INPUT_FORMATS = ['.step', '.stp', '.STEP']
+import gc
+
+CAD_FORMATS = ['.step', '.stp', '.STEP']
+MESH_FORMATS = ['.OBJ', '.obj']
+FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
 
 POSSIBLE_MESH_GENERATORS = ['occ' , 'gmsh']
 
-def list_files(input_dir: str) -> list:
+def list_files(input_dir: str, formats: list, return_str=False) -> list:
     files = []
     path = Path(input_dir)
     for file_path in path.glob('*'):
-        if file_path.suffix.lower() in INPUT_FORMATS:
-            files.append(file_path)
+        if file_path.suffix.lower() in formats:
+            files.append(file_path if not return_str else str(file_path))
     return sorted(files)
 
 
-def output_name_converter(input_path):
+def output_name_converter(input_path, formats):
     filename = str(input_path).split('/')[-1]
     
-    for f in INPUT_FORMATS:
+    for f in formats:
         if f in filename:
             filename = filename.replace(f, '')
     return filename
@@ -36,6 +41,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset Generator')
     parser.add_argument('input_path', type=str, default='.', help='path to input directory or input file.')
     parser.add_argument('output_dir', type=str, default='./results/', help='results directory.')
+    parser.add_argument('-d_dt', '--delete_old_data', action='store_true', help='delete old data.')
     parser.add_argument('-mg', '--mesh_generator', type=str, default='occ', help='method to be used for mesh generation. Possible methods: occ and gmsh. Default: occ')
     parser.add_argument('-mfn', '--mesh_folder_name', type=str, default = 'mesh', help='mesh folder name. Default: mesh.')
     parser.add_argument('-ffn', '--features_folder_name', type=str, default = 'features', help='features folder name. \
@@ -48,6 +54,7 @@ if __name__ == '__main__':
 
     input_path = args['input_path']
     output_directory = args['output_dir']
+    delete_old_data = args['delete_old_data']
     mesh_folder_name = args['mesh_folder_name']
     features_folder_name = args['features_folder_name']
     mesh_size = args['mesh_size']
@@ -61,23 +68,39 @@ if __name__ == '__main__':
     # Test the directories
     if os.path.exists(input_path):
         if os.path.isdir(input_path):
-            files = list_files(input_path)
+            files = list_files(input_path, CAD_FORMATS)
         else:
             files = [input_path]
     else:
         print('[Generator Error] Input path not found')
         exit()
 
-    if not os.path.isdir(output_directory):
-        os.mkdir(output_directory)
+    os.makedirs(output_directory, exist_ok=True)
 
     mesh_folder_dir = os.path.join(output_directory, mesh_folder_name)
     features_folder_dir = os.path.join(output_directory, features_folder_name)
     
-    if not os.path.isdir(mesh_folder_dir):
-        os.mkdir(mesh_folder_dir)
-    if not os.path.isdir(features_folder_dir):
-        os.mkdir(features_folder_dir)
+    if delete_old_data:
+        if os.path.isdir(mesh_folder_dir):
+            shutil.rmtree(mesh_folder_dir)
+            shutil.rmtree(features_folder_dir)
+    
+    os.makedirs(mesh_folder_dir, exist_ok=True)
+    os.makedirs(features_folder_dir, exist_ok=True)
+
+    mesh_files = list_files(mesh_folder_dir, MESH_FORMATS, return_str=True)
+    mesh_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in mesh_files]
+    features_files = list_files(features_folder_dir, FEATURES_FORMATS, return_str=True)
+    features_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in features_files]
+
+    i = 0
+    while i < len(files):
+        f = str(files[i])
+        filename = f[(f.rfind('/') + 1):f.rindex('.')]
+        if filename in mesh_files and filename in features_files:
+            files.pop(i)
+        else:
+            i += 1
 
     # Main loop
     error_counter = 0
@@ -85,7 +108,7 @@ if __name__ == '__main__':
     time_initial = time.time()
     for file in files:
         file = str(file)
-        output_name = output_name_converter(file)
+        output_name = output_name_converter(file, CAD_FORMATS)
         mesh_name = os.path.join(mesh_folder_dir, output_name)
         print('\n[Generator] Processing file ' + file + '...')
         
@@ -105,6 +128,10 @@ if __name__ == '__main__':
         features_name = os.path.join(features_folder_dir, output_name)
         writeFeatures(features_name=features_name, features=features, tp=features_file_type)
         print('\n[Generator] Process done.')
+
+        del features
+        del mesh
+        gc.collect()
 
     time_finish = time.time()
     

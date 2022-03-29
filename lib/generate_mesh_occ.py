@@ -6,6 +6,10 @@ from OCC.Core.BRep import BRep_Tool
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.gp import gp_Pnt
 from OCC.Core.STEPConstruct import STEPConstruct_PointHasher
+from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
+from OCC.Core.IMeshTools import IMeshTools_Parameters
+
+from tqdm import tqdm
 
 MAX_INT = 2**31 - 1
 
@@ -22,144 +26,170 @@ def findPointInListWithHashCode(point, points, hash_codes):
                 break
     return index, hc
 
-def registerEdgeMeshInGlobalMesh(edge, mesh):
-    assert 'vertices' in mesh.keys() and 'vertices_hcs' in mesh.keys()
+def searchEntityInMap(entity, map):
+    hc = entity.HashCode(MAX_INT)
+    index = -1
+    if hc in map:
+        for qindex, qentity in map[hc]:
+            if entity.IsSame(qentity):
+                index = qindex
+                break
+    return index
 
-    brep_tool = BRep_Tool()
-    location = TopLoc_Location()
-    brep_mesh = brep_tool.Polygon3D(edge, location)
-    transform = location.Transformation()
+def addEntityToMap(index, entity, map):
+    hc = entity.HashCode(MAX_INT)
+    if hc in map:
+        map[hc].append((index, entity))
+    else:
+        map[hc] = [(index, entity)]
 
-    edge_mesh_data = {}
-    if brep_mesh != None:
-        vertices = mesh['vertices']
-        vertices_hcs = mesh['vertices_hcs']
+def computeMeshData(edges, faces, topology):
+    edges_mesh_data = []
+    edges_map = {}
+    print('\n[PythonOCC] Mapping Edges...')
+    for i, edge in enumerate(tqdm(edges)):
+        edges_mesh_data.append({'vert_indices': [], 'vert_parameters': []})
+        addEntityToMap(i, edge, edges_map)
 
-        vert_indices = []
+    faces_mesh_data = []
+    face_edges_map = []
+    faces_map = {}
+    print('\n[PythonOCC] Mapping Faces...')
+    for i, face in enumerate(tqdm(faces)):
+        faces_mesh_data.append(None)
+        addEntityToMap(i, face, faces_map)
+        edges_indices = [searchEntityInMap(edge, edges_map) for edge in topology.edges_from_face(face)]
+        face_edges_map.append(edges_indices)
+        
+    mesh_vertices = []
+    mesh_faces = []
+    print('\n[PythonOCC] Generating Mesh Data...')
+    for face_index, face in enumerate(tqdm(faces)):     
+        face_orientation = face.Orientation()
 
-        nodes = list(brep_mesh.Nodes())
-        vert_parameters = list(brep_mesh.Parameters())
+        brep_tool = BRep_Tool()
+        location = TopLoc_Location()
+        triangulation = brep_tool.Triangulation(face, location)
+        transform = location.Transformation()
 
-        for i in range(1, len(nodes) + 1):
-            pnt = nodes[i-1]
-            pnt.Transform(transform)
-            index, hc = findPointInListWithHashCode(pnt, vertices, vertices_hcs)
-            if index < 0:
-                old_index = index
-                vertices.append(np.array(pnt.Coord()))
-                index = len(vertices) - 1
-                if old_index == -2:
-                    vertices_hcs[hc].append(index)
-                else:
-                    vertices_hcs[hc] = [index]
-            vert_indices.append(index)
+        if triangulation is None:
+            print(f'ERROR: face {face_index} could not be triangularized.')
+            continue
 
-        if len(vert_indices) > 0:
-            edge_mesh_data['vert_indices'] = vert_indices
-            edge_mesh_data['vert_parameters'] = vert_parameters
-
-    return edge_mesh_data
-
-
-def registerFaceMeshInGlobalMesh(face, mesh, face_edges, edges_data):
-
-    assert 'vertices' in mesh.keys() and 'faces' in mesh.keys()
-
-    face_orientation = face.Orientation()
-
-    brep_tool = BRep_Tool()
-    location = TopLoc_Location()
-    brep_mesh = brep_tool.Triangulation(face, location)
-    transform = location.Transformation()
-
-    face_mesh_data = {}
-    out_edges_data = {}
-    
-    if brep_mesh is not None:
-        verts = mesh['vertices']  
-
+        number_vertices = triangulation.NbNodes()
+        vert_indices = np.zeros(number_vertices, dtype=np.int64) - 1
         vert_parameters = []
 
-        number_vertices = brep_mesh.NbNodes()
-        vert_indices = np.zeros(number_vertices, dtype=np.int64) - 1
-        for face_edge in face_edges:
-            hc = face_edge.HashCode(MAX_INT)
+        for edge_index in face_edges_map[face_index]:
+            edge = edges[edge_index]
 
-            if hc in edges_data:
-                found_edge = False
-                for i, edge_data in enumerate(edges_data[hc]):
-                    edge = edge_data['entity']
-                    if face_edge.IsSame(edge):
-                        found_edge = True
-                        poly_on_triang = brep_tool.PolygonOnTriangulation(face_edge, brep_mesh, location)
-                        if poly_on_triang is not None:
-                            poly_nodes = list(poly_on_triang.Nodes())
-                            edge_index = edge_data['index']
-                            edge_mesh_data = edge_data['mesh_data']
+            polygon = brep_tool.PolygonOnTriangulation(edge, triangulation, location)
 
-                            if edge_mesh_data == {}:
-                                edge_vert_indices = copy(poly_nodes)
-                                edge_vert_parameters = list(poly_on_triang.Parameters())
-                                out_edges_mesh_data = {'vert_indices': edge_vert_indices, 'vert_parameters': edge_vert_parameters}
-                                out_edge_data = {'index': edge_index, 'hc_list_index': i, 'mesh_data': out_edges_mesh_data}
-                                if hc in out_edges_data:
-                                    out_edges_data[hc].append(out_edge_data)
-                                else:
-                                    out_edges_data[hc] = [out_edge_data]
-                            else:
-                                poly_nodes_arr = np.array(poly_nodes, dtype=np.int64) - 1
-                                edge_vert_indices_arr = np.array(edge_mesh_data['vert_indices'], dtype=np.int64)
-                                assert len(poly_nodes_arr) == len(edge_vert_indices_arr)
-                                vert_indices[poly_nodes_arr] = edge_vert_indices_arr   
-                        else:
-                            print('ERROR: none polygon on triangulation.')
-                        break
-                if found_edge == False:
-                    print('ERROR: some edge has not been computed before. (IsSame Error)')
-            else:
-                print('ERROR: some edge has not been computed before. (HashCode Error)')
+            if polygon is None:
+                print(f'ERROR: edge {edge_index} do not form a polygon on face {face_index} triangulation.')
+                continue
 
-        face
+            polygon_nodes = list(polygon.Nodes())
+            polygon_parameters = list(polygon.Parameters())
+
+            vert_indices_curr = edges_mesh_data[edge_index]['vert_indices']
+            vert_parameters_curr = edges_mesh_data[edge_index]['vert_parameters']
+
+            vert_indices_curr_final = []
+            vert_local_indices_curr_final = []
+            vert_parameters_curr_final = []
+
+            i = 0
+            j = 0
+            while i < len(polygon_nodes) and j < len(vert_indices_curr):
+                if polygon_parameters[i] == vert_parameters_curr[j]:
+                    vert_indices_curr_final.append(vert_indices_curr[j])
+                    vert_local_indices_curr_final.append(-1)
+                    vert_parameters_curr_final.append(polygon_parameters[i])
+                    vert_indices[polygon_nodes[i] - 1] = vert_indices_curr[j]
+                    j += 1
+                    i += 1
+                elif polygon_parameters[i] > vert_parameters_curr[j]:
+                    vert_indices_curr_final.append(vert_indices_curr[j])
+                    vert_local_indices_curr_final.append(-1)
+                    vert_parameters_curr_final.append(vert_parameters_curr[j])
+                    j += 1
+                else:
+                    vert_indices_curr_final.append(-1)
+                    vert_local_indices_curr_final.append(polygon_nodes[i] - 1)
+                    vert_parameters_curr_final.append(polygon_parameters[i])
+                    i += 1
+            
+            while i < len(polygon_nodes):
+                vert_indices_curr_final.append(-1)
+                vert_local_indices_curr_final.append(polygon_nodes[i] - 1)
+                vert_parameters_curr_final.append(polygon_parameters[i])
+                i += 1
+            
+            while j < len(vert_indices_curr):
+                vert_indices_curr_final.append(vert_indices_curr[j])
+                vert_local_indices_curr_final.append(-1)
+                vert_parameters_curr_final.append(vert_parameters_curr[j])
+                j += 1
+
+            new_edge_mesh_data = {'vert_indices': np.asarray(vert_indices_curr_final), 'vert_local_indices': np.asarray(vert_local_indices_curr_final), 'vert_parameters': vert_parameters_curr_final}
+
+            edges_mesh_data[edge_index] = new_edge_mesh_data
+
         for i in range(1, number_vertices + 1):
-            pnt = brep_mesh.Node(i)
+            pnt = triangulation.Node(i)
             pnt.Transform(transform)
             pnt_array = np.array(pnt.Coord())
 
             if vert_indices[i - 1] == -1:
-                verts.append(pnt_array)
-                vert_indices[i - 1] = len(verts) - 1
+                mesh_vertices.append(pnt_array)
+                vert_indices[i - 1] = len(mesh_vertices) - 1
 
-            uv_node = brep_mesh.UVNode(i)
+            uv_node = triangulation.UVNode(i)
             vert_parameters.append(list(uv_node.Coord()))
-        
-        for key in out_edges_data:
-            for i in range(len(out_edges_data[key])):
-                out_edges_data[key][i]['mesh_data']['vert_indices'] = [int(vert_indices[j - 1]) for j in out_edges_data[key][i]['mesh_data']['vert_indices']]
 
-        vert_indices = vert_indices.tolist()
+        for edge_index in face_edges_map[face_index]:
+            mesh_data = edges_mesh_data[edge_index]
+            mask = (mesh_data['vert_indices'] == -1)
+            mesh_data['vert_indices'][mask] = vert_indices[mesh_data['vert_local_indices'][mask]]
+            mesh_data['vert_indices'] = mesh_data['vert_indices'].tolist()
+            edges_mesh_data[edge_index].pop('vert_local_indices')
 
-        faces = mesh['faces']           
         face_indices = []
-    
-        number_faces = brep_mesh.NbTriangles()
+
+        number_faces = triangulation.NbTriangles()
         for i in range(1, number_faces + 1):
-            i1, i2, i3 = brep_mesh.Triangle(i).Get()
+            i1, i2, i3 = triangulation.Triangle(i).Get()
             i1 = vert_indices[i1 - 1]
             i2 = vert_indices[i2 - 1]
             i3 = vert_indices[i3 - 1]
-            # if i1 == i2 or i2 == i3 or i1 == i3:
-            #     print(f'WARNING: face {len(faces)} has two vertices with the same index.')
             if face_orientation == 0:
                 verts_of_face = np.array([i1 , i2, i3])
-                faces.append(verts_of_face)
-                face_indices.append(len(faces) - 1)
+                mesh_faces.append(verts_of_face)
+                face_indices.append(len(mesh_faces) - 1)
             elif face_orientation == 1:
                 verts_of_face = np.array([i3, i2, i1])
-                faces.append(verts_of_face)
-                face_indices.append(len(faces) - 1)
+                mesh_faces.append(verts_of_face)
+                face_indices.append(len(mesh_faces) - 1)
             else:
                 print("Broken face orientation", face_orientation)
+        
+        faces_mesh_data[face_index] = {'vert_indices': vert_indices.tolist(), 'vert_parameters': vert_parameters, 'face_indices': face_indices}
 
-            face_mesh_data = {'vert_indices': vert_indices, 'vert_parameters': vert_parameters, 'face_indices': face_indices}
+    return mesh_vertices, mesh_faces, edges_mesh_data, faces_mesh_data
 
-    return face_mesh_data, out_edges_data
+def OCCMeshGeneration(shape):
+    print('\n[PythonOCC] Mesh Generation...')
+    parameters = IMeshTools_Parameters()
+
+    #Ref: https://dev.opencascade.org/doc/refman/html/struct_i_mesh_tools___parameters.html#a3027dc569da3d3e3fcd76e0615befb27
+    parameters.MeshAlgo = -1
+    parameters.Angle = 0.1
+    parameters.Deflection = 0.01
+    # parameters.MinSize = 0.1
+    parameters.Relative = True
+    parameters.InParallel = True
+
+    brep_mesh = BRepMesh_IncrementalMesh(shape, parameters)
+    brep_mesh.Perform()
+    assert brep_mesh.IsDone()
