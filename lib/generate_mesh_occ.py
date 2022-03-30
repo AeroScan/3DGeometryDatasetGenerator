@@ -8,6 +8,8 @@ from OCC.Core.gp import gp_Pnt
 from OCC.Core.STEPConstruct import STEPConstruct_PointHasher
 from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
 from OCC.Core.IMeshTools import IMeshTools_Parameters
+from OCC.Core.GeomAbs import GeomAbs_SurfaceType
+from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
 
 from tqdm import tqdm
 
@@ -64,7 +66,7 @@ def computeMeshData(edges, faces, topology):
     mesh_vertices = []
     mesh_faces = []
     print('\n[PythonOCC] Generating Mesh Data...')
-    for face_index, face in enumerate(tqdm(faces)):     
+    for face_index, face in enumerate(tqdm(faces)):
         face_orientation = face.Orientation()
 
         brep_tool = BRep_Tool()
@@ -73,12 +75,16 @@ def computeMeshData(edges, faces, topology):
         transform = location.Transformation()
 
         if triangulation is None:
-            print(f'ERROR: face {face_index} could not be triangularized.')
+            surface = BRepAdaptor_Surface(face, True)
+            tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
+            print(f'ERROR: face {face_index} of type {tp} could not be triangularized.')
             continue
 
         number_vertices = triangulation.NbNodes()
         vert_indices = np.zeros(number_vertices, dtype=np.int64) - 1
         vert_parameters = []
+
+        global_ids = []
 
         for edge_index in face_edges_map[face_index]:
             edge = edges[edge_index]
@@ -103,6 +109,7 @@ def computeMeshData(edges, faces, topology):
             j = 0
             while i < len(polygon_nodes) and j < len(vert_indices_curr):
                 if polygon_parameters[i] == vert_parameters_curr[j]:
+                    global_ids.append(vert_indices_curr[j])
                     vert_indices_curr_final.append(vert_indices_curr[j])
                     vert_local_indices_curr_final.append(-1)
                     vert_parameters_curr_final.append(polygon_parameters[i])
@@ -163,6 +170,9 @@ def computeMeshData(edges, faces, topology):
             i1 = vert_indices[i1 - 1]
             i2 = vert_indices[i2 - 1]
             i3 = vert_indices[i3 - 1]
+            if i1 == i2 or i1 == i3 or i2 == i3:
+                #ignoring faces with repeated vertices (temporary solution)
+                continue
             if face_orientation == 0:
                 verts_of_face = np.array([i1 , i2, i3])
                 mesh_faces.append(verts_of_face)
@@ -176,6 +186,7 @@ def computeMeshData(edges, faces, topology):
         
         faces_mesh_data[face_index] = {'vert_indices': vert_indices.tolist(), 'vert_parameters': vert_parameters, 'face_indices': face_indices}
 
+
     return mesh_vertices, mesh_faces, edges_mesh_data, faces_mesh_data
 
 def OCCMeshGeneration(shape):
@@ -186,7 +197,7 @@ def OCCMeshGeneration(shape):
     parameters.MeshAlgo = -1
     parameters.Angle = 0.1
     parameters.Deflection = 0.01
-    # parameters.MinSize = 0.1
+    #parameters.MinSize = 0.1
     parameters.Relative = True
     parameters.InParallel = True
 
