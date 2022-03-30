@@ -94,6 +94,9 @@ def writePKL(features_name: str, features: dict):
         pickle.dump(features, f)
 
 def writeFeatures(features_name: str, features: dict, tp: str):
+    for feature in features['surfaces']:
+        if feature['face_indices'] is None:
+            print(feature)
     if tp.lower() in YAML_NAMES:
         writeYAML(f'{features_name}.{tp}', features)
     elif tp.lower() in PKL_NAMES:
@@ -144,15 +147,3 @@ def filterFeaturesData(features_data, curve_types, surface_types):
 
 def writeMeshOBJ(filename, mesh):
     igl.write_triangle_mesh(f'{filename}.obj', mesh['vertices'], mesh['faces'])
-    
-    # count = 0
-    # for idx, mesh in enumerate(meshes):
-    #     if count == 0:
-    #         count += 1
-    #         continue
-    #     else:
-    #         print('#################################')
-    #         print(mesh)
-    #         igl.write_triangle_mesh("%s/%05i_mesh.obj"%(str(output_name), idx), mesh["vertices"], mesh["faces"])
-    #         print('#################################')
-    #         exit()

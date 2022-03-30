@@ -117,16 +117,16 @@ if __name__ == '__main__':
 
         if mesh_generator == 'gmsh':
             print('\n+-------------GMSH-------------+')
-            processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
-        elif mesh_generator == 'occ':
-            if mesh is not {}:
-                print(f'\nWriting meshes in obj file...')
-                writeMeshOBJ(mesh_name, mesh)
+            features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
+        
+        print(f'\nWriting meshes in obj file...')
+        writeMeshOBJ(mesh_name, mesh)
 
         features = FeaturesFactory.getListOfDictFromPrimitive(features)
         print(f'\nWriting Features in {features_file_type} format...')
         features_name = os.path.join(features_folder_dir, output_name)
         writeFeatures(features_name=features_name, features=features, tp=features_file_type)
+        
         print('\n[Generator] Process done.')
 
         del features

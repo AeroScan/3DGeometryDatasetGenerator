@@ -56,7 +56,7 @@ def computeMeshData(edges, faces, topology):
     faces_map = {}
     print('\n[PythonOCC] Mapping Faces...')
     for i, face in enumerate(tqdm(faces)):
-        faces_mesh_data.append(None)
+        faces_mesh_data.append({'vert_indices': [], 'vert_parameters': [], 'face_indices': []})
         addEntityToMap(i, face, faces_map)
         edges_indices = [searchEntityInMap(edge, edges_map) for edge in topology.edges_from_face(face)]
         face_edges_map.append(edges_indices)
