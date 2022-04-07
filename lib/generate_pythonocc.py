@@ -4,6 +4,7 @@ from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
+from OCC.Core.gp import gp_Trsf
 from lib.features_factory import FeaturesFactory
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
 from lib.TopologyUtils import TopologyExplorer
@@ -148,8 +149,23 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
     
     return features, mesh
 
+def rotation_method(shape):
+    # descobrir pra qual orientação o topo está virado
+    # se topo == eixo z return shape
+    # se nao
+    # rotacionar o sistema de coordenadas para manter o eixo z para o topo e return shape
+
+    from OCC.Extend.ShapeFactory import rotate_shape
+    trns = gp_Trsf()
+    shape = rotate_shape(shape=shape, axis=(1.0, 0.0, 0.0), angle=90, unite="deg")
+    
+    exit()
+    return shape
+
 def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, debug=True) -> dict:
     shape = read_step_file(input_name, verbosity=debug)
+
+    shape = rotation_method(shape)
 
     features, mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
     
