@@ -1,14 +1,22 @@
-from pyexpat import features
 from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
-from OCC.Core.gp import gp_Ax1, gp_Pnt, gp_Dir
-from OCC.Extend.ShapeFactory import rotate_shape
+from OCC.Core.gp import (
+    gp_Ax1, 
+    gp_Pnt, 
+    gp_Dir,
+    gp_Vec
+)
+from OCC.Extend.ShapeFactory import (
+    rotate_shape,
+    translate_shp
+)
+from OCC.Core.Bnd import Bnd_Box
+from OCC.Core.BRepBndLib import brepbndlib_Add
 from lib.features_factory import FeaturesFactory
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
-from lib.TopologyUtils import TopologyExplorer, is_compound
 
 from tqdm import tqdm
 import numpy as np
@@ -162,14 +170,35 @@ def rotation_method(shape):
 
     # if axis y on the top:
     rotate_in_x = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(1.0, 0.0, 0.0))
-    shape = rotate_shape(shape=shape, axis=rotate_in_x, angle=90, unite="deg")
+    rotated_shape = rotate_shape(shape=shape, axis=rotate_in_x, angle=90, unite="deg")
     
-    return shape
+    return rotated_shape
+
+def _getBoundingBox(shape, tol=1e-6, use_mesh=False):
+    bbox = Bnd_Box()
+    bbox.SetGap(tol)
+    brepbndlib_Add(shape, bbox, use_mesh)
+
+    return bbox.Get()
+
+def centralize_method(shape): 
+    print('\n[PythonOCC] Centering model at origin')
+    xmin, ymin, zmin, xmax, ymax, zmax = _getBoundingBox(shape=shape)
+    x_vec = -(xmax+xmin)*0.5
+    y_vec = -(ymax+ymin)*0.5
+    z_vec = -zmin
+    vec = gp_Vec(x_vec, y_vec, z_vec)
+
+    centralized_shape = translate_shp(shp=shape, vec=vec, copy=True)
+    
+    return centralized_shape
 
 def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, debug=True) -> dict:
     shape = read_step_file(input_name, as_compound=True, verbosity=debug)
     
     shape = rotation_method(shape)
+
+    shape = centralize_method(shape)
 
     features, mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
     
