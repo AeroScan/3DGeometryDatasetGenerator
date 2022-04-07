@@ -4,7 +4,8 @@ from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
-from OCC.Core.gp import *
+from OCC.Core.gp import gp_Ax1, gp_Pnt, gp_Dir
+from OCC.Extend.ShapeFactory import rotate_shape
 from lib.features_factory import FeaturesFactory
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
 from lib.TopologyUtils import TopologyExplorer, is_compound
@@ -150,18 +151,17 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
     return features, mesh
 
 def rotation_method(shape):
-    # descobrir pra qual orientação o topo está virado
-    # se topo == eixo z return shape
-    # se nao
-    # rotacionar o sistema de coordenadas para manter o eixo z para o topo e return shape (clear)
+    print('\n[PythonOCC] Rotate model in axis X')
 
-    from OCC.Extend.ShapeFactory import rotate_shape
-    # if axis y on top
-    rotate_in_x = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(1.0, 0.0, 0.0)) # gira no eixo X
-    # if axis x on top
-    rotate_in_y = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(0.0, 1.0, 0.0)) # gira no eixo Y
-    # if axis z on bottom
-    rotate_in_z = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(0.0, 0.0, 1.0)) # gira no eixo Z
+    """
+    if axis x on top
+        rotate_in_y = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(0.0, 1.0, 0.0)) # gira no eixo Y
+    if axis z on bottom
+        rotate_in_z = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(0.0, 0.0, 1.0)) # gira no eixo Z
+    """
+
+    # if axis y on the top:
+    rotate_in_x = gp_Ax1(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(1.0, 0.0, 0.0))
     shape = rotate_shape(shape=shape, axis=rotate_in_x, angle=90, unite="deg")
     
     return shape
