@@ -3,6 +3,11 @@ import pickle
 import json
 import yaml
 import igl
+import os
+from OCC.Core.STEPControl import STEPControl_Reader
+from OCC.Core.IFSelect import IFSelect_RetDone, IFSelect_ItemsByEntity
+from OCC.Core.Interface import Interface_Static_IVal, Interface_Static_SetCVal
+from lib.TopologyUtils import list_of_shapes_to_compound
 
 # Convert a float to string
 def float2str(number, limit = 10) -> str:
@@ -147,3 +152,50 @@ def filterFeaturesData(features_data, curve_types, surface_types):
 
 def writeMeshOBJ(filename, mesh):
     igl.write_triangle_mesh(f'{filename}.obj', mesh['vertices'], mesh['faces'])
+
+POSSIBLE_UNITS = ['1', 'inch', 'mm', '??', 'ft', 'mi', 'm', 'km', 'mil', 'um', 'cm', 'uin']
+def read_step(filename: str, as_compound: bool=True, verbosity: bool=True):
+    if not os.path.isfile(filename):
+        raise FileNotFoundError(f'{filename} not found.')
+
+    step_reader = STEPControl_Reader()
+    status = step_reader.ReadFile(filename)
+
+    original_unit = POSSIBLE_UNITS[Interface_Static_IVal('xstep.cascade.unit')]
+    print(f'Unidade original: {original_unit}')
+    if original_unit != 'm':
+        Interface_Static_SetCVal('xstep.cascade.unit', 'M')
+        print(f'Convertivo para: {POSSIBLE_UNITS[Interface_Static_IVal("xstep.cascade.unit")]}')
+
+    if status == IFSelect_RetDone:
+        if verbosity:
+            failsonly = False
+            step_reader.PrintCheckLoad(failsonly, IFSelect_ItemsByEntity)
+            step_reader.PrintCheckTransfer(failsonly, IFSelect_ItemsByEntity)
+        transfer_result = step_reader.TransferRoots()
+        if not transfer_result:
+            raise AssertionError("Transfer failed.")
+        _nbs = step_reader.NbShapes()
+        if _nbs == 0:
+            raise AssertionError("No shape to transfer.")
+        elif _nbs == 1:  # most cases
+            return step_reader.Shape(1)
+        elif _nbs > 1:
+            print("Number of shapes:", _nbs)
+            shps = []
+            # loop over root shapes
+            for k in range(1, _nbs + 1):
+                new_shp = step_reader.Shape(k)
+                if not new_shp.IsNull():
+                    shps.append(new_shp)
+            if as_compound:
+                compound, result = list_of_shapes_to_compound(shps)
+                if not result:
+                    print("Warning: all shapes were not added to the compound")
+                return compound
+            else:
+                print("Warning, returns a list of shapes.")
+                return shps
+    else:
+        raise AssertionError("Error: can't read file.")
+    return None

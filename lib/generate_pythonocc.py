@@ -1,7 +1,7 @@
 from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Core.TopoDS import TopoDS_Face
-from OCC.Extend.DataExchange import read_step_file
+from lib.tools import read_step
 from OCC.Extend.TopologyUtils import TopologyExplorer
 from OCC.Core.gp import (
     gp_Ax1, 
@@ -194,7 +194,7 @@ def centralize_method(shape):
     return centralized_shape
 
 def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, debug=True) -> dict:
-    shape = read_step_file(input_name, as_compound=True, verbosity=debug)
+    shape = read_step(input_name, as_compound=True, verbosity=debug)
     
     shape = rotation_method(shape)
 
