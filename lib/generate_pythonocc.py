@@ -2,7 +2,7 @@ from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Core.TopoDS import TopoDS_Face
 from lib.tools import read_step
-from OCC.Extend.TopologyUtils import TopologyExplorer
+from lib.TopologyUtils import TopologyExplorer
 from OCC.Core.gp import (
     gp_Ax1, 
     gp_Pnt, 
@@ -15,6 +15,7 @@ from OCC.Extend.ShapeFactory import (
 )
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib_Add
+from OCC.Extend.DataExchange import read_step_file
 from lib.features_factory import FeaturesFactory
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
 
@@ -128,7 +129,7 @@ def processHighestDim(topology, generate_mesh):
 
 def processNoHighestDim(topology, generate_mesh):
     print('\n[PythonOCC] Using all the Shapes')
-
+    
     edges = [e for e in topology.edges()]
     faces = [f for f in topology.faces()]
 
@@ -194,7 +195,7 @@ def centralize_method(shape):
     return centralized_shape
 
 def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, debug=True) -> dict:
-    shape = read_step(input_name, as_compound=True, verbosity=debug)
+    shape = read_step_file(input_name, as_compound=True, verbosity=debug)
     
     shape = rotation_method(shape)
 
