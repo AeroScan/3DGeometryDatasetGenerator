@@ -7,6 +7,8 @@ import shutil
 import os
 import time
 import argparse
+import math
+import numpy as np
 from pathlib import Path
 
 from termcolor import colored
@@ -36,6 +38,18 @@ def output_name_converter(input_path, formats):
             filename = filename.replace(f, '')
     return filename
 
+def computeRotationMatrix(theta, axis):
+    axis = axis / np.sqrt(np.dot(axis, axis))
+    a = np.cos(theta / 2.0)
+    b, c, d = -axis * np.sin(theta / 2.0)
+    aa, bb, cc, dd = a * a, b * b, c * c, d * d
+    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+    
+    R = np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+    
+    return R
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset Generator')
@@ -119,6 +133,32 @@ if __name__ == '__main__':
             print('\n+-------------GMSH-------------+')
             features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
         
+        if True: #if normalize:
+            vertices = mesh['vertices']
+            R = computeRotationMatrix(math.pi/2, np.array([1., 0., 0.]))
+            vertices = (R @ vertices.T).T
+            #vertices = np.array([R*v for v in vertices], dtype=vertices.dtype)
+
+            bounding_box_min = np.min(vertices, axis=0).tolist()
+            bounding_box_max = np.max(vertices, axis=0).tolist()
+            tx = - (bounding_box_max[0] + bounding_box_min[0]) * 0.5
+            ty = - (bounding_box_max[1] + bounding_box_min[1]) * 0.5
+            tz = - bounding_box_min[2]
+            t = np.array([tx, ty, tz])
+            vertices += t
+
+            s = 1./1000
+            vertices *= s
+
+            mesh['vertices'] = vertices
+
+            # #nasceu pro factory
+            for key in features:
+                for i in range(len(features[key])):
+                    if features[key][i] is not None:
+                        features[key][i].normalize(R=R, t=t, s=s)
+
+
         print(f'\nWriting meshes in obj file...')
         writeMeshOBJ(mesh_name, mesh)
 
