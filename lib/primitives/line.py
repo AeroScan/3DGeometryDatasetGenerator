@@ -1,5 +1,6 @@
-from lib.primitives.base_curve_feature import BaseCurveFeature
+import numpy as np
 
+from lib.primitives.base_curve_feature import BaseCurveFeature
 from lib.tools import gpXYZ2List
 
 class Line(BaseCurveFeature):
@@ -36,3 +37,14 @@ class Line(BaseCurveFeature):
         features['direction'] = self.direction
 
         return features
+    
+    def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
+        self.location = R @ self.location
+        self.direction = R @ self.direction
+        
+        self.location += t
+        
+        self.location *= s
+
+        self.location = self.location.tolist()
+        self.direction = self.direction.tolist()

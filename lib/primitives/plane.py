@@ -1,5 +1,6 @@
-from lib.tools import gpXYZ2List
+import numpy as np
 
+from lib.tools import gpXYZ2List
 from lib.primitives.base_surface_feature import BaseSurfaceFeature
 
 class Plane(BaseSurfaceFeature):
@@ -48,3 +49,20 @@ class Plane(BaseSurfaceFeature):
         features['normal'] = self.normal
 
         return features
+    
+    def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
+        self.location = R @ self.location
+        self.x_axis = R @ self.x_axis
+        self.y_axis = R @ self.y_axis
+        self.z_axis = R @ self.z_axis
+        self.normal = R @ self.normal
+
+        self.location += t
+
+        self.location *= s
+
+        self.location = self.location.tolist()
+        self.x_axis = self.x_axis.tolist()
+        self.y_axis = self.y_axis.tolist()
+        self.z_axis = self.z_axis.tolist()
+        self.normal = self.normal.tolist()

@@ -1,3 +1,5 @@
+from abc import abstractmethod
+import numpy as np
 
 class BaseCurveFeature:
 
@@ -18,3 +20,7 @@ class BaseCurveFeature:
         features['vert_parameters'] = self.vert_parameters
 
         return features
+    
+    @abstractmethod
+    def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
+        pass

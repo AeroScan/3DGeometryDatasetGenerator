@@ -1,3 +1,5 @@
+from abc import abstractmethod
+import numpy as np
 
 class BaseSurfaceFeature:
 
@@ -18,3 +20,7 @@ class BaseSurfaceFeature:
         features['face_indices'] = self.face_indices
         
         return features
+    
+    @abstractmethod
+    def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
+        pass
