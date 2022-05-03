@@ -1,34 +1,6 @@
-from .primitives import *
+from .primitives import CurveFactory, SurfaceFactory
 
 class FeaturesFactory:
-    SURFACES_TYPES = {
-        'plane': Plane,
-        'cylinder': Cylinder,
-        'cone': Cone,
-        'sphere': Sphere,
-        'torus': Torus,
-    }
-    CURVES_TYPES = {
-        'line': Line,
-        'circle': Circle,
-        'ellipse': Ellipse,
-    }
-    
-    @staticmethod
-    def getPrimitiveObject(type, shape, mesh: dict):
-        type = type.lower()
-        if type in FeaturesFactory.SURFACES_TYPES.keys(): 
-            return FeaturesFactory.SURFACES_TYPES[type](shape=shape, mesh=mesh)
-        elif type in FeaturesFactory.CURVES_TYPES.keys():
-            return FeaturesFactory.CURVES_TYPES[type](shape=shape, mesh=mesh)
-        else:
-            return None
-
-    @staticmethod
-    def getDictFromPrimitive(primitive) -> dict:
-        feature = {}
-        feature = primitive.toDict()
-        return feature
 
     @staticmethod
     def removeNoneValuesOfDict(d: dict) -> dict:
@@ -46,10 +18,10 @@ class FeaturesFactory:
     def getListOfDictFromPrimitive(primitives: dict) -> dict:
         for i in range(0, len(primitives['curves'])):
             if primitives['curves'][i] is not None:
-                primitives['curves'][i] = FeaturesFactory.getDictFromPrimitive(primitives['curves'][i])
+                primitives['curves'][i] = CurveFactory.getDictFromPrimitive(primitives['curves'][i])
         for i in range(0, len(primitives['surfaces'])):
             if primitives['surfaces'][i] is not None:
-                primitives['surfaces'][i] = FeaturesFactory.getDictFromPrimitive(primitives['surfaces'][i])
+                primitives['surfaces'][i] = SurfaceFactory.getDictFromPrimitive(primitives['surfaces'][i])
         
         features = {
             'curves': primitives['curves'],

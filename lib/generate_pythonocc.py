@@ -53,7 +53,7 @@ def processEdgesAndFaces(edges, faces, topology, generate_mesh):
     for i, face in enumerate(tqdm(faces)):
         surface = BRepAdaptor_Surface(face, True)
         tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
-
+        
         features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=faces_mesh_data[i]))
 
     return features, mesh
