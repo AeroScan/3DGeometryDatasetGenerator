@@ -33,3 +33,10 @@ class Extrusion(BaseSurfaceFeature):
     def fromMesh(self, mesh):
         super().fromMesh(mesh=mesh)
     
+    def toDict(self):
+        features = super().toDict()
+        features['type'] = Extrusion.primitiveType()
+        features['direction'] = self.direction
+        features['curve'] = self.curve
+
+        return features
