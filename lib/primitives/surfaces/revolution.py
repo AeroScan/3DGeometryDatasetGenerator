@@ -1,6 +1,8 @@
 from lib.primitives.base_surface_feature import BaseSurfaceFeature
 from lib.primitives.curve_factory import CurveFactory
 
+import numpy as np
+
 class Revolution(BaseSurfaceFeature):
 
     @staticmethod
@@ -21,16 +23,15 @@ class Revolution(BaseSurfaceFeature):
         if mesh is not None:
             self.fromMesh(mesh=mesh)
 
-    def _getCurveInfo(self, curve):
-        c = CurveFactory.getPrimitiveObject(type=curve.GetType(), shape=curve, mesh={})
-        return CurveFactory.getDictFromPrimitive(primitive=c)
+    def _getCurveObject(self, curve):
+        return CurveFactory.getPrimitiveObject(type=curve.GetType(), shape=curve, mesh={})
 
     def fromShape(self, shape):
         surface = shape.AxeOfRevolution()
         curve = shape.BasisCurve()
         self.location = list(surface.Location().Coord())
         self.z_axis = list(surface.Direction().Coord())
-        self.curve = self._getCurveInfo(curve=curve)
+        self.curve = self._getCurveObject(curve=curve)
 
     def fromMesh(self, mesh):
         super().fromMesh(mesh=mesh)
@@ -40,6 +41,17 @@ class Revolution(BaseSurfaceFeature):
         features['type'] = Revolution.primitiveType()
         features['location'] = self.location
         features['z_axis'] = self.z_axis
-        features['curve'] = self.curve
+        features['curve'] = CurveFactory.getDictFromPrimitive(primitive=self.curve)
 
         return features
+
+    def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
+        self.curve = self.curve.normalize(R=R, t=t, s=s)
+
+        self.location = R @ self.location
+        self.z_axis = R @ self.z_axis
+
+        self.location += t
+
+        self.location = self.location.tolist()
+        self.z_axis = self.z_axis.tolist()

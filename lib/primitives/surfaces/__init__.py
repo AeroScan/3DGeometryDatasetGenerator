@@ -5,5 +5,5 @@ from .sphere import Sphere
 from .cylinder import Cylinder
 from .extrusion import Extrusion
 from .revolution import Revolution
-from .bspline import BSplineSurface
+from .bspline_surface import BSplineSurface
 from ..surface_factory import SurfaceFactory

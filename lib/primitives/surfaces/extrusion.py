@@ -1,6 +1,8 @@
 from lib.primitives.base_surface_feature import BaseSurfaceFeature
 from lib.primitives.curve_factory import CurveFactory
 
+import numpy as np
+
 class Extrusion(BaseSurfaceFeature):
 
     @staticmethod
@@ -20,15 +22,15 @@ class Extrusion(BaseSurfaceFeature):
         if mesh is not None:
             self.fromMesh(mesh=mesh)
 
-    def _getCurveInfo(self, curve):
-        c = CurveFactory.getPrimitiveObject(type=curve.GetType(), shape=curve, mesh={})
-        return CurveFactory.getDictFromPrimitive(primitive=c)
+    def _getCurveObject(self, curve):
+        return CurveFactory.getPrimitiveObject(type=curve.GetType(), shape=curve, mesh={})
+        
 
     def fromShape(self, shape):
         surface = shape
         curve = shape.BasisCurve()
         self.direction = list(surface.Direction().Coord())
-        self.curve = self._getCurveInfo(curve=curve)
+        self.curve = self._getCurveObject(curve=curve)
 
     def fromMesh(self, mesh):
         super().fromMesh(mesh=mesh)
@@ -37,6 +39,13 @@ class Extrusion(BaseSurfaceFeature):
         features = super().toDict()
         features['type'] = Extrusion.primitiveType()
         features['direction'] = self.direction
-        features['curve'] = self.curve
+        features['curve'] = CurveFactory.getDictFromPrimitive(primitive=self.curve)
 
         return features
+
+    def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
+        self.curve = self.curve.normalize(R=R, t=t, s=s)
+
+        self.direction = R @ self.direction
+
+        self.direction = self.direction.tolist()

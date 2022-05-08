@@ -3,6 +3,16 @@ from .primitives import CurveFactory, SurfaceFactory
 class FeaturesFactory:
 
     @staticmethod
+    def getPrimitiveObject(type, shape, mesh: dict):
+        type = type.lower()
+        if type in CurveFactory.CURVE_TYPES.keys():
+            return CurveFactory.getPrimitiveObject(type, shape, mesh)
+        elif type in SurfaceFactory.SURFACE_TYPES.keys():
+            return SurfaceFactory.getPrimitiveObject(type, shape, mesh)
+        else:
+            return None
+
+    @staticmethod
     def removeNoneValuesOfDict(d: dict) -> dict:
         for key in d.keys():
             i = 0

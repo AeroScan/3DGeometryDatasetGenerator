@@ -3,6 +3,8 @@ from lib.primitives.base_curve_feature import BaseCurveFeature
 from OCC.Core.TColStd import TColStd_Array1OfReal
 from OCC.Core.TColgp import TColgp_Array1OfPnt
 
+import numpy as np
+
 class BSplineCurve(BaseCurveFeature):
 
     @staticmethod
@@ -28,27 +30,27 @@ class BSplineCurve(BaseCurveFeature):
             self.fromMesh(mesh=mesh)
 
     def _getPoles(self, shape):
-        interval = TColgp_Array1OfPnt(1, shape.NbPoles())
-        shape.Poles(interval)
+        k_degree = TColgp_Array1OfPnt(1, shape.NbPoles())
+        shape.Poles(k_degree)
         points = []
-        for i in range(interval.Length()):
-            points.append(list(interval.Value(i+1).Coord()))
+        for i in range(k_degree.Length()):
+            points.append(list(k_degree.Value(i+1).Coord()))
         return points
 
     def _getKnots(self, shape):
-        interval = TColStd_Array1OfReal(1, shape.NbPoles() + shape.Degree() + 1)
-        shape.KnotSequence(interval)
+        k_degree = TColStd_Array1OfReal(1, shape.NbPoles() + shape.Degree() + 1)
+        shape.KnotSequence(k_degree)
         knots = []
-        for i in range(interval.Length()):
-            knots.append(interval.Value(i+1))
+        for i in range(k_degree.Length()):
+            knots.append(k_degree.Value(i+1))
         return knots
 
     def _getWeights(self, shape):
-        interval = TColStd_Array1OfReal(1, shape.NbPoles())
-        shape.Weights(interval)
+        k_degree = TColStd_Array1OfReal(1, shape.NbPoles())
+        shape.Weights(k_degree)
         weights = []
-        for i in range(interval.Length()):
-            weights.append(interval.Value(i+1))
+        for i in range(k_degree.Length()):
+            weights.append(k_degree.Value(i+1))
         return weights
 
     def fromShape(self, shape):
@@ -76,3 +78,6 @@ class BSplineCurve(BaseCurveFeature):
         features['weights'] = self.weights
 
         return features
+
+    def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
+        pass

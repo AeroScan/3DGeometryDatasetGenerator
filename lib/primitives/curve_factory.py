@@ -21,4 +21,3 @@ class CurveFactory:
         feature = {}
         feature = primitive.toDict()
         return feature
-    

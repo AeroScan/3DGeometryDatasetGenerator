@@ -16,7 +16,7 @@ class SurfaceFactory:
     def getPrimitiveObject(type, shape, mesh: dict):
         type = type.lower()
         if type in SurfaceFactory.SURFACE_TYPES.keys():
-            return SurfaceFactory.CURVE_TYPES[type](shape=shape, mesh=mesh)
+            return SurfaceFactory.SURFACE_TYPES[type](shape=shape, mesh=mesh)
         else:
             return None
 
