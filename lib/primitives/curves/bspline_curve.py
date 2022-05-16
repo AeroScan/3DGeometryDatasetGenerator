@@ -32,25 +32,19 @@ class BSplineCurve(BaseCurveFeature):
     def _getPoles(self, shape):
         k_degree = TColgp_Array1OfPnt(1, shape.NbPoles())
         shape.Poles(k_degree)
-        points = []
-        for i in range(k_degree.Length()):
-            points.append(list(k_degree.Value(i+1).Coord()))
+        points = [list(k_degree.Value(i+1).Coord() for i in range(k_degree.Length()))]
         return points
 
     def _getKnots(self, shape):
         k_degree = TColStd_Array1OfReal(1, shape.NbPoles() + shape.Degree() + 1)
         shape.KnotSequence(k_degree)
-        knots = []
-        for i in range(k_degree.Length()):
-            knots.append(k_degree.Value(i+1))
+        knots = [k_degree.Value(i+1) for i in range(k_degree.Length())]
         return knots
 
     def _getWeights(self, shape):
         k_degree = TColStd_Array1OfReal(1, shape.NbPoles())
         shape.Weights(k_degree)
-        weights = []
-        for i in range(k_degree.Length()):
-            weights.append(k_degree.Value(i+1))
+        weights = [k_degree.Value(i+1) for i in range(k_degree.Length())]
         return weights
 
     def fromShape(self, shape):
@@ -80,4 +74,6 @@ class BSplineCurve(BaseCurveFeature):
         return features
 
     def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
-        pass
+        self.poles = [(pole @ R).tolist() for pole in self.poles]
+
+        self.poles = [(pole + t).tolist() for pole in self.poles]
