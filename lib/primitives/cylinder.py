@@ -49,7 +49,7 @@ class Cylinder(BaseSurfaceFeature):
         features['radius'] = self.radius
 
         return features
-    
+
     def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
         self.location = R @ self.location
         self.x_axis = R @ self.x_axis
