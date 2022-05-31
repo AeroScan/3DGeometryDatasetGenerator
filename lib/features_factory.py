@@ -45,3 +45,10 @@ class FeaturesFactory:
     @staticmethod
     def updatePrimitiveWithMeshParams(primitive, mesh: dict):
         return primitive.fromMesh(mesh)
+
+    @staticmethod
+    def normalizeShape(features, R, t, s):
+        for key in features:
+            for i in range(len(features[key])):
+                if features[key][i] is not None:
+                    features[key][i].normalize(R=R, t=t, s=s)
