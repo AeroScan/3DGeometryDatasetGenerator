@@ -4,6 +4,8 @@ from OCC.Core.TColStd import TColStd_Array1OfReal
 from OCC.Core.TColgp import TColgp_Array1OfPnt
 
 import numpy as np
+import scipy.interpolate as si
+import matplotlib.pyplot as plt
 
 class BSplineCurve(BaseCurveFeature):
 
@@ -74,6 +76,16 @@ class BSplineCurve(BaseCurveFeature):
         return features
 
     def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
-        self.poles = [(pole @ R).tolist() for pole in self.poles]
-
-        self.poles = [(pole + t).tolist() for pole in self.poles]
+        if len(self.poles) == 1:
+            """ Não sei porque teria tamanho maior do que 1 """
+            self.poles = self.poles[0]
+        else:
+            raise Exception("NORMALIZE BSPLINE CURVE")
+        
+        self.poles = [pole @ R for pole in self.poles]
+        
+        self.poles = [pole + t for pole in self.poles]
+        
+        self.poles = [pole * s for pole in self.poles]
+        
+        self.poles = [pole.tolist() for pole in self.poles]
