@@ -4,8 +4,6 @@ from OCC.Core.TColStd import TColStd_Array1OfReal
 from OCC.Core.TColgp import TColgp_Array1OfPnt
 
 import numpy as np
-import scipy.interpolate as si
-import matplotlib.pyplot as plt
 
 class BSplineCurve(BaseCurveFeature):
 

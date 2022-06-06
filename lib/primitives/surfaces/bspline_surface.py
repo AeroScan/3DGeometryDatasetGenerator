@@ -94,3 +94,4 @@ class BSplineSurface(BaseSurfaceFeature):
 
         self.poles[0] = [(pole + t).tolist() for pole in self.poles[0]]
         self.poles[1] = [(pole + t).tolist() for pole in self.poles[1]]
+
