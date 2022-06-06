@@ -7,15 +7,11 @@ class FeaturesFactory:
         'cone': Cone,
         'sphere': Sphere,
         'torus': Torus,
-        'revolution': Revolution,
-        'extrusion': Extrusion,
-        'bsplinesurface': BSplineSurface,
     }
     CURVES_TYPES = {
         'line': Line,
         'circle': Circle,
         'ellipse': Ellipse,
-        'bsplinecurve': BSplineCurve,
     }
     
     @staticmethod
