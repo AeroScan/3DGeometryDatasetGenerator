@@ -49,6 +49,22 @@ class Plane(BaseSurfaceFeature):
         features['normal'] = self.normal
 
         return features
+
+    def _getNewCoefficients(self):
+
+        # Cartesian equation of the plane: ax + by + cz = d or ax + by + cz - d = 0
+        # In this case: self.coefficients[0]*x + self.coefficients[1]*y + self.coefficients[2]*x + self.coefficients[3] = 0.0
+
+        # z_axis = [self.coefficients[0], self.coefficients[1], self.coefficients[2]]
+        # Because: z_axis is a normal vector of the plane, so:
+        #   z_axis = a*i + b*j + c*k
+        #   z_axis = self.coefficients[0]*i + self.coefficients[1]*j + self.coefficients[2]*k
+
+        # Therefore, d = self.coefficients[0]*self.location[0] + self.coefficients[1]*self.location[1] + self.coefficients[2]*self.location[2]
+
+        d = -(self.z_axis[0]*self.location[0] + self.z_axis[1]*self.location[1] + self.z_axis[2]*self.location[2])
+        
+        return [self.z_axis[0], self.z_axis[1], self.z_axis[2], d]
     
     def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
         self.location = R @ self.location
@@ -66,3 +82,5 @@ class Plane(BaseSurfaceFeature):
         self.y_axis = self.y_axis.tolist()
         self.z_axis = self.z_axis.tolist()
         self.normal = self.normal.tolist()
+
+        self.coefficients = self._getNewCoefficients()
