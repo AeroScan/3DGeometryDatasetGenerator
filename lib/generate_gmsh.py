@@ -91,22 +91,20 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
             for i in tqdm(range(0, len(features['curves']))):
                 tag = entities[dimension][i]
                  
-                if features['curves'][i] is not None:
+                if features['curves'][i].primitiveType() != 'BaseCurve':
                     feature = generateGMSHCurveFeature(dimension, tag)
                     
-                    FeaturesFactory.updatePrimitiveWithMeshParams(primitive=features['curves'][i], mesh=feature)
+                    features['curves'][i].fromMesh(mesh=feature)
 
-                    # features['curves'][i].update(feature)
         if dimension == 2:
             for i in tqdm(range(0, len(features['surfaces']))):
                 tag = entities[dimension][i]
 
-                if features['surfaces'][i] is not None:
+                if features['surfaces'][i].primitiveType() != 'BaseSurface':
                     feature = generateGMSHSurfaceFeature(dimension, tag)
 
-                    FeaturesFactory.updatePrimitiveWithMeshParams(primitive=features['surfaces'][i], mesh=feature)
+                    features['surfaces'][i].fromMesh(mesh=feature)
 
-                    # features['surfaces'][i].update(feature)
     return features
 
 # Configure the GMSH

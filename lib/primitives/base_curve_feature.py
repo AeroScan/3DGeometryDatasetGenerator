@@ -2,11 +2,22 @@ from abc import abstractmethod
 import numpy as np
 
 class BaseCurveFeature:
+    @staticmethod
+    def primitiveType():
+        return 'BaseCurve'
 
-    def __init__(self):
+    def __init__(self, shape = None, mesh: dict = None):
         self.sharp = None
         self.vert_indices = None
         self.vert_parameters = None
+        if shape is not None:
+            self.fromShape(shape=shape)
+        if mesh is not None:
+            self.fromMesh(mesh=mesh)
+
+    @abstractmethod
+    def fromShape(self, shape):
+        pass
 
     def fromMesh(self, mesh: dict) -> None:
         self.sharp = mesh['sharp'] if 'sharp' in mesh.keys() else True

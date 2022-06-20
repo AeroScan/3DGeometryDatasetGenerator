@@ -48,13 +48,13 @@ def processEdgesAndFaces(edges, faces, topology, generate_mesh):
         curve = BRepAdaptor_Curve(edge)
         tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
 
-        features['curves'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=curve, mesh=edges_mesh_data[i]))
+        features['curves'].append(FeaturesFactory.getPrimitiveObject(tp, 'curve', shape=curve, mesh=edges_mesh_data[i]))
 
     for i, face in enumerate(tqdm(faces)):
         surface = BRepAdaptor_Surface(face, True)
         tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
 
-        features['surfaces'].append(FeaturesFactory.getPrimitiveObject(type=tp, shape=surface, mesh=faces_mesh_data[i]))
+        features['surfaces'].append(FeaturesFactory.getPrimitiveObject(tp, 'surface', shape=surface, mesh=faces_mesh_data[i]))
 
     return features, mesh
 
