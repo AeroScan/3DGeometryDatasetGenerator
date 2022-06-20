@@ -1,5 +1,5 @@
 from lib.primitives.base_surface_feature import BaseSurfaceFeature
-from lib.primitives.curve_factory import CurveFactory
+from lib.primitives.curves.curve_factory import CurveFactory
 
 import numpy as np
 

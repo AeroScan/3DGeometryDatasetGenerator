@@ -1,4 +1,4 @@
-from .surfaces import *
+from . import *
 
 class SurfaceFactory:
     SURFACE_TYPES = {

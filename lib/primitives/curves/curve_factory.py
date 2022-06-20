@@ -1,4 +1,4 @@
-from .curves import *
+from . import *
 
 class CurveFactory:
     CURVE_TYPES = {

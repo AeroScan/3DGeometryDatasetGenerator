@@ -1,4 +1,3 @@
-from pyexpat import features
 from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Core.TopoDS import TopoDS_Face
