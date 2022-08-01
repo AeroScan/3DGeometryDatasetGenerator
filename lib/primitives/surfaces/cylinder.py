@@ -1,9 +1,9 @@
 import numpy as np
 
 from lib.tools import gpXYZ2List
-from lib.primitives.base_surface_feature import BaseSurfaceFeature
+from .base_surface import BaseSurface
 
-class Cylinder(BaseSurfaceFeature):
+class Cylinder(BaseSurface):
     
     @staticmethod
     def primitiveType():

@@ -1,12 +1,23 @@
 from abc import abstractmethod
 import numpy as np
 
-class BaseSurfaceFeature:
+class BaseSurface:
+    @staticmethod
+    def primitiveType():
+        return 'BaseSurface'
 
-    def __init__(self):
+    def __init__(self, shape = None, mesh: dict = None):
         self.vert_indices = None
         self.vert_parameters = None
         self.face_indices = None
+        if shape is not None:
+            self.fromShape(shape=shape)
+        if mesh is not None:
+            self.fromMesh(mesh=mesh)
+
+    @abstractmethod
+    def fromShape(self, shape):
+        pass
 
     def fromMesh(self, mesh: dict) -> None:
         self.vert_indices = mesh['vert_indices'] if 'vert_indices' in mesh.keys() else []

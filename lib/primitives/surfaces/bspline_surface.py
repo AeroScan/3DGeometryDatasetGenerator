@@ -1,11 +1,11 @@
-from lib.primitives.base_surface_feature import BaseSurfaceFeature
+from .base_surface import BaseSurface
 
 from OCC.Core.TColgp import TColgp_Array2OfPnt
 from OCC.Core.TColStd import TColStd_Array1OfReal, TColStd_Array2OfReal
 
 import numpy as np
 
-class BSplineSurface(BaseSurfaceFeature):
+class BSplineSurface(BaseSurface):
 
     @staticmethod
     def primitiveType():

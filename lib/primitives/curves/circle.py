@@ -1,9 +1,9 @@
 import numpy as np
 
-from lib.primitives.base_curve_feature import BaseCurveFeature
+from .base_curve import BaseCurve
 from lib.tools import gpXYZ2List
 
-class Circle(BaseCurveFeature):
+class Circle(BaseCurve):
 
     @staticmethod
     def primitiveType():

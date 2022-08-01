@@ -1,11 +1,11 @@
-from lib.primitives.base_curve_feature import BaseCurveFeature
+from .base_curve import BaseCurve
 
 from OCC.Core.TColStd import TColStd_Array1OfReal
 from OCC.Core.TColgp import TColgp_Array1OfPnt
 
 import numpy as np
 
-class BSplineCurve(BaseCurveFeature):
+class BSplineCurve(BaseCurve):
 
     @staticmethod
     def primitiveType():

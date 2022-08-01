@@ -1,9 +1,9 @@
-from lib.primitives.base_surface_feature import BaseSurfaceFeature
+from .base_surface import BaseSurface
 from lib.primitives.curves.curve_factory import CurveFactory
 
 import numpy as np
 
-class Revolution(BaseSurfaceFeature):
+class Revolution(BaseSurface):
 
     @staticmethod
     def primitiveType():

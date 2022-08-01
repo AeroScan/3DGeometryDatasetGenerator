@@ -1,14 +1,17 @@
+import statistics
 from lib.tools import (
     computeTranslationVector,
     writeFeatures, 
     writeMeshOBJ, 
     computeRotationMatrix,
     list_files,
-    output_name_converter
+    output_name_converter,
+    writeJSON
     )
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.features_factory import FeaturesFactory
+from lib.generate_statistics import generateStatistics
 
 import shutil
 import os
@@ -37,6 +40,8 @@ if __name__ == '__main__':
     parser.add_argument('-mfn', '--mesh_folder_name', type=str, default = 'mesh', help='mesh folder name. Default: mesh.')
     parser.add_argument('-ffn', '--features_folder_name', type=str, default = 'features', help='features folder name. \
     Default: features.')
+    parser.add_argument('-sfn', '--statistics_folder_name', type=str, default = 'stats', help='stats folder name. \
+    Default: stats.')
     parser.add_argument('-ms', '--mesh_size', type=float, default=1e22, help='mesh size max. Default: 1e+22.')
     parser.add_argument('-nuhd', '--no_use_highest_dim', action='store_false', help='use highest dim to explore file topology. Default: True.')
     parser.add_argument('-fft', '--features_file_type', type=str, default='json', help='type of the file to save the dict of features. Default: json. Possible types: json, yaml and pkl.')
@@ -49,6 +54,7 @@ if __name__ == '__main__':
     delete_old_data = args['delete_old_data']
     mesh_folder_name = args['mesh_folder_name']
     features_folder_name = args['features_folder_name']
+    statistics_folder_name = args['statistics_folder_name']
     mesh_size = args['mesh_size']
     use_highest_dim = args['no_use_highest_dim']
     features_file_type = args['features_file_type']
@@ -72,14 +78,19 @@ if __name__ == '__main__':
 
     mesh_folder_dir = os.path.join(output_directory, mesh_folder_name)
     features_folder_dir = os.path.join(output_directory, features_folder_name)
+    statistics_folder_dir = os.path.join(output_directory, statistics_folder_name)
     
     if delete_old_data:
         if os.path.isdir(mesh_folder_dir):
             shutil.rmtree(mesh_folder_dir)
+        if os.path.isdir(features_folder_dir):   
             shutil.rmtree(features_folder_dir)
+        if os.path.isdir(statistics_folder_dir):
+            shutil.rmtree(statistics_folder_dir)
     
     os.makedirs(mesh_folder_dir, exist_ok=True)
     os.makedirs(features_folder_dir, exist_ok=True)
+    os.makedirs(statistics_folder_dir, exist_ok=True)
 
     mesh_files = list_files(mesh_folder_dir, MESH_FORMATS, return_str=True)
     mesh_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in mesh_files]
@@ -133,13 +144,20 @@ if __name__ == '__main__':
         print(f'\nWriting meshes in obj file...')
         writeMeshOBJ(mesh_name, mesh)
 
+        stats = generateStatistics(features, mesh)
+
         features = FeaturesFactory.getListOfDictFromPrimitive(features)
         print(f'\nWriting Features in {features_file_type} format...')
         features_name = os.path.join(features_folder_dir, output_name)
         writeFeatures(features_name=features_name, features=features, tp=features_file_type)
-        
+
+        print(f'\nWriting Statistics in json file..')
+        stats_name = os.path.join(statistics_folder_dir, (output_name + '.json'))
+        writeJSON(stats_name, stats)    
+
         print('\n[Generator] Process done.')
 
+        del stats
         del features
         del mesh
         gc.collect()
