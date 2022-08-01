@@ -1,5 +1,13 @@
 import statistics
-from lib.tools import writeFeatures, writeMeshOBJ, writeJSON
+from lib.tools import (
+    computeTranslationVector,
+    writeFeatures, 
+    writeMeshOBJ, 
+    computeRotationMatrix,
+    list_files,
+    output_name_converter,
+    writeJSON
+    )
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.features_factory import FeaturesFactory
@@ -23,36 +31,6 @@ FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
 
 POSSIBLE_MESH_GENERATORS = ['occ' , 'gmsh']
 
-def list_files(input_dir: str, formats: list, return_str=False) -> list:
-    files = []
-    path = Path(input_dir)
-    for file_path in path.glob('*'):
-        if file_path.suffix.lower() in formats:
-            files.append(file_path if not return_str else str(file_path))
-    return sorted(files)
-
-
-def output_name_converter(input_path, formats):
-    filename = str(input_path).split('/')[-1]
-    
-    for f in formats:
-        if f in filename:
-            filename = filename.replace(f, '')
-    return filename
-
-def computeRotationMatrix(theta, axis):
-    axis = axis / np.sqrt(np.dot(axis, axis))
-    a = np.cos(theta / 2.0)
-    b, c, d = -axis * np.sin(theta / 2.0)
-    aa, bb, cc, dd = a * a, b * b, c * c, d * d
-    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
-    
-    R = np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
-                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
-                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
-    
-    return R
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset Generator')
     parser.add_argument('input_path', type=str, default='.', help='path to input directory or input file.')
@@ -68,6 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('-nuhd', '--no_use_highest_dim', action='store_false', help='use highest dim to explore file topology. Default: True.')
     parser.add_argument('-fft', '--features_file_type', type=str, default='json', help='type of the file to save the dict of features. Default: json. Possible types: json, yaml and pkl.')
     parser.add_argument('-nud', '--no_use_debug', action='store_false', help='use debug mode in PythonOCC and GMSH libraries. Default: True.')
+    parser.add_argument('-n', '--normalize', action='store_false', help='no normalize the shape. Center in origin, scale in meters and axis z on the top. Default: True')
     args = vars(parser.parse_args())
 
     input_path = args['input_path']
@@ -81,6 +60,7 @@ if __name__ == '__main__':
     features_file_type = args['features_file_type']
     use_debug = args['no_use_debug']
     mesh_generator = args['mesh_generator'].lower()
+    normalize_shape = args['normalize']
 
     assert mesh_generator in POSSIBLE_MESH_GENERATORS
 
@@ -143,18 +123,14 @@ if __name__ == '__main__':
             print('\n+-------------GMSH-------------+')
             features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
         
-        if True: #if normalize:
+        if normalize_shape:
+            print('\n[Generator] Normalization in progress...')
             vertices = mesh['vertices']
+
             R = computeRotationMatrix(math.pi/2, np.array([1., 0., 0.]))
             vertices = (R @ vertices.T).T
-            #vertices = np.array([R*v for v in vertices], dtype=vertices.dtype)
 
-            bounding_box_min = np.min(vertices, axis=0).tolist()
-            bounding_box_max = np.max(vertices, axis=0).tolist()
-            tx = - (bounding_box_max[0] + bounding_box_min[0]) * 0.5
-            ty = - (bounding_box_max[1] + bounding_box_min[1]) * 0.5
-            tz = - bounding_box_min[2]
-            t = np.array([tx, ty, tz])
+            t = computeTranslationVector(vertices)
             vertices += t
 
             s = 1./1000
@@ -162,11 +138,7 @@ if __name__ == '__main__':
 
             mesh['vertices'] = vertices
 
-            # #nasceu pro factory
-            for key in features:
-                for i in range(len(features[key])):
-                    if features[key][i] is not None:
-                        features[key][i].normalize(R=R, t=t, s=s)
+            FeaturesFactory.normalizeShape(features, R=R, t=t, s=s)
 
 
         print(f'\nWriting meshes in obj file...')

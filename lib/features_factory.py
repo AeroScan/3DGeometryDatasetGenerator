@@ -1,42 +1,15 @@
-from .primitives import *
+from .primitives import CurveFactory, SurfaceFactory
 
 class FeaturesFactory:
-    TYPES = {
-        'curve': {
-            'base': BaseCurveFeature,
-            'types': {
-                'line': Line,
-                'circle': Circle,
-                'ellipse': Ellipse,
-            },
-        },
-        'surface': {
-            'base': BaseSurfaceFeature,
-            'types': {
-                'plane': Plane,
-                'cylinder': Cylinder,
-                'cone': Cone,
-                'sphere': Sphere,
-                'torus': Torus,
-            },
-        },
-    }
-    
     @staticmethod
-    def getPrimitiveObject(type, geometry_type, shape=None, mesh=None,):
+    def getPrimitiveObject(type, shape=None, mesh=None,):
         type = type.lower()
-        geometry_type = geometry_type.lower()
-        if geometry_type in FeaturesFactory.TYPES.keys():
-            if type in FeaturesFactory.TYPES[geometry_type]['types'].keys(): 
-                return FeaturesFactory.TYPES[geometry_type]['types'][type](shape=shape, mesh=mesh)
-            else:
-                return FeaturesFactory.TYPES[geometry_type]['base'](shape=shape, mesh=mesh)
-
-    @staticmethod
-    def getDictFromPrimitive(primitive) -> dict:
-        feature = {}
-        feature = primitive.toDict()
-        return feature
+        if type in CurveFactory.CURVE_TYPES.keys():
+            return CurveFactory.getPrimitiveObject(type, shape, mesh)
+        elif type in SurfaceFactory.SURFACE_TYPES.keys():
+            return SurfaceFactory.getPrimitiveObject(type, shape, mesh)
+        else:
+            return None
 
     @staticmethod
     def removeNoneValuesOfDict(d: dict) -> dict:
@@ -52,24 +25,29 @@ class FeaturesFactory:
 
     @staticmethod
     def getListOfDictFromPrimitive(primitives: dict) -> dict:
-        i = 0
-        while i < len(primitives['curves']):
-            if primitives['curves'][i].primitiveType() != 'BaseCurve':
-                primitives['curves'][i] = FeaturesFactory.getDictFromPrimitive(primitives['curves'][i])
-                i += 1
-            else:
-                primitives['curves'].pop(i)
-        i = 0
-        while i < len(primitives['surfaces']):
-            if primitives['surfaces'][i].primitiveType() != 'BaseSurface':
-                primitives['surfaces'][i] = FeaturesFactory.getDictFromPrimitive(primitives['surfaces'][i])
-                i += 1
-            else:
-                primitives['surfaces'].pop(i)
+        for i in range(0, len(primitives['curves'])):
+            if primitives['curves'][i] is not None:
+                primitives['curves'][i] = CurveFactory.getDictFromPrimitive(primitives['curves'][i])
+        for i in range(0, len(primitives['surfaces'])):
+            if primitives['surfaces'][i] is not None:
+                primitives['surfaces'][i] = SurfaceFactory.getDictFromPrimitive(primitives['surfaces'][i])
         
         features = {
             'curves': primitives['curves'],
             'surfaces': primitives['surfaces']
         }
 
+        features = FeaturesFactory.removeNoneValuesOfDict(d=features)
+
         return features
+
+    @staticmethod
+    def updatePrimitiveWithMeshParams(primitive, mesh: dict):
+        return primitive.fromMesh(mesh)
+
+    @staticmethod
+    def normalizeShape(features, R, t, s):
+        for key in features:
+            for i in range(len(features[key])):
+                if features[key][i] is not None:
+                    features[key][i].normalize(R=R, t=t, s=s)

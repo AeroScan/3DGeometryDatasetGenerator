@@ -1,36 +1,46 @@
 import numpy as np
 
-from lib.primitives.base_curve_feature import BaseCurveFeature
 from lib.tools import gpXYZ2List
+from .base_surface import BaseSurface
 
-class Circle(BaseCurveFeature):
-
+class Sphere(BaseSurface):
+    
     @staticmethod
     def primitiveType():
-        return 'Circle'
+        return 'Sphere'
 
     @staticmethod
     def getPrimitiveParams():
-        return ['type', 'location', 'x_axis', 'y_axis', 'z_axis', 'radius', 'sharp', 'vert_indices', 'vert_parameters']
-    
+        return ['type', 'location', 'x_axis', 'y_axis', 'z_axis', 'coefficients', 'radius', 'vert_indices', 'vert_parameters', 'face_indices']
+
     def __init__(self, shape = None, mesh: dict = None):
         super().__init__()
         self.location = None
         self.x_axis = None
         self.y_axis = None
         self.z_axis = None
+        self.coefficients = None
         self.radius = None
         if shape is not None:
             self.fromShape(shape=shape)
         if mesh is not None:
             self.fromMesh(mesh=mesh)
 
+    def getAxis(self, shape):
+        x_axis = np.array(gpXYZ2List(shape.XAxis().Direction()))
+        y_axis = np.array(gpXYZ2List(shape.YAxis().Direction()))
+        z_axis = np.cross(x_axis, y_axis)
+
+        return [x_axis.tolist(), y_axis.tolist(), z_axis.tolist()]
+    
     def fromShape(self, shape):
-        shape = shape.Circle()
+        shape = shape.Sphere()
+        axis = self.getAxis(shape)
         self.location = gpXYZ2List(shape.Location())
-        self.x_axis = gpXYZ2List(shape.XAxis().Direction())
-        self.y_axis = gpXYZ2List(shape.YAxis().Direction())
-        self.z_axis = gpXYZ2List(shape.Axis().Direction())
+        self.x_axis = axis[0]
+        self.y_axis = axis[1]
+        self.z_axis = axis[2]
+        self.coefficients = list(shape.Coefficients())
         self.radius = shape.Radius()
 
     def fromMesh(self, mesh):
@@ -38,15 +48,16 @@ class Circle(BaseCurveFeature):
 
     def toDict(self):
         features = super().toDict()
-        features['type'] = Circle.primitiveType()
+        features['type'] = Sphere.primitiveType()
         features['location'] = self.location
         features['x_axis'] = self.x_axis
         features['y_axis'] = self.y_axis
         features['z_axis'] = self.z_axis
+        features['coefficients'] = self.coefficients
         features['radius'] = self.radius
 
         return features
-
+    
     def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
         self.location = R @ self.location
         self.x_axis = R @ self.x_axis
@@ -54,7 +65,7 @@ class Circle(BaseCurveFeature):
         self.z_axis = R @ self.z_axis
         
         self.location += t
-        
+
         self.location *= s
         self.radius *= s
 
@@ -62,4 +73,3 @@ class Circle(BaseCurveFeature):
         self.x_axis = self.x_axis.tolist()
         self.y_axis = self.y_axis.tolist()
         self.z_axis = self.z_axis.tolist()
-        

@@ -3,6 +3,7 @@ import pickle
 import json
 import yaml
 import igl
+from pathlib import Path
 
 # Convert a float to string
 def float2str(number, limit = 10) -> str:
@@ -147,3 +148,42 @@ def filterFeaturesData(features_data, curve_types, surface_types):
 
 def writeMeshOBJ(filename, mesh):
     igl.write_triangle_mesh(f'{filename}.obj', mesh['vertices'], mesh['faces'])
+
+def list_files(input_dir: str, formats: list, return_str=False) -> list:
+    files = []
+    path = Path(input_dir)
+    for file_path in path.glob('*'):
+        if file_path.suffix.lower() in formats:
+            files.append(file_path if not return_str else str(file_path))
+    return sorted(files)
+
+def output_name_converter(input_path, formats):
+    filename = str(input_path).split('/')[-1]
+    
+    for f in formats:
+        if f in filename:
+            filename = filename.replace(f, '')
+    return filename
+
+def computeRotationMatrix(theta, axis):
+    axis = axis / np.sqrt(np.dot(axis, axis))
+    a = np.cos(theta / 2.0)
+    b, c, d = -axis * np.sin(theta / 2.0)
+    aa, bb, cc, dd = a * a, b * b, c * c, d * d
+    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+    
+    R = np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+    
+    return R
+
+def computeTranslationVector(vertices):
+    bounding_box_min = np.min(vertices, axis=0).tolist()
+    bounding_box_max = np.max(vertices, axis=0).tolist()
+    tx = - (bounding_box_max[0] + bounding_box_min[0]) * 0.5
+    ty = - (bounding_box_max[1] + bounding_box_min[1]) * 0.5
+    tz = - bounding_box_min[2]
+    t = np.array([tx, ty, tz])
+
+    return t
