@@ -62,7 +62,7 @@ def main(args):
     for filename in tqdm(filenames):
         l, w, h = _get_dimensions(filename)
 
-        result = (filename.split("/")[-1], l, w, h)
+        result = (filename.split("/")[-1], str(l).replace(".", ","), str(w).replace(".", ","), str(h).replace(".", ","))
         results.append(result)
     print(f"Done.\n")
 

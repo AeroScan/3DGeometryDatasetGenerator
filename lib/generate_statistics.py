@@ -1,7 +1,8 @@
-
+import numpy as np
 
 def generateStatistics(features, mesh):
     result = {}
+    result['size'] = list(np.max(mesh['vertices'], axis=0) - np.min(mesh['vertices'], axis=0))
     result['number_vertices'] = len(mesh['vertices'])
     result['number_faces'] = len(mesh['faces'])
     result['number_curves'] = len(features['curves'])
