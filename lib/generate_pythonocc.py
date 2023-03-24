@@ -37,10 +37,10 @@ def processEdgesAndFaces(edges, faces, topology, generate_mesh):
 
     mesh = {}
     edges_mesh_data = [{} for x in edges]
-    faces_mesh_data = [{} for x in edges]
+    faces_mesh_data = [{} for x in faces]
 
     if generate_mesh:
-        mesh['vertices'], mesh['faces'], edges_mesh_data, faces_mesh_data  = computeMeshData(edges, faces, topology)
+        mesh['vertices'], mesh['faces'], edges_mesh_data, faces_mesh_data = computeMeshData(edges, faces, topology)
     
     print('\n[PythonOCC] Generating Features...')
     for i, edge in enumerate(tqdm(edges)):

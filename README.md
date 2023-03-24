@@ -17,15 +17,12 @@ The 3D Geometry Dataset Generator software uses Pythonocc and Gmsh API to proces
 Just a list of dependencies, follow the installation steps to install them all.
 - [Anaconda](https://www.anaconda.com)
 - [Pythonocc (>= 7.5.0)](https://github.com/tpaviot/pythonocc-core)
-- [Gmsh API (Our Fork)](https://gmsh.info/)
+- [Gmsh API](https://gmsh.info/)
 - [argparse](https://pypi.org/project/argparse/)
 - [tqdm](https://github.com/tqdm/tqdm)
 - [PyYAML](https://pypi.org/project/PyYAML/)
 - [numpy](https://pypi.org/project/numpy/)
 - [termcolor](https://pypi.org/project/termcolor/)
-- [h5py](https://www.h5py.org/)
-- [pypcd](https://github.com/dimatura/pypcd)
-- [mesh_point_sampling](https://github.com/igormaurell/mesh_point_sampling)
 
 ## Installation
 
@@ -60,45 +57,6 @@ Download the "tgz" file on https://dev.opencascade.org/release, than:
 ### Pythonocc (7.5.1)
 
     $ conda install -c conda-forge pythonocc-core=7.5.1
-
-### Gmsh (4.8.4)
-On your prefered folder, install:
-
-    $ git clone https://github.com/igormaurell/gmsh
-    $ cd gmsh
-    $ mkdir build && cd build
-    $ cmake -DCMAKE_INSTALL_PREFIX=/opt/gmsh -DENABLE_BUILD_DYNAMIC=1 ..
-    $ make
-    $ sudo make install
-
-Add to PYTHONPATH,
-
-for bash:
-
-    $ echo export PYTHONPATH="${PYTHONPATH}:/opt/gmsh/lib" >> ~/.bashrc
-    $ source ~/.bashrc
-    
-for zsh:
-
-    $ echo export PYTHONPATH="${PYTHONPATH}:/opt/gmsh/lib" >> ~/.zshrc
-    $ source ~/.zshrc
-
-### pypcd
-On your prefered folder, install:
-
-    $ git clone https://github.com/igormaurell/pypcd
-    $ cd pypcd
-    $ python setup.py install
-
-### mesh_point_sampling
-On your prefered folder, install:
-
-    $ git clone --recursive https://github.com/igormaurell/mesh_point_sampling
-    $ cd mesh_point_sampling
-    $ mkdir build && cd build
-    $ cmake ..
-    $ make
-    $ make install
 
 ### 3D Geometry Dataset Generator
 On your workspace folder, download:

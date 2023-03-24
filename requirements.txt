@@ -1,6 +1,6 @@
+gmsh
 argparse
 tqdm
 numpy
 termcolor
-h5py
 pyyaml

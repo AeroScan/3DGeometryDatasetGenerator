@@ -186,7 +186,6 @@ def computeMeshData(edges, faces, topology):
         
         faces_mesh_data[face_index] = {'vert_indices': vert_indices.tolist(), 'vert_parameters': vert_parameters, 'face_indices': face_indices}
 
-
     return mesh_vertices, mesh_faces, edges_mesh_data, faces_mesh_data
 
 def OCCMeshGeneration(shape):

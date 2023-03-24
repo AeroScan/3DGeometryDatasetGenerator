@@ -91,7 +91,7 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
             for i in tqdm(range(0, len(features['curves']))):
                 tag = entities[dimension][i]
                  
-                if features['curves'][i].primitiveType() != 'BaseCurve':
+                if features['curves'][i] is not None and features['curves'][i].primitiveType() != 'BaseCurve':
                     feature = generateGMSHCurveFeature(dimension, tag)
                     
                     features['curves'][i].fromMesh(mesh=feature)
@@ -100,7 +100,7 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
             for i in tqdm(range(0, len(features['surfaces']))):
                 tag = entities[dimension][i]
 
-                if features['surfaces'][i].primitiveType() != 'BaseSurface':
+                if features['surfaces'][i] is not None and features['surfaces'][i].primitiveType() != 'BaseSurface':
                     feature = generateGMSHSurfaceFeature(dimension, tag)
 
                     features['surfaces'][i].fromMesh(mesh=feature)
@@ -191,7 +191,7 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
         else:
             shape_pnt = int(shape.this)
             gmsh.model.occ.importShapesNativePointer(shape_pnt, highestDimOnly=use_highest_dim)
-
+        
         gmsh.model.occ.synchronize()
 
         setupGMSH(mesh_size=mesh_size, use_debug=debug)
