@@ -1,4 +1,4 @@
-import statistics
+import json
 from lib.tools import (
     computeTranslationVector,
     writeFeatures, 
@@ -11,7 +11,10 @@ from lib.tools import (
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.features_factory import FeaturesFactory
-from lib.generate_statistics import generateStatistics
+from lib.generate_statistics import (
+    generateStatistics,
+    generateAreaFromSurface
+)
 
 import shutil
 import os
@@ -47,20 +50,22 @@ if __name__ == '__main__':
     parser.add_argument('-fft', '--features_file_type', type=str, default='json', help='type of the file to save the dict of features. Default: json. Possible types: json, yaml and pkl.')
     parser.add_argument('-nud', '--no_use_debug', action='store_false', help='use debug mode in PythonOCC and GMSH libraries. Default: True.')
     parser.add_argument('-n', '--normalize', action='store_false', help='no normalize the shape. Center in origin, scale in meters and axis z on the top. Default: True')
+    parser.add_argument('-s', '--only_stats', action='store_true', help='set the dataset generator to generate only the statistics. Default: False')
     args = vars(parser.parse_args())
 
-    input_path = args['input_path']
-    output_directory = args['output_dir']
-    delete_old_data = args['delete_old_data']
-    mesh_folder_name = args['mesh_folder_name']
-    features_folder_name = args['features_folder_name']
-    statistics_folder_name = args['statistics_folder_name']
-    mesh_size = args['mesh_size']
-    use_highest_dim = args['no_use_highest_dim']
-    features_file_type = args['features_file_type']
-    use_debug = args['no_use_debug']
-    mesh_generator = args['mesh_generator'].lower()
-    normalize_shape = args['normalize']
+    input_path =                args['input_path']
+    output_directory =          args['output_dir']
+    delete_old_data =           args['delete_old_data']
+    mesh_folder_name =          args['mesh_folder_name']
+    features_folder_name =      args['features_folder_name']
+    statistics_folder_name =    args['statistics_folder_name']
+    mesh_size =                 args['mesh_size']
+    use_highest_dim =           args['no_use_highest_dim']
+    features_file_type =        args['features_file_type']
+    use_debug =                 args['no_use_debug']
+    mesh_generator =            args['mesh_generator'].lower()
+    normalize_shape =           args['normalize']
+    only_stats =                args["only_stats"]
 
     assert mesh_generator in POSSIBLE_MESH_GENERATORS
 
@@ -106,64 +111,74 @@ if __name__ == '__main__':
         else:
             i += 1
 
-    # Main loop
+    # ---------------------------------------------------------------------------------------------------- #
     error_counter = 0
     processorErrors = []
-    time_initial = time.time()
-    for file in files:
-        file = str(file)
-        output_name = output_name_converter(file, CAD_FORMATS)
-        mesh_name = os.path.join(mesh_folder_dir, output_name)
-        print('\n[Generator] Processing file ' + file + '...')
-        
-        print('\n+-----------PythonOCC----------+')
-        shape, features, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=='occ'), use_highest_dim=use_highest_dim, debug=use_debug)
+    if not only_stats:
+        # Main loop
+        time_initial = time.time()
+        for file in files:
+            file = str(file)
+            output_name = output_name_converter(file, CAD_FORMATS)
+            mesh_name = os.path.join(mesh_folder_dir, output_name)
+            print('\n[Generator] Processing file ' + file + '...')
+            
+            print('\n+-----------PythonOCC----------+')
+            shape, features, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=='occ'), use_highest_dim=use_highest_dim, debug=use_debug)
 
-        if mesh_generator == 'gmsh':
-            print('\n+-------------GMSH-------------+')
-            features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
-        
-        if normalize_shape:
-            print('\n[Generator] Normalization in progress...')
-            vertices = mesh['vertices']
+            if mesh_generator == 'gmsh':
+                print('\n+-------------GMSH-------------+')
+                features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, features=features, mesh_name=mesh_name, shape=shape, use_highest_dim=use_highest_dim, debug=use_debug)
+            
+            if normalize_shape:
+                print('\n[Generator] Normalization in progress...')
+                vertices = mesh['vertices']
 
-            R = computeRotationMatrix(math.pi/2, np.array([1., 0., 0.]))
-            vertices = (R @ vertices.T).T
+                R = computeRotationMatrix(math.pi/2, np.array([1., 0., 0.]))
+                vertices = (R @ vertices.T).T
 
-            t = computeTranslationVector(vertices)
-            vertices += t
+                t = computeTranslationVector(vertices)
+                vertices += t
 
-            s = 1./1000
-            vertices *= s
+                s = 1./1000
+                vertices *= s
 
-            mesh['vertices'] = vertices
+                mesh['vertices'] = vertices
 
-            FeaturesFactory.normalizeShape(features, R=R, t=t, s=s)
+                FeaturesFactory.normalizeShape(features, R=R, t=t, s=s)
 
 
-        print(f'\nWriting meshes in obj file...')
-        writeMeshOBJ(mesh_name, mesh)
+            print(f'\nWriting meshes in obj file...')
+            writeMeshOBJ(mesh_name, mesh)
 
-        stats = generateStatistics(features, mesh)
+            stats = generateStatistics(features, mesh)
 
-        features = FeaturesFactory.getListOfDictFromPrimitive(features)
-        print(f'\nWriting Features in {features_file_type} format...')
-        features_name = os.path.join(features_folder_dir, output_name)
-        writeFeatures(features_name=features_name, features=features, tp=features_file_type)
+            features = FeaturesFactory.getListOfDictFromPrimitive(features)
+            print(f'\nWriting Features in {features_file_type} format...')
+            features_name = os.path.join(features_folder_dir, output_name)
+            writeFeatures(features_name=features_name, features=features, tp=features_file_type)
 
-        print(f'\nWriting Statistics in json file..')
-        stats_name = os.path.join(statistics_folder_dir, (output_name + '.json'))
-        writeJSON(stats_name, stats)    
+            print(f'\nWriting Statistics in json file..')
+            stats_name = os.path.join(statistics_folder_dir, (output_name + '.json'))
+            writeJSON(stats_name, stats)    
 
-        print('\n[Generator] Process done.')
+            print('\n[Generator] Process done.')
 
-        del stats
-        del features
-        del mesh
-        gc.collect()
+            del stats
+            del features
+            del mesh
+            gc.collect()
 
-    time_finish = time.time()
-    
+        time_finish = time.time()
+
+    else: 
+        time_initial = time.time()
+
+        pass            
+
+        time_finish = time.time()
+    # ---------------------------------------------------------------------------------------------------- #
+
     print('\n\n+-----------LOG--------------+')
     print(f'Processed files: {len(files) - error_counter}')
     print(f'Unprocessed files: {error_counter}')
