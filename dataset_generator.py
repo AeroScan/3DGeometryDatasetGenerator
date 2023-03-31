@@ -6,7 +6,9 @@ from lib.tools import (
     computeRotationMatrix,
     list_files,
     output_name_converter,
-    writeJSON
+    writeJSON,
+    loadMeshOBJ,
+    loadFeatures
     )
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
@@ -184,41 +186,22 @@ if __name__ == '__main__':
 
         # List files
         # meshes = [mesh for mesh in mesh_folder.glob("*.obj")]
-        features = [feature for feature in features_folder.glob("*."+str(features_file_type))]
+        features = [str(feature).replace('.'+str(features_file_type), '') for feature in features_folder.glob("*."+str(features_file_type))]
 
         for feature in features:
             # Find the correspondent mesh
             model_name = str(feature).split("/")[-1]
-            mesh_f = model_name.replace("."+str(features_file_type), ".obj")
-            mesh_p = Path(os.path.join(mesh_folder, mesh_f))
+            mesh_p = Path(os.path.join(mesh_folder, model_name))
 
-            try:
-                m = {}
-                faces = []
-                vertices = []
-                with open(mesh_p, "r") as mesh_file:
-                    lines = mesh_file.readlines()
-                    for line in lines:
-                        if "v" in line:
-                            vert = np.array(line.replace("v ", ""))
-                            vertices.append(vert)
-                        elif "f" in line:
-                            face = line.replace("f ", "")
-                            faces.append(face)
-                m["faces"] = faces
-                m["vertices"] = vertices
+            mesh = loadMeshOBJ(mesh_p)
 
-                with open(feature, "r") as feat_file:
-                    json_file = json.load(feat_file)
+            features_data = loadFeatures(feature, features_file_type)
 
-                    stats = generateStatistics(json_file, m, only_stats=only_stats)
+            stats = generateStatistics(features_data, mesh, only_stats=only_stats)
 
-                    print(f'\nWriting Statistics in json file..')
-                    stats_name = os.path.join(statistics_folder_dir, (model_name + '.json'))
-                    writeJSON(stats_name, stats)
-
-            except FileNotFoundError:
-                print(f"\nThe {mesh_f} is not found.")
+            print(f'\nWriting Statistics in json file..')
+            stats_name = os.path.join(statistics_folder_dir, (model_name + '.json'))
+            writeJSON(stats_name, stats)
 
         time_finish = time.time()
     # ---------------------------------------------------------------------------------------------------- #

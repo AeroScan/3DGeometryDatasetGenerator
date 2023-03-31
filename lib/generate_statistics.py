@@ -22,6 +22,8 @@ def distance_between_two_points(a, b):
     return np.sqrt(squared_dist)
 
 def generateAreaFromSurface(surface, vertices:list, faces: list):
+    print(vertices)
+    print(faces)
     try:
         face_indices = surface.face_indices
     except:
