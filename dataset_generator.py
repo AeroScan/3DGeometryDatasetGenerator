@@ -174,7 +174,51 @@ if __name__ == '__main__':
     else: 
         time_initial = time.time()
 
-        pass            
+        # Get folders
+        mesh_folder = Path(os.path.join(input_path, mesh_folder_name))
+        features_folder = Path(os.path.join(input_path, features_folder_name))
+        statistics_folder = Path(os.path.join(input_path, statistics_folder_name))
+
+        # Remove stats files
+        shutil.rmtree(statistics_folder)
+
+        # List files
+        # meshes = [mesh for mesh in mesh_folder.glob("*.obj")]
+        features = [feature for feature in features_folder.glob("*."+str(features_file_type))]
+
+        for feature in features:
+            # Find the correspondent mesh
+            model_name = str(feature).split("/")[-1]
+            mesh_f = model_name.replace("."+str(features_file_type), ".obj")
+            mesh_p = Path(os.path.join(mesh_folder, mesh_f))
+
+            try:
+                m = {}
+                faces = []
+                vertices = []
+                with open(mesh_p, "r") as mesh_file:
+                    lines = mesh_file.readlines()
+                    for line in lines:
+                        if "v" in line:
+                            vert = np.array(line.replace("v ", ""))
+                            vertices.append(vert)
+                        elif "f" in line:
+                            face = line.replace("f ", "")
+                            faces.append(face)
+                m["faces"] = faces
+                m["vertices"] = vertices
+
+                with open(feature, "r") as feat_file:
+                    json_file = json.load(feat_file)
+
+                    stats = generateStatistics(json_file, m, only_stats=only_stats)
+
+                    print(f'\nWriting Statistics in json file..')
+                    stats_name = os.path.join(statistics_folder_dir, (model_name + '.json'))
+                    writeJSON(stats_name, stats)
+
+            except FileNotFoundError:
+                print(f"\nThe {mesh_f} is not found.")
 
         time_finish = time.time()
     # ---------------------------------------------------------------------------------------------------- #
