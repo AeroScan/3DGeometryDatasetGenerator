@@ -1,29 +1,5 @@
 import numpy as np
 
-EPS = np.finfo(np.float32).eps
-
-def lineseg_dist(p, a, b):
-
-    # normalized tangent vector
-    print(np.linalg.norm(b - a))
-    d = np.divide(b - a, np.linalg.norm(b - a) + EPS)
-
-    # signed parallel distance components
-    s = np.dot(a - p, d)
-    t = np.dot(p - b, d)
-
-    # clamped parallel distance
-    h = np.maximum.reduce([s, t, 0])
-
-    # perpendicular distance component
-    c = np.cross(p - a, d)
-
-    return np.hypot(h, np.linalg.norm(c))
-
-def distance_between_two_points(a, b):
-    squared_dist = np.sum((a-b)**2, axis=0)
-    return np.sqrt(squared_dist)
-
 def generateAreaFromSurface(surface, vertices:list, faces: list):
     area_of_surface = 0.0
     try:
@@ -31,20 +7,18 @@ def generateAreaFromSurface(surface, vertices:list, faces: list):
     except:
         face_indices = surface["face_indices"]
 
-    for face in face_indices:
-        triangles = faces[face].tolist()
+    for id in face_indices:
+        triangle = faces[id].tolist()
 
-        v1 = vertices[triangles[0]]
+        A = vertices[triangle[0]]
         
-        v2 = vertices[triangles[1]]
+        B = vertices[triangle[1]]
         
-        v3 = vertices[triangles[2]]
+        C = vertices[triangle[2]]
 
-        height = lineseg_dist(v1, v2, v3)
-        base = distance_between_two_points(v2, v3)
+        area =  np.linalg.norm(np.cross((B - A), (C - A)))/2
 
-        area_of_triangle = (height * base) / 2.0
-        area_of_surface += area_of_triangle
+        area_of_surface += area
     
     return area_of_surface
 
