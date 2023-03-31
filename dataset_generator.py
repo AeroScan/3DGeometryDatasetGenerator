@@ -200,6 +200,7 @@ if __name__ == '__main__':
             stats = generateStatistics(features_data, mesh, only_stats=only_stats)
 
             print(f'\nWriting Statistics in json file..')
+            os.makedirs(statistics_folder_dir, exist_ok=True)
             stats_name = os.path.join(statistics_folder_dir, (model_name + '.json'))
             writeJSON(stats_name, stats)
 

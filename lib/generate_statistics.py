@@ -1,9 +1,12 @@
 import numpy as np
 
+EPS = np.finfo(np.float32).eps
+
 def lineseg_dist(p, a, b):
 
     # normalized tangent vector
-    d = np.divide(b - a, np.linalg.norm(b - a))
+    print(np.linalg.norm(b - a))
+    d = np.divide(b - a, np.linalg.norm(b - a) + EPS)
 
     # signed parallel distance components
     s = np.dot(a - p, d)
@@ -22,28 +25,28 @@ def distance_between_two_points(a, b):
     return np.sqrt(squared_dist)
 
 def generateAreaFromSurface(surface, vertices:list, faces: list):
-    print(vertices)
-    print(faces)
+    area_of_surface = 0.0
     try:
         face_indices = surface.face_indices
     except:
         face_indices = surface["face_indices"]
 
     for face in face_indices:
-        faces = faces[face]
+        triangles = faces[face].tolist()
+
+        v1 = vertices[triangles[0]]
         
-        face_index = faces.tolist()
+        v2 = vertices[triangles[1]]
         
-        v1 = vertices[face_index[0]]
-        
-        v2 = vertices[face_index[1]]
-        
-        v3 = vertices[face_index[2]]
+        v3 = vertices[triangles[2]]
 
         height = lineseg_dist(v1, v2, v3)
         base = distance_between_two_points(v2, v3)
 
-        return height * base
+        area_of_triangle = (height * base) / 2.0
+        area_of_surface += area_of_triangle
+    
+    return area_of_surface
 
 def generateStatistics(features, mesh, only_stats=False):
     result = {}
