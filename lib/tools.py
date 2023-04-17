@@ -149,6 +149,11 @@ def filterFeaturesData(features_data, curve_types, surface_types):
 def writeMeshOBJ(filename, mesh):
     igl.write_triangle_mesh(f'{filename}.obj', mesh['vertices'], mesh['faces'])
 
+def loadMeshOBJ(filename):
+    v, f = igl.read_triangle_mesh(f'{filename}.obj')
+    mesh = {'vertices': v, 'faces': f}
+    return mesh
+
 def list_files(input_dir: str, formats: list, return_str=False) -> list:
     files = []
     path = Path(input_dir)
