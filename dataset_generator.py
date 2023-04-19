@@ -149,8 +149,8 @@ if __name__ == '__main__':
 
                 FeaturesFactory.normalizeShape(features, R=R, t=t, s=s)
 
-            print(f'\nGenerating Stats...')            
-            stats = generateStatistics(features, mesh)
+            #print(f'\nGenerating Stats...')            
+            #stats = generateStatistics(features, mesh)
 
             print(f'\nWriting meshes in obj file...')
             writeMeshOBJ(mesh_name, mesh)
@@ -162,11 +162,11 @@ if __name__ == '__main__':
 
             print(f'\nWriting Statistics in json file..')
             stats_name = os.path.join(statistics_folder_dir, (output_name + '.json'))
-            writeJSON(stats_name, stats)    
+            #writeJSON(stats_name, stats)    
 
             print('\n[Generator] Process done.')
 
-            del stats
+            #del stats
             del features
             del mesh
             gc.collect()
