@@ -87,14 +87,6 @@ if __name__ == '__main__':
     features_folder_dir = os.path.join(output_directory, features_folder_name)
     statistics_folder_dir = os.path.join(output_directory, statistics_folder_name)
     
-    if delete_old_data:
-        if os.path.isdir(mesh_folder_dir):
-            shutil.rmtree(mesh_folder_dir)
-        if os.path.isdir(features_folder_dir):   
-            shutil.rmtree(features_folder_dir)
-        if os.path.isdir(statistics_folder_dir):
-            shutil.rmtree(statistics_folder_dir)
-    
     os.makedirs(mesh_folder_dir, exist_ok=True)
     os.makedirs(features_folder_dir, exist_ok=True)
     os.makedirs(statistics_folder_dir, exist_ok=True)
@@ -108,7 +100,7 @@ if __name__ == '__main__':
     while i < len(files):
         f = str(files[i])
         filename = f[(f.rfind('/') + 1):f.rindex('.')]
-        if filename in mesh_files and filename in features_files:
+        if filename in mesh_files and filename in features_files and not delete_old_data:
             files.pop(i)
         else:
             i += 1
@@ -149,24 +141,24 @@ if __name__ == '__main__':
 
                 FeaturesFactory.normalizeShape(features, R=R, t=t, s=s)
 
+            #print(f'\nGenerating Stats...')            
+            #stats = generateStatistics(features, mesh)
 
             print(f'\nWriting meshes in obj file...')
             writeMeshOBJ(mesh_name, mesh)
 
-            stats = generateStatistics(features, mesh)
-
-            features = FeaturesFactory.getListOfDictFromPrimitive(features)
             print(f'\nWriting Features in {features_file_type} format...')
+            features = FeaturesFactory.getListOfDictFromPrimitive(features)
             features_name = os.path.join(features_folder_dir, output_name)
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
 
             print(f'\nWriting Statistics in json file..')
             stats_name = os.path.join(statistics_folder_dir, (output_name + '.json'))
-            writeJSON(stats_name, stats)    
+            #writeJSON(stats_name, stats)    
 
             print('\n[Generator] Process done.')
 
-            del stats
+            #del stats
             del features
             del mesh
             gc.collect()

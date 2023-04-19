@@ -16,7 +16,7 @@ The 3D Geometry Dataset Generator software uses Pythonocc and Gmsh API to proces
 ## Dependencies
 Just a list of dependencies, follow the installation steps to install them all.
 - [Anaconda](https://www.anaconda.com)
-- [Pythonocc (>= 7.5.0)](https://github.com/tpaviot/pythonocc-core)
+- [Pythonocc (>= 7.7.0)](https://github.com/tpaviot/pythonocc-core)
 - [Gmsh API](https://gmsh.info/)
 - [argparse](https://pypi.org/project/argparse/)
 - [tqdm](https://github.com/tqdm/tqdm)
@@ -40,23 +40,23 @@ Just a list of dependencies, follow the installation steps to install them all.
 ### Create Conda Env
 Create conda env:
 
-    $ conda create --name=pyoccenv python=3.7
+    $ conda create --name=pyoccenv python=3.9
     $ conda activate pyoccenv
 
-### OCC (7.5.0)
+### OCC (7.7.0)
 Download the "tgz" file on https://dev.opencascade.org/release, than:
 
     $ cd ~/Downloads
-    $ tar xf opencascade-7.5.0.tgz
-    $ cd opencascade-7.5.0
+    $ tar xf opencascade-7.7.0.tgz
+    $ cd opencascade-7.7.0
     $ mkdir build && cd build
     $ cmake ..
     $ make
     $ sudo make install
 
-### Pythonocc (7.5.1)
+### Pythonocc (7.7.0)
 
-    $ conda install -c conda-forge pythonocc-core=7.5.1
+    $ conda install -c conda-forge pythonocc-core=7.7.0
 
 ### 3D Geometry Dataset Generator
 On your workspace folder, download:

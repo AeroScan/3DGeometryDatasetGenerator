@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 import json
 import yaml
-import igl
+import open3d as o3d
 from pathlib import Path
 
 # Convert a float to string
@@ -146,11 +146,15 @@ def filterFeaturesData(features_data, curve_types, surface_types):
         else:
             i+=1 
 
-def writeMeshOBJ(filename, mesh):
-    igl.write_triangle_mesh(f'{filename}.obj', mesh['vertices'], mesh['faces'])
+def writeMeshOBJ(filename, mesh_dict):
+    mesh = o3d.geometry.TriangleMesh()
+    mesh.vertices = o3d.utility.Vector3dVector(np.asarray(mesh_dict['vertices']))
+    mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh_dict['faces']))
+    o3d.io.write_triangle_mesh(filename + '.obj', mesh, print_progress=True)
 
 def loadMeshOBJ(filename):
-    v, f = igl.read_triangle_mesh(f'{filename}.obj')
+    mesh = o3d.io.read_triangle_mesh(filename + '.obj', print_progress=True)
+    v, f = np.asarray(mesh.vertices), np.asarray(mesh.triangles)
     mesh = {'vertices': v, 'faces': f}
     return mesh
 

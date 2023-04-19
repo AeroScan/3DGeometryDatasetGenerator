@@ -62,7 +62,6 @@ def computeMeshData(edges, faces, topology):
         addEntityToMap(i, face, faces_map)
         edges_indices = [searchEntityInMap(edge, edges_map) for edge in topology.edges_from_face(face)]
         face_edges_map.append(edges_indices)
-        
     mesh_vertices = []
     mesh_faces = []
     print('\n[PythonOCC] Generating Mesh Data...')
@@ -83,8 +82,6 @@ def computeMeshData(edges, faces, topology):
         number_vertices = triangulation.NbNodes()
         vert_indices = np.zeros(number_vertices, dtype=np.int64) - 1
         vert_parameters = []
-
-        global_ids = []
 
         for edge_index in face_edges_map[face_index]:
             edge = edges[edge_index]
@@ -109,7 +106,6 @@ def computeMeshData(edges, faces, topology):
             j = 0
             while i < len(polygon_nodes) and j < len(vert_indices_curr):
                 if polygon_parameters[i] == vert_parameters_curr[j]:
-                    global_ids.append(vert_indices_curr[j])
                     vert_indices_curr_final.append(vert_indices_curr[j])
                     vert_local_indices_curr_final.append(-1)
                     vert_parameters_curr_final.append(polygon_parameters[i])
@@ -156,22 +152,23 @@ def computeMeshData(edges, faces, topology):
             vert_parameters.append(list(uv_node.Coord()))
 
         for edge_index in face_edges_map[face_index]:
-            mesh_data = edges_mesh_data[edge_index]
-            mask = (mesh_data['vert_indices'] == -1)
-            mesh_data['vert_indices'][mask] = vert_indices[mesh_data['vert_local_indices'][mask]]
-            mesh_data['vert_indices'] = mesh_data['vert_indices'].tolist()
+            mask = (edges_mesh_data[edge_index]['vert_indices'] == -1)
+            edges_mesh_data[edge_index]['vert_indices'][mask] = vert_indices[edges_mesh_data[edge_index]['vert_local_indices'][mask]]
+            edges_mesh_data[edge_index]['vert_indices'] = edges_mesh_data[edge_index]['vert_indices'].tolist()
             edges_mesh_data[edge_index].pop('vert_local_indices')
 
         face_indices = []
 
         number_faces = triangulation.NbTriangles()
+        vert_count = np.zeros(number_vertices)
         for i in range(1, number_faces + 1):
             i1, i2, i3 = triangulation.Triangle(i).Get()
+            vert_count[np.array([i1, i2, i3]) - 1] = 1 
             i1 = vert_indices[i1 - 1]
             i2 = vert_indices[i2 - 1]
             i3 = vert_indices[i3 - 1]
             if i1 == i2 or i1 == i3 or i2 == i3:
-                #ignoring faces with repeated vertices (temporary solution)
+                #print('ERROR: ignoring faces with repeated vertices (temporary solution)')
                 continue
             if face_orientation == 0:
                 verts_of_face = np.array([i1 , i2, i3])
@@ -185,6 +182,50 @@ def computeMeshData(edges, faces, topology):
                 print("Broken face orientation", face_orientation)
         
         faces_mesh_data[face_index] = {'vert_indices': vert_indices.tolist(), 'vert_parameters': vert_parameters, 'face_indices': face_indices}
+
+    valid_vert_mask = np.zeros(len(mesh_vertices), dtype=np.uint32)
+    for face in mesh_faces:
+        valid_vert_mask[face] = 1
+    invalid_vert_mask = valid_vert_mask == 0
+
+    invalid_count = np.count_nonzero(invalid_vert_mask)
+    if  invalid_count > 0:
+        print("\n[PythonOCC] Post-proccessing required, there are {} verticies without a triangle.".format(invalid_count))
+
+        vert_map = np.arange(len(mesh_vertices), dtype=np.int32)
+        invalid_vert_indices = np.sort(np.arange(len(mesh_vertices), dtype=np.uint32)[invalid_vert_mask])
+        last_index = 0
+        for c, index in enumerate(invalid_vert_indices):
+            vert_map[last_index:index] -= c
+            vert_map[index] = -1
+            last_index = index + 1
+        if last_index < len(vert_map):
+            vert_map[last_index:] -= len(invalid_vert_indices)
+
+        mesh_vertices = (np.asarray(mesh_vertices)[(vert_map != -1)]).tolist()
+        assert (len(mesh_vertices) - 1) == np.max(vert_map)
+        
+        for ie in range(len(edges_mesh_data)):
+            vert_indices = (vert_map[np.asarray(edges_mesh_data[ie]['vert_indices'], dtype=np.int32)])
+            vert_indices = vert_indices[vert_indices != -1]
+            edges_mesh_data[ie]['vert_indices'] = vert_indices.tolist()
+        
+        for ifa in range(len(faces_mesh_data)):
+            vert_indices = (vert_map[np.asarray(faces_mesh_data[ifa]['vert_indices'], dtype=np.int32)])
+            vert_indices = vert_indices[vert_indices != -1]
+            faces_mesh_data[ifa]['vert_indices'] = vert_indices.tolist()
+
+        mesh_faces = (vert_map[np.asarray(mesh_faces)])
+
+        assert not np.isin(-1, mesh_faces).any(), 'Some face has a removed vertex. (Code BUG probably)'
+
+        valid_vert_mask = np.zeros(len(mesh_vertices), dtype=np.uint32)
+        for face in mesh_faces:
+            valid_vert_mask[face] = 1
+        invalid_vert_mask = valid_vert_mask == 0
+        invalid_count = np.count_nonzero(invalid_vert_mask)
+
+        assert invalid_count == 0, 'Post-proccess did not work.'
 
     return mesh_vertices, mesh_faces, edges_mesh_data, faces_mesh_data
 
