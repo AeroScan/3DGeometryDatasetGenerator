@@ -191,11 +191,6 @@ def computeMeshData(edges, faces, topology):
     invalid_count = np.count_nonzero(invalid_vert_mask)
     if  invalid_count > 0:
         print("\n[PythonOCC] Post-proccessing required, there are {} verticies without a triangle.".format(invalid_count))
-        void_vert_in_faces_count = 0
-        for fmd in faces_mesh_data:
-            vert_face_mask = valid_vert_mask[np.asarray(fmd['vert_indices'], dtype=np.int32)]
-            void_vert_in_faces_count += len(vert_face_mask) - np.count_nonzero(vert_face_mask)
-        assert invalid_count == void_vert_in_faces_count, 'There are some vertices in geometric surfaces that do not have any triangles.'
 
         vert_map = np.arange(len(mesh_vertices), dtype=np.int32)
         invalid_vert_indices = np.sort(np.arange(len(mesh_vertices), dtype=np.uint32)[invalid_vert_mask])
@@ -208,14 +203,21 @@ def computeMeshData(edges, faces, topology):
             vert_map[last_index:] -= len(invalid_vert_indices)
 
         mesh_vertices = (np.asarray(mesh_vertices)[(vert_map != -1)]).tolist()
+        assert (len(mesh_vertices) - 1) == np.max(vert_map)
         
         for ie in range(len(edges_mesh_data)):
-            edges_mesh_data[ie]['vert_indices'] = (vert_map[np.asarray(edges_mesh_data[ie]['vert_indices'], dtype=np.int32)]).tolist()
+            vert_indices = (vert_map[np.asarray(edges_mesh_data[ie]['vert_indices'], dtype=np.int32)])
+            vert_indices = vert_indices[vert_indices != -1]
+            edges_mesh_data[ie]['vert_indices'] = vert_indices.tolist()
         
         for ifa in range(len(faces_mesh_data)):
-            faces_mesh_data[ifa]['vert_indices'] = (vert_map[np.asarray(faces_mesh_data[ifa]['vert_indices'], dtype=np.int32)]).tolist()
+            vert_indices = (vert_map[np.asarray(faces_mesh_data[ifa]['vert_indices'], dtype=np.int32)])
+            vert_indices = vert_indices[vert_indices != -1]
+            faces_mesh_data[ifa]['vert_indices'] = vert_indices.tolist()
 
-        mesh_faces = (vert_map[np.asarray(mesh_faces)]).tolist()
+        mesh_faces = (vert_map[np.asarray(mesh_faces)])
+
+        assert not np.isin(-1, mesh_faces).any(), 'Some face has a removed vertex. (Code BUG probably)'
 
         valid_vert_mask = np.zeros(len(mesh_vertices), dtype=np.uint32)
         for face in mesh_faces:
