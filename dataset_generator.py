@@ -153,14 +153,13 @@ if __name__ == '__main__':
             print(f'\nWriting meshes in obj file...')
             writeMeshOBJ(mesh_name, mesh)
 
-            stats = generateStatistics(features, mesh)
-
-            features = FeaturesFactory.getListOfDictFromPrimitive(features)
             print(f'\nWriting Features in {features_file_type} format...')
+            features = FeaturesFactory.getListOfDictFromPrimitive(features)
             features_name = os.path.join(features_folder_dir, output_name)
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
 
             print(f'\nWriting Statistics in json file..')
+            stats = generateStatistics(features, mesh)
             stats_name = os.path.join(statistics_folder_dir, (output_name + '.json'))
             writeJSON(stats_name, stats)    
 
