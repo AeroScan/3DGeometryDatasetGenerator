@@ -5,7 +5,6 @@ from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
 from lib.features_factory import FeaturesFactory
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
-from lib.TopologyUtils import TopologyExplorer
 
 from tqdm import tqdm
 import numpy as np
