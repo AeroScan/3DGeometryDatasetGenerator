@@ -1,4 +1,5 @@
 import json
+import yaml
 from lib.tools import (
     computeTranslationVector,
     writeFeatures, 
@@ -141,10 +142,29 @@ if __name__ == '__main__':
                                                     debug=use_debug)
 
             if normalize_shape:
+
+                if meta != "":
+                    meta_filename = output_name + ".yml"
+                    meta_file = os.path.join(meta, meta_filename)
+
+                    if os.path.isfile(meta_file):
+                        with open(meta_file, "r") as m_f:
+                            file_info = yaml.load(m_f, Loader=yaml.FullLoader)
+
+                            vertical_up_axis = file_info["vertical_up_axis"] if \
+                                                "vertical_up_axis" in file_info.keys() \
+                                                    else None
+
                 print('\n[Generator] Normalization in progress...')
                 vertices = mesh['vertices']
 
-                R = computeRotationMatrix(math.pi/2, np.array([1., 0., 0.]))
+                if vertical_up_axis is None or vertical_up_axis == "y":
+                    R = computeRotationMatrix(math.pi/2, np.array([1., 0., 0.]))
+                elif vertical_up_axis == "x":
+                    R = computeRotationMatrix(math.pi/2, np.array([0., 1., 0.]))
+                else:
+                    R = computeRotationMatrix(0.0, np.array([1., 0., 0.]))
+
                 vertices = (R @ vertices.T).T
 
                 t = computeTranslationVector(vertices)
