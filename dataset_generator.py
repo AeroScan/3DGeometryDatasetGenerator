@@ -141,8 +141,8 @@ if __name__ == '__main__':
 
                 FeaturesFactory.normalizeShape(features, R=R, t=t, s=s)
 
-            #print(f'\nGenerating Stats...')            
-            #stats = generateStatistics(features, mesh)
+            print(f'\nGenerating Stats...')            
+            stats = generateStatistics(features, mesh)
 
             print(f'\nWriting meshes in obj file...')
             writeMeshOBJ(mesh_name, mesh)
@@ -154,7 +154,7 @@ if __name__ == '__main__':
 
             print(f'\nWriting Statistics in json file..')
             stats_name = os.path.join(statistics_folder_dir, (output_name + '.json'))
-            #writeJSON(stats_name, stats)    
+            writeJSON(stats_name, stats)    
 
             print('\n[Generator] Process done.')
 
@@ -168,22 +168,17 @@ if __name__ == '__main__':
     else: 
         time_initial = time.time()
 
-        # Get folders
-        mesh_folder = Path(os.path.join(input_path, mesh_folder_name))
-        features_folder = Path(os.path.join(input_path, features_folder_name))
-        statistics_folder = Path(os.path.join(input_path, statistics_folder_name))
-
         # Remove stats files
-        shutil.rmtree(statistics_folder)
+        shutil.rmtree(statistics_folder_dir)
 
         # List files
         # meshes = [mesh for mesh in mesh_folder.glob("*.obj")]
-        features = [str(feature).replace('.'+str(features_file_type), '') for feature in features_folder.glob("*."+str(features_file_type))]
+        features = [str(feature).replace('.'+str(features_file_type), '') for feature in Path(features_folder_dir).glob("*."+str(features_file_type))]
 
         for feature in features:
             # Find the correspondent mesh
             model_name = str(feature).split("/")[-1]
-            mesh_p = Path(os.path.join(mesh_folder, model_name))
+            mesh_p = Path(os.path.join(mesh_folder_dir, model_name))
 
             mesh = loadMeshOBJ(mesh_p)
 
