@@ -157,11 +157,6 @@ if __name__ == '__main__':
                 vertices = mesh['vertices']
 
                 R = rotation_matrix_from_vectors(vertical_up_axis)
-                print("-----Original orientation")
-                print(vertical_up_axis)
-                print("-----Rotation matrix")
-                print(R)
-                print("-----")
 
                 vertices = (R @ vertices.T).T
 
