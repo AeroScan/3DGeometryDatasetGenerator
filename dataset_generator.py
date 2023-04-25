@@ -3,8 +3,8 @@ import yaml
 from lib.tools import (
     computeTranslationVector,
     writeFeatures, 
-    writeMeshOBJ, 
-    computeRotationMatrix,
+    writeMeshOBJ,
+    rotation_matrix_from_vectors,
     list_files,
     output_name_converter,
     writeJSON,
@@ -14,10 +14,7 @@ from lib.tools import (
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.features_factory import FeaturesFactory
-from lib.generate_statistics import (
-    generateStatistics,
-    generateAreaFromSurface
-)
+from lib.generate_statistics import generateStatistics
 
 import shutil
 import os
@@ -142,7 +139,8 @@ if __name__ == '__main__':
                                                     debug=use_debug)
 
             if normalize_shape:
-
+                
+                vertical_up_axis = None
                 if meta != "":
                     meta_filename = output_name + ".yml"
                     meta_file = os.path.join(meta, meta_filename)
@@ -151,19 +149,19 @@ if __name__ == '__main__':
                         with open(meta_file, "r") as m_f:
                             file_info = yaml.load(m_f, Loader=yaml.FullLoader)
 
-                            vertical_up_axis = file_info["vertical_up_axis"] if \
+                            vertical_up_axis = np.array(file_info["vertical_up_axis"]) if \
                                                 "vertical_up_axis" in file_info.keys() \
-                                                    else None
+                                                    else np.array([0., 0., 1.])
 
                 print('\n[Generator] Normalization in progress...')
                 vertices = mesh['vertices']
 
-                if vertical_up_axis is None or vertical_up_axis == "y":
-                    R = computeRotationMatrix(math.pi/2, np.array([1., 0., 0.]))
-                elif vertical_up_axis == "x":
-                    R = computeRotationMatrix(math.pi/2, np.array([0., 1., 0.]))
-                else:
-                    R = computeRotationMatrix(0.0, np.array([1., 0., 0.]))
+                R = rotation_matrix_from_vectors(vertical_up_axis)
+                print("-----Original orientation")
+                print(vertical_up_axis)
+                print("-----Rotation matrix")
+                print(R)
+                print("-----")
 
                 vertices = (R @ vertices.T).T
 
