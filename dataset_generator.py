@@ -139,7 +139,7 @@ if __name__ == '__main__':
                                                     debug=use_debug)
 
             if normalize_shape:
-                
+
                 vertical_up_axis = None
                 if meta != "":
                     meta_filename = output_name + ".yml"
@@ -150,7 +150,8 @@ if __name__ == '__main__':
                             file_info = yaml.load(m_f, Loader=yaml.FullLoader)
 
                             vertical_up_axis = np.array(file_info["vertical_up_axis"]) if \
-                                                "vertical_up_axis" in file_info.keys() \
+                                                "vertical_up_axis" in file_info.keys() or  \
+                                                file_info["vertical_up_axis"] is None \
                                                     else np.array([0., 0., 1.])
 
                 print('\n[Generator] Normalization in progress...')
