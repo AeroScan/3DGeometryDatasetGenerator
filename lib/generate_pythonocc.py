@@ -146,7 +146,7 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
     
     return features, mesh
 
-def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, debug=True) -> dict:
+def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, debug=False) -> dict:
     shape = read_step_file(input_name, verbosity=debug)
 
     features, mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
