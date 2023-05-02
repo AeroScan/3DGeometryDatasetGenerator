@@ -140,7 +140,7 @@ if __name__ == '__main__':
 
             if normalize_shape:
 
-                vertical_up_axis = None
+                vertical_up_axis = np.array([0., 0., 1.])
                 if meta != "":
                     meta_filename = output_name + ".yml"
                     meta_file = os.path.join(meta, meta_filename)
