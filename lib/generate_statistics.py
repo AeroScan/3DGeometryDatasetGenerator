@@ -53,7 +53,7 @@ def generateStatistics(features, mesh, only_stats=False):
                 surfaces_dict[tp]['number_faces'] += len(surface["face_indices"])
                 surfaces_dict[tp]['number_surfaces'] += 1
                 surfaces_dict[tp]['area'] += surface_area
-            total_area_of_surfaces += surface_area
+                total_area_of_surfaces += surface_area
         surfaces_dict['area'] = total_area_of_surfaces
         result['surfaces'] = surfaces_dict 
     else:
@@ -78,7 +78,7 @@ def generateStatistics(features, mesh, only_stats=False):
                 surfaces_dict[tp]['number_faces'] += len(surface.face_indices)
                 surfaces_dict[tp]['number_surfaces'] += 1
                 surfaces_dict[tp]['area'] += surface_area
-            total_area_of_surfaces += surface_area
+                total_area_of_surfaces += surface_area
         surfaces_dict['area'] = total_area_of_surfaces
         result['surfaces'] = surfaces_dict 
     return result
