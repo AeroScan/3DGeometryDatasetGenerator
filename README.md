@@ -10,7 +10,7 @@ The 3D Geometry Dataset Generator software uses Pythonocc and Gmsh API to proces
 - BRep
 - Iges
 ### Output Formats
-- YAML (Geometry Features)
+- JSON, YAML, PKL (Geometry Features)
 - OBJ (CAD Mesh)
 
 ## Dependencies
@@ -28,46 +28,46 @@ Just a list of dependencies, follow the installation steps to install them all.
 
 ### Apt dependencies:
 
-    $ sudo apt-get install software-properties-common
-    $ sudo apt-get install libtool autoconf automake gfortran gdebi
-    $ sudo apt-get install gcc-multilib libxi-dev libxmu-dev libxmu-headers
-    $ sudo apt-get install libx11-dev mesa-common-dev libglu1-mesa-dev
-    $ sudo apt-get install libfontconfig1-dev
-    $ sudo apt-get install libfreetype6 libfreetype6-dev
-    $ sudo apt-get install tcl tcl-dev tk tk-dev
-    $ sudo apt-get install libfltk1.3-dev
+    sudo apt-get install software-properties-common
+    sudo apt-get install libtool autoconf automake gfortran gdebi
+    sudo apt-get install gcc-multilib libxi-dev libxmu-dev libxmu-headers
+    sudo apt-get install libx11-dev mesa-common-dev libglu1-mesa-dev
+    sudo apt-get install libfontconfig1-dev
+    sudo apt-get install libfreetype6 libfreetype6-dev
+    sudo apt-get install tcl tcl-dev tk tk-dev
+    sudo apt-get install libfltk1.3-dev
 
 ### Create Conda Env
 Create conda env:
 
-    $ conda create --name=pyoccenv python=3.9
-    $ conda activate pyoccenv
+    conda create --name=pyoccenv python=3.9
+    conda activate pyoccenv
 
 ### OCC (7.7.0)
 Download the "tgz" file on https://dev.opencascade.org/release, than:
 
-    $ cd ~/Downloads
-    $ tar xf opencascade-7.7.0.tgz
-    $ cd opencascade-7.7.0
-    $ mkdir build && cd build
-    $ cmake ..
-    $ make
-    $ sudo make install
+    cd ~/Downloads
+    tar xf opencascade-7.7.0.tgz
+    cd opencascade-7.7.0
+    mkdir build && cd build
+    cmake ..
+    make
+    sudo make install
 
 ### Pythonocc (7.7.0)
 
-    $ conda install -c conda-forge pythonocc-core=7.7.0
+    conda install -c conda-forge pythonocc-core=7.7.0
 
 ### 3D Geometry Dataset Generator
 On your workspace folder, download:
 
-    $ git clone https://github.com/AeroScan/3DGeometryDatasetGenerator
-    $ cd 3DGeometryDatasetGenerator
-    $ pip install -r requirements.txt
+    git clone https://github.com/AeroScan/3DGeometryDatasetGenerator
+    cd 3DGeometryDatasetGenerator
+    pip install -r requirements.txt
+    conda install -c conda-forge igl
 
 ## Using
 After install, you can use:
     
     $ conda activate pyoccenv
     $ python dataset_generator.py --help
-    $ python h5_parser.py --help
