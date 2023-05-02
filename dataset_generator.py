@@ -18,8 +18,7 @@ from lib.tools import (
     loadMeshOBJ,
     loadFeatures,
     create_dirs,
-    list_files
-    )
+    list_files)
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.features_factory import FeaturesFactory
@@ -32,28 +31,28 @@ FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
 def parse_opt():
     """ Function to organize all the possible arguments """
     parser = argparse.ArgumentParser(description='Dataset Generator')
-    parser.add_argument('input_path', type=str, default='./dataset/step/', help='path to input directory or input file.')
-    parser.add_argument('output_path', type=str, default='./results/', help='results directory.')
-    parser.add_argument('--meta_path', type=str, default='', help="metadata directory.")
-    parser.add_argument('--delete_old_data', action='store_true', help='delete old data.')
-    parser.add_argument('--use_debug', action='store_true', help='use debug mode.')
+    parser.add_argument('input_path', type=str, default='./dataset/step/', help='Path to the input directory')
+    parser.add_argument('output_path', type=str, default='./results/', help='Path to the output directory where processed files will be saved')
+    parser.add_argument('--meta_path', type=str, default='', help="Path to the directory containing metadata information such as file URLs, author names, vertical up axis of the model, and model type (large or small plant and large or small part)")
+    parser.add_argument('--delete_old_data', action='store_true', help='Boolean flag indicating whether to delete old data in the output directory')
+    parser.add_argument('--verbose', action='store_true', help='Boolean flag indicating whether to run the code in debug mode.')
 
     # Meta parser general
     mesh_parser = parser.add_argument_group("Mesh commands")
-    mesh_parser.add_argument("--mesh_generator", type=str, default="occ", choices=["occ", "gmsh"], help="Generator to generate mesh.")
-    mesh_parser.add_argument('--mesh_folder', type=str or None, default=None, help='mesh folder.')
-    mesh_parser.add_argument('use_highest_dim', action='store_true', help='use highest dim to explore file topology.')
-    mesh_parser.add_argument('--mesh_size', type=float, default=1e+22, help="the mesh size to GMSH generate the mesh.")
+    mesh_parser.add_argument("--mesh_generator", type=str, default="occ", choices=["occ", "gmsh"], help="Name of the mesh generator to use")
+    mesh_parser.add_argument('--mesh_folder', type=str or None, default=None, help='Path to the folder where the mesh will be saved')
+    mesh_parser.add_argument('use_highest_dim', action='store_true', help='Boolean flag indicating whether to use the highest dimension of the mesh')
+    mesh_parser.add_argument('--mesh_size', type=float, default=1e+22, help="The edge size of the mesh, used in conjunction with the GMSH mesh generator")
 
     # Feature parser general
     feature_parser = parser.add_argument_group("Feature commands")
-    feature_parser.add_argument('--features_folder', type=str or None, default=None, help='features folder.')
-    feature_parser.add_argument('--features_file_type', type=str, default='json', choices=["json", "pkl", "yaml"], help='file type of the features.')
+    feature_parser.add_argument('--features_folder', type=str or None, default=None, help='Path to the folder containing the features to be extracted')
+    feature_parser.add_argument('--features_file_type', type=str, default='json', choices=["json", "pkl", "yaml"], help='The file type of the features')
 
     # Stats parser general
     stats_parser = parser.add_argument_group("Stats commands")
-    stats_parser.add_argument('--statistics_folder', type=str or None, default=None, help='stats folder.')
-    stats_parser.add_argument('--only_stats', action='store_true', help='generate only the statistics.')
+    stats_parser.add_argument('--statistics_folder', type=str or None, default=None, help='Path to the folder where statistics will be saved')
+    stats_parser.add_argument('--only_stats', action='store_true', help='Boolean flag indicating whether to only generate statistics without processing the data.')
 
     return parser.parse_args()
 
@@ -66,7 +65,7 @@ def main():
     output_path = args.output_path
     meta_path = args.meta_path
     delete_old_data = args.delete_old_data
-    use_debug = args.use_debug
+    verbose = args.verbose
     # <--- General arguments
 
     # ---> Mesh arguments
@@ -113,7 +112,6 @@ def main():
     error_counter = 0
     processor_errors = []
     if not only_stats:
-        # Main loop
         time_initial = time.time()
         for file in files:
             file = str(file)
@@ -124,14 +122,14 @@ def main():
             print('\n+-----------PythonOCC----------+')
             shape, features, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
                                                      use_highest_dim=use_highest_dim, \
-                                                        debug=use_debug)
+                                                        debug=verbose)
 
             if mesh_generator == "gmsh":
                 print('\n+-------------GMSH-------------+')
                 features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, \
                                              features=features, mesh_name=mesh_name, \
                                                 shape=shape, use_highest_dim=use_highest_dim, \
-                                                    debug=use_debug)
+                                                    debug=verbose)
 
             print('\n[Generator] Normalization in progress...')
             vertical_up_axis = None
@@ -182,7 +180,6 @@ def main():
 
             print('\n[Generator] Process done.')
 
-            #del stats
             del features
             del mesh
             gc.collect()
@@ -192,16 +189,12 @@ def main():
     else:
         time_initial = time.time()
 
-        # Remove stats files
         shutil.rmtree(statistics_folder_dir)
 
-        # List files
-        # meshes = [mesh for mesh in mesh_folder.glob("*.obj")]
         features = [str(feature).replace('.'+str(features_file_type), '') for feature in \
                     Path(features_folder_dir).glob("*."+str(features_file_type))]
 
         for feature in features:
-            # Find the correspondent mesh
             model_name = str(feature).rsplit("/", maxsplit=1)[-1]
             mesh_p = Path(os.path.join(mesh_folder_dir, model_name))
 
