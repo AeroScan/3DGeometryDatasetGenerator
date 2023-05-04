@@ -141,6 +141,7 @@ if __name__ == '__main__':
             if normalize_shape:
 
                 vertical_up_axis = np.array([0., 0., 1.])
+                unit_scale = 1000
                 if meta != "":
                     meta_filename = output_name + ".yml"
                     meta_file = os.path.join(meta, meta_filename)
@@ -153,6 +154,9 @@ if __name__ == '__main__':
                                                 "vertical_up_axis" in file_info.keys() or  \
                                                 file_info["vertical_up_axis"] is None \
                                                     else np.array([0., 0., 1.])
+                            
+                            unit_scale = file_info["unit_scale"] if "unit_scale" \
+                                            in file_info.keys() else 1000
 
                 print('\n[Generator] Normalization in progress...')
                 vertices = mesh['vertices']
@@ -164,7 +168,7 @@ if __name__ == '__main__':
                 t = computeTranslationVector(vertices)
                 vertices += t
 
-                s = 1./1000
+                s = 1./unit_scale
                 vertices *= s
 
                 mesh['vertices'] = vertices
