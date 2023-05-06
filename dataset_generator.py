@@ -113,29 +113,27 @@ def main():
     # <--- Directories verifications
 
     # ---> Main loop
-    error_counter = 0
-    processor_errors = []
     if not only_stats:
-        time_initial = time.time()
-        for file in files:
+        for idx, file in enumerate(files):
             file = str(file)
+            filename = file.rsplit("/", maxsplit=1)[-1]
             output_name = output_name_converter(file, CAD_FORMATS)
             mesh_name = os.path.join(mesh_folder_dir, output_name)
-            print('\n[Generator] Processing file ' + file + '...')
+            print(f'\nProcessing file - Model {filename} - [{idx+1}/{len(files)}]:')
 
-            print('\n+-----------PythonOCC----------+')
             shape, features, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
                                                      use_highest_dim=use_highest_dim, \
                                                         debug=verbose)
-
+            print("\n[PythonOCC] Done.")
             if mesh_generator == "gmsh":
-                print('\n+-------------GMSH-------------+')
+                print('\n[GMSH]:')
                 features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, \
                                              features=features, mesh_name=mesh_name, \
                                                 shape=shape, use_highest_dim=use_highest_dim, \
                                                     debug=verbose)
+                print("\n[GMSH] Done.")
 
-            print('\n[Generator] Normalization in progress...')
+            print('\n[Normalization]')
             vertical_up_axis = np.array([0., 0., 1.])
             unit_scale = 1000
 
@@ -143,7 +141,10 @@ def main():
                 meta_filename = output_name + ".yml"
                 meta_file = os.path.join(meta_path, meta_filename)
 
-                with open(meta_file, "r") as file_info:
+                with open(meta_file, "r") as meta_file_object:
+                    print("\n[Normalization] Using meta_file")
+                    file_info = yaml.load(meta_file_object, Loader=yaml.FullLoader)
+
                     vertical_up_axis = np.array(file_info["vertical_up_axis"]) if \
                                         "vertical_up_axis" in file_info.keys() or  \
                                         file_info["vertical_up_axis"] is None \
@@ -151,6 +152,8 @@ def main():
                     
                     unit_scale = file_info["unit_scale"] if "unit_scale" \
                                     in file_info.keys() else 1000
+                    
+            vertices = mesh["vertices"]
 
             R = rotation_matrix_from_vectors(vertical_up_axis)
 
@@ -163,74 +166,65 @@ def main():
             vertices *= s
 
             FeaturesFactory.normalizeShape(features, R=R, t=t, s=s)
-            print("\nDone.")
+            print("\n[Normalization] Done.")
 
-            print('\nGenerating Stats...')
+            print('\n[Generating statistics]')
             stats = generateStatistics(features, mesh)
+            print("\n[Statistics] Done.")
 
-            print('\nWriting meshes in obj file...')
+            print('\n[Writing meshes]')
             writeMeshOBJ(mesh_name, mesh)
+            print('\n[Writing meshes] Done.')
 
-            print(f'\nWriting Features in {features_file_type} format...')
+            print(f'\n[Writing Features]')
             features = FeaturesFactory.getListOfDictFromPrimitive(features)
             features_name = os.path.join(features_folder_dir, output_name)
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
+            print("\n[Writing Features] Done.")
 
-            print('\nWriting Statistics in json file..')
+            print('\n[Writing Statistics]')
             stats_name = os.path.join(statistics_folder_dir, (output_name + '.json'))
             writeJSON(stats_name, stats)
+            print("\n[Writing Statistics] Done.")
 
             print('\n[Generator] Process done.')
 
+            del stats
             del features
             del mesh
             gc.collect()
-
-        time_finish = time.time()
-
     else:
-        time_initial = time.time()
-
-        # List files
+        print("\n[Reading features]")
         features = [str(feature).replace('.'+str(features_file_type), '') for feature in \
                     Path(features_folder_dir).glob("*."+str(features_file_type))]
+        print("\n[Reading features] Done.")
 
-        for feature in tqdm(features):
-
-            # Find the correspondent mesh
+        for idx, feature in enumerate(features):
+            print(f"\nProcessing file - Model {feature} - [{idx+1}/{len(features)}]:")
             model_name = str(feature).split("/")[-1]
             if model_name in statistics_files and not delete_old_data:
+                print(f"\nStats of the model {model_name} already exist.")
                 continue
 
             mesh_p = Path(os.path.join(mesh_folder_dir, model_name))
 
+            print("\n[Load mesh]")
             mesh = loadMeshOBJ(mesh_p)
+            print("\n[Load mesh] Done.")
 
+            print("\n[Load feature]")
             features_data = loadFeatures(feature, features_file_type)
+            print("\n[Load feature] Done.")
 
+            print("\n[Generating statistics]")
             stats = generateStatistics(features_data, mesh, only_stats=only_stats)
+            print("\n[Generating statistics] Done.")
 
-            print('\nWriting Statistics in json file..')
+            print('\n[Writing Statistics]')
             os.makedirs(statistics_folder_dir, exist_ok=True)
             stats_name = os.path.join(statistics_folder_dir, (model_name + '.json'))
             writeJSON(stats_name, stats)
-
-        time_finish = time.time()
-
-    print('\n\n+-----------LOG--------------+')
-    print(f'Processed files: {len(files) - error_counter}')
-    print(f'Unprocessed files: {error_counter}')
-    print(f'List of unprocessed files: {processor_errors}')
-    print(f'Time used: {time_finish - time_initial}')
-    print('+----------------------------+')
-
-    if processor_errors:
-        with open('./files_unprocessed.txt', 'w') as f:
-            for item in processor_errors:
-                s = ''
-                s = str(item) + '\n'
-                f.write(s)
-        print(colored('\n[LOG] Unprocessed files listed in: files_unprocessed.txt\n', 'blue'))
+            print('\n[Writing Statistics] Done.')
     # <--- Main loop
 
 if __name__ == '__main__':
