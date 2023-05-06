@@ -23,6 +23,7 @@ import argparse
 import math
 import numpy as np
 from pathlib import Path
+from tqdm import tqdm
 
 from termcolor import colored
 
@@ -31,6 +32,7 @@ import gc
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.OBJ', '.obj']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
+STATISTICS_FORMATS = [".json", ".JSON"]
 
 POSSIBLE_MESH_GENERATORS = ['occ' , 'gmsh']
 
@@ -105,6 +107,8 @@ if __name__ == '__main__':
     mesh_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in mesh_files]
     features_files = list_files(features_folder_dir, FEATURES_FORMATS, return_str=True)
     features_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in features_files]
+    statistics_files = list_files(statistics_folder_dir, STATISTICS_FORMATS, return_str=True)
+    statistics_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in statistics_files]
 
     i = 0
     while i < len(files):
@@ -202,17 +206,17 @@ if __name__ == '__main__':
     else:
         time_initial = time.time()
 
-        # Remove stats files
-        shutil.rmtree(statistics_folder_dir)
-
         # List files
-        # meshes = [mesh for mesh in mesh_folder.glob("*.obj")]
         features = [str(feature).replace('.'+str(features_file_type), '') for feature in \
                     Path(features_folder_dir).glob("*."+str(features_file_type))]
 
-        for feature in features:
+        for feature in tqdm(features):
+
             # Find the correspondent mesh
             model_name = str(feature).split("/")[-1]
+            if model_name in statistics_files and not delete_old_data:
+                continue
+
             mesh_p = Path(os.path.join(mesh_folder_dir, model_name))
 
             mesh = loadMeshOBJ(mesh_p)
