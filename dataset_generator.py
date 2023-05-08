@@ -200,8 +200,8 @@ def main():
         print("\n[Reading features] Done.")
 
         for idx, feature in enumerate(features):
-            print(f"\nProcessing file - Model {feature} - [{idx+1}/{len(features)}]:")
             model_name = str(feature).split("/")[-1]
+            print(f"\nProcessing file - Model {model_name} - [{idx+1}/{len(features)}]:")
             if model_name in statistics_files and not delete_old_data:
                 print(f"\nStats of the model {model_name} already exist.")
                 continue
@@ -225,6 +225,9 @@ def main():
             stats_name = os.path.join(statistics_folder_dir, (model_name + '.json'))
             writeJSON(stats_name, stats)
             print('\n[Writing Statistics] Done.')
+
+            del mesh, features_data, stats
+            gc.collect()
     # <--- Main loop
 
 if __name__ == '__main__':
