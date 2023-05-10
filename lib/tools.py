@@ -1,9 +1,14 @@
+import os
 import numpy as np
 import pickle
 import json
 import yaml
 import open3d as o3d
 from pathlib import Path
+
+CAD_FORMATS = ['.step', '.stp', '.STEP']
+MESH_FORMATS = ['.OBJ', '.obj']
+FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
 
 # Convert a float to string
 def float2str(number, limit = 10) -> str:
@@ -82,16 +87,16 @@ PKL_NAMES  = ['pkl']
 
 # Write features file
 def writeYAML(features_name: str, features: dict):
-    with open(features_name, 'w') as f:
+    with open(features_name+".yaml", 'w') as f:
         features_yaml = generateFeaturesYAML(features)
         f.write(features_yaml)
 
 def writeJSON(features_name: str, features: dict):
-    with open(features_name, 'w') as f:
+    with open(features_name+".json", 'w') as f:
         json.dump(features, f, indent=4)
 
 def writePKL(features_name: str, features: dict):
-    with open(features_name, 'wb') as f:
+    with open(features_name+".pkl", 'wb') as f:
         pickle.dump(features, f)
 
 def writeFeatures(features_name: str, features: dict, tp: str):
@@ -201,3 +206,23 @@ def computeTranslationVector(vertices):
     t = np.array([tx, ty, tz])
 
     return t
+
+def get_files_from_input_path(input_path):
+    """ To get files from input path """
+    if os.path.exists(input_path):
+        if os.path.isdir(input_path):
+            files = list_files(input_path, CAD_FORMATS)
+        else:
+            files = [input_path]
+    else:
+        raise FileNotFoundError("Input path not found.")
+
+    return files
+
+def create_dirs(*directories):
+    """ To create the directories """
+    try:
+        for directory in directories:
+            os.makedirs(directory, exist_ok=True)
+    except OSError as os_error:
+        raise OSError from os_error

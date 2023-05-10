@@ -10,7 +10,7 @@ The 3D Geometry Dataset Generator software uses Pythonocc and Gmsh API to proces
 - BRep
 - Iges
 ### Output Formats
-- YAML (Geometry Features)
+- JSON, YAML, PKL (Geometry Features)
 - OBJ (CAD Mesh)
 
 ## Dependencies
@@ -64,6 +64,7 @@ On your workspace folder, download:
     git clone https://github.com/AeroScan/3DGeometryDatasetGenerator
     cd 3DGeometryDatasetGenerator
     pip install -r requirements.txt
+    conda install -c conda-forge igl
 
 ## Using
 After install, you can use:

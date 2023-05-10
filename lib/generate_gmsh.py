@@ -181,7 +181,7 @@ def generateMesh():
 #     f.write(obj_content)
 
 # Main function
-def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: str, shape = None, use_highest_dim=True, debug=True):
+def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: str, shape = None, use_highest_dim=True, debug=False):
     global FIRST_NODE_TAG, FIRST_ELEM_TAG
     try:
         gmsh.initialize()

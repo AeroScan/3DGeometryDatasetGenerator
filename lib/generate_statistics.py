@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 
 def generateAreaFromSurface(surface, vertices:list, faces: list):
     area_of_surface = 0.0
@@ -32,7 +33,8 @@ def generateStatistics(features, mesh, only_stats=False):
     curves_dict = {}
     surfaces_dict = {}
     if only_stats:
-        for curve in features["curves"]:
+        print("Generating for curves: ")
+        for curve in tqdm(features["curves"]):
             if curve is not None:
                 tp = curve["type"]
                 if tp not in curves_dict:
@@ -43,7 +45,8 @@ def generateStatistics(features, mesh, only_stats=False):
         # ----------------------------- #
         surfaces_dict['area'] = 0.0
         total_area_of_surfaces = 0.0
-        for surface in features['surfaces']:
+        print("Generating for surfaces: ")
+        for surface in tqdm(features['surfaces']):
             if surface is not None:
                 tp = surface["type"]
                 if tp not in surfaces_dict:
@@ -57,7 +60,8 @@ def generateStatistics(features, mesh, only_stats=False):
         surfaces_dict['area'] = total_area_of_surfaces
         result['surfaces'] = surfaces_dict 
     else:
-        for curve in features['curves']:
+        print("Generating for curves: ")
+        for curve in tqdm(features['curves']):
             if curve is not None:
                 tp = curve.primitiveType() if curve.primitiveType() != 'BaseCurve' else 'Other'
                 if tp not in curves_dict:
@@ -68,7 +72,8 @@ def generateStatistics(features, mesh, only_stats=False):
         # ----------------------------- #
         surfaces_dict['area'] = 0.0
         total_area_of_surfaces = 0.0
-        for surface in features['surfaces']:
+        print("Generating for surfaces: ")
+        for surface in tqdm(features['surfaces']):
             if surface is not None:
                 tp = surface.primitiveType() if surface.primitiveType() != 'BaseSurface' else 'Other'
                 if tp not in surfaces_dict:
