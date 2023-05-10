@@ -87,16 +87,16 @@ PKL_NAMES  = ['pkl']
 
 # Write features file
 def writeYAML(features_name: str, features: dict):
-    with open(features_name, 'w') as f:
+    with open(features_name+".yaml", 'w') as f:
         features_yaml = generateFeaturesYAML(features)
         f.write(features_yaml)
 
 def writeJSON(features_name: str, features: dict):
-    with open(features_name, 'w') as f:
+    with open(features_name+".json", 'w') as f:
         json.dump(features, f, indent=4)
 
 def writePKL(features_name: str, features: dict):
-    with open(features_name, 'wb') as f:
+    with open(features_name+".pkl", 'wb') as f:
         pickle.dump(features, f)
 
 def writeFeatures(features_name: str, features: dict, tp: str):

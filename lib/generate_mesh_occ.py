@@ -76,7 +76,6 @@ def computeMeshData(edges, faces, topology):
         if triangulation is None:
             surface = BRepAdaptor_Surface(face, True)
             tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
-            print(f'ERROR: face {face_index} of type {tp} could not be triangularized.')
             continue
 
         number_vertices = triangulation.NbNodes()
@@ -89,7 +88,6 @@ def computeMeshData(edges, faces, topology):
             polygon = brep_tool.PolygonOnTriangulation(edge, triangulation, location)
 
             if polygon is None:
-                print(f'ERROR: edge {edge_index} do not form a polygon on face {face_index} triangulation.')
                 continue
 
             polygon_nodes = list(polygon.Nodes())
@@ -179,7 +177,7 @@ def computeMeshData(edges, faces, topology):
                 mesh_faces.append(verts_of_face)
                 face_indices.append(len(mesh_faces) - 1)
             else:
-                print("Broken face orientation", face_orientation)
+                pass
         
         faces_mesh_data[face_index] = {'vert_indices': vert_indices.tolist(), 'vert_parameters': vert_parameters, 'face_indices': face_indices}
 

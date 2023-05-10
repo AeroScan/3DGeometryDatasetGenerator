@@ -1,12 +1,8 @@
-import shutil
 import os
-import time
 import argparse
 from pathlib import Path
 import gc
 import numpy as np
-from termcolor import colored
-from tqdm import tqdm
 import yaml
 from lib.tools import (
     computeTranslationVector,
@@ -42,18 +38,18 @@ def parse_opt():
     # Meta parser general
     mesh_parser = parser.add_argument_group("Mesh commands")
     mesh_parser.add_argument("--mesh_generator", type=str, default="occ", choices=["occ", "gmsh"], help="Name of the mesh generator to use")
-    mesh_parser.add_argument('--mesh_folder', type=str or None, default=None, help='Path to the folder where the mesh will be saved')
+    mesh_parser.add_argument('--mesh_folder', type=str, default="mesh", help='Path to the folder where the mesh will be saved')
     mesh_parser.add_argument('use_highest_dim', action='store_true', help='Boolean flag indicating whether to use the highest dimension of the mesh')
     mesh_parser.add_argument('--mesh_size', type=float, default=1e+22, help="The edge size of the mesh, used in conjunction with the GMSH mesh generator")
 
     # Feature parser general
     feature_parser = parser.add_argument_group("Feature commands")
-    feature_parser.add_argument('--features_folder', type=str or None, default=None, help='Path to the folder containing the features to be extracted')
+    feature_parser.add_argument('--features_folder', type=str, default="features", help='Path to the folder containing the features to be extracted')
     feature_parser.add_argument('--features_file_type', type=str, default='json', choices=["json", "pkl", "yaml"], help='The file type of the features')
 
     # Stats parser general
     stats_parser = parser.add_argument_group("Stats commands")
-    stats_parser.add_argument('--statistics_folder', type=str or None, default=None, help='Path to the folder where statistics will be saved')
+    stats_parser.add_argument('--statistics_folder', type=str, default="stats", help='Path to the folder where statistics will be saved')
     stats_parser.add_argument('--only_stats', action='store_true', help='Boolean flag indicating whether to only generate statistics without processing the data.')
 
     return parser.parse_args()
@@ -89,10 +85,10 @@ def main():
 
     # ---> Directories verifications
     files = get_files_from_input_path(input_path)
-
-    mesh_folder_dir = os.path.join(output_path, mesh_folder if mesh_folder is not None else f"{output_path}/mesh")
-    features_folder_dir = os.path.join(output_path, features_folder if features_folder is not None else f"{output_path}/features")
-    statistics_folder_dir = os.path.join(output_path, statistics_folder if statistics_folder is not None else f"{output_path}/stats")
+    
+    mesh_folder_dir = os.path.join(output_path, mesh_folder)
+    features_folder_dir = os.path.join(output_path, features_folder)
+    statistics_folder_dir = os.path.join(output_path, statistics_folder)
     create_dirs(output_path, mesh_folder_dir, features_folder_dir, statistics_folder_dir)
 
     mesh_files = list_files(mesh_folder_dir, MESH_FORMATS, return_str=True)
@@ -149,10 +145,10 @@ def main():
                                         "vertical_up_axis" in file_info.keys() or  \
                                         file_info["vertical_up_axis"] is None \
                                             else np.array([0., 0., 1.])
-                    
+
                     unit_scale = file_info["unit_scale"] if "unit_scale" \
                                     in file_info.keys() else 1000
-                    
+
             vertices = mesh["vertices"]
 
             R = rotation_matrix_from_vectors(vertical_up_axis)
@@ -176,7 +172,7 @@ def main():
             writeMeshOBJ(mesh_name, mesh)
             print('\n[Writing meshes] Done.')
 
-            print(f'\n[Writing Features]')
+            print('\n[Writing Features]')
             features = FeaturesFactory.getListOfDictFromPrimitive(features)
             features_name = os.path.join(features_folder_dir, output_name)
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
@@ -194,40 +190,31 @@ def main():
             del mesh
             gc.collect()
     else:
-        print("\n[Reading features]")
-        features = [str(feature).replace('.'+str(features_file_type), '') for feature in \
-                    Path(features_folder_dir).glob("*."+str(features_file_type))]
-        print("\n[Reading features] Done.")
+        print("Reading features list...")
+        features = list(set(features_files) - set(statistics_files)) if not delete_old_data else \
+                                                                    features_files
 
-        for idx, feature in enumerate(features):
-            model_name = str(feature).split("/")[-1]
-            print(f"\nProcessing file - Model {model_name} - [{idx+1}/{len(features)}]:")
-            if model_name in statistics_files and not delete_old_data:
-                print(f"\nStats of the model {model_name} already exist.")
-                continue
+        for idx, feature_name in enumerate(features):
+            print(f"\nProcessing file - Model {feature_name} - [{idx+1}/{len(features)}]:")
 
-            mesh_p = Path(os.path.join(mesh_folder_dir, model_name))
+            mesh_p = Path(os.path.join(mesh_folder_dir, feature_name))
 
-            print("\n[Load mesh]")
             mesh = loadMeshOBJ(mesh_p)
-            print("\n[Load mesh] Done.")
 
-            print("\n[Load feature]")
-            features_data = loadFeatures(feature, features_file_type)
-            print("\n[Load feature] Done.")
+            features_path = os.path.join(features_folder_dir, feature_name)
+            features_data = loadFeatures(features_path, features_file_type)
 
-            print("\n[Generating statistics]")
+            print("\nGenerating statistics...")
             stats = generateStatistics(features_data, mesh, only_stats=only_stats)
-            print("\n[Generating statistics] Done.")
 
-            print('\n[Writing Statistics]')
+            print("Writing stats in statistic file...")
             os.makedirs(statistics_folder_dir, exist_ok=True)
-            stats_name = os.path.join(statistics_folder_dir, (model_name + '.json'))
+            stats_name = os.path.join(statistics_folder_dir, feature_name)
             writeJSON(stats_name, stats)
-            print('\n[Writing Statistics] Done.')
 
             del mesh, features_data, stats
             gc.collect()
+        print(f"\nDone. {len(features)} were processed.")
     # <--- Main loop
 
 if __name__ == '__main__':
