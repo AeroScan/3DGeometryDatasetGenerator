@@ -136,18 +136,18 @@ def main():
             if meta_path != "":
                 meta_filename = output_name + ".yml"
                 meta_file = os.path.join(meta_path, meta_filename)
+                if os.path.isfile(meta_file):
+                    with open(meta_file, "r") as meta_file_object:
+                        print("\n[Normalization] Using meta_file")
+                        file_info = yaml.load(meta_file_object, Loader=yaml.FullLoader)
 
-                with open(meta_file, "r") as meta_file_object:
-                    print("\n[Normalization] Using meta_file")
-                    file_info = yaml.load(meta_file_object, Loader=yaml.FullLoader)
+                        vertical_up_axis = np.array(file_info["vertical_up_axis"]) if \
+                                            "vertical_up_axis" in file_info.keys() or  \
+                                            file_info["vertical_up_axis"] is None \
+                                                else np.array([0., 0., 1.])
 
-                    vertical_up_axis = np.array(file_info["vertical_up_axis"]) if \
-                                        "vertical_up_axis" in file_info.keys() or  \
-                                        file_info["vertical_up_axis"] is None \
-                                            else np.array([0., 0., 1.])
-
-                    unit_scale = file_info["unit_scale"] if "unit_scale" \
-                                    in file_info.keys() else 1000
+                        unit_scale = file_info["unit_scale"] if "unit_scale" \
+                                        in file_info.keys() else 1000
 
             vertices = mesh["vertices"]
 
