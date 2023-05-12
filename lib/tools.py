@@ -104,11 +104,11 @@ def writeFeatures(features_name: str, features: dict, tp: str):
         if feature['face_indices'] is None:
             print(feature)
     if tp.lower() in YAML_NAMES:
-        writeYAML(f'{features_name}.{tp}', features)
+        writeYAML(f'{features_name}', features)
     elif tp.lower() in PKL_NAMES:
-        writePKL(f'{features_name}.{tp}', features)
+        writePKL(f'{features_name}', features)
     else:
-        writeJSON(f'{features_name}.{tp}', features)
+        writeJSON(f'{features_name}', features)
 
 # Load features file
 def loadYAML(features_name: str):

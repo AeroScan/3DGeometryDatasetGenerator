@@ -179,7 +179,7 @@ def main():
             print("\n[Writing Features] Done.")
 
             print('\n[Writing Statistics]')
-            stats_name = os.path.join(statistics_folder_dir, (output_name + '.json'))
+            stats_name = os.path.join(statistics_folder_dir, output_name)
             writeJSON(stats_name, stats)
             print("\n[Writing Statistics] Done.")
 
