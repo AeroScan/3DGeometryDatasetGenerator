@@ -4,6 +4,7 @@ import pickle
 import json
 import yaml
 import open3d as o3d
+import igl
 from pathlib import Path
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
@@ -151,14 +152,14 @@ def filterFeaturesData(features_data, curve_types, surface_types):
         else:
             i+=1 
 
-def writeMeshOBJ(filename, mesh_dict):
+def writeMeshPLY(filename, mesh_dict):
     mesh = o3d.geometry.TriangleMesh()
     mesh.vertices = o3d.utility.Vector3dVector(np.asarray(mesh_dict['vertices']))
     mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh_dict['faces']))
-    o3d.io.write_triangle_mesh(filename + '.obj', mesh, print_progress=True)
+    o3d.io.write_triangle_mesh(filename + '.ply', mesh, print_progress=True, compressed=True)
 
-def loadMeshOBJ(filename):
-    mesh = o3d.io.read_triangle_mesh(str(filename) + '.obj', print_progress=True)
+def loadMeshPLY(filename):
+    mesh = o3d.io.read_triangle_mesh(str(filename) + '.ply', print_progress=True)
     v, f = np.asarray(mesh.vertices), np.asarray(mesh.triangles)
     mesh = {'vertices': v, 'faces': f}
     return mesh
