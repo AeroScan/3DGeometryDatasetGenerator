@@ -22,7 +22,7 @@ from lib.features_factory import FeaturesFactory
 from lib.generate_statistics import generateStatistics
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
-MESH_FORMATS = ['.OBJ', '.obj']
+MESH_FORMATS = ['.OBJ', '.obj', ".ply", '.PLY']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
 STATISTICS_FORMATS = [".json", ".JSON"]
 
@@ -160,6 +160,8 @@ def main():
 
             s = 1./unit_scale
             vertices *= s
+
+            mesh["vertices"] = vertices
 
             FeaturesFactory.normalizeShape(features, R=R, t=t, s=s)
             print("\n[Normalization] Done.")
