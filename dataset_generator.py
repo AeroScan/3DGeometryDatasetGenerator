@@ -7,12 +7,12 @@ import yaml
 from lib.tools import (
     computeTranslationVector,
     writeFeatures,
-    writeMeshOBJ,
+    writeMeshPLY,
     rotation_matrix_from_vectors,
     get_files_from_input_path,
     output_name_converter,
     writeJSON,
-    loadMeshOBJ,
+    loadMeshPLY,
     loadFeatures,
     create_dirs,
     list_files)
@@ -169,7 +169,7 @@ def main():
             print("\n[Statistics] Done.")
 
             print('\n[Writing meshes]')
-            writeMeshOBJ(mesh_name, mesh)
+            writeMeshPLY(mesh_name, mesh)
             print('\n[Writing meshes] Done.')
 
             print('\n[Writing Features]')
@@ -199,7 +199,7 @@ def main():
 
             mesh_p = Path(os.path.join(mesh_folder_dir, feature_name))
 
-            mesh = loadMeshOBJ(mesh_p)
+            mesh = loadMeshPLY(mesh_p)
 
             features_path = os.path.join(features_folder_dir, feature_name)
             features_data = loadFeatures(features_path, features_file_type)
