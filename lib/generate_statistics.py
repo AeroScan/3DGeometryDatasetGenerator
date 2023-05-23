@@ -1,27 +1,30 @@
 import numpy as np
 from tqdm import tqdm
+import open3d as o3d
 
-def generateAreaFromSurface(surface, vertices:list, faces: list):
-    area_of_surface = 0.0
+def generate_area_from_surface(surface, vertices: np.array, faces: np.array) -> float:
+    """ This function returns the area from the received surface """
     try:
-        face_indices = surface.face_indices
-    except:
         face_indices = surface["face_indices"]
+        vert_indices = np.unique(surface["vert_indices"])
+    except TypeError:
+        face_indices = surface.face_indices
+        vert_indices = np.unique(surface.vert_indices)
 
-    for id in face_indices:
-        triangle = faces[id].tolist()
+    vertices = vertices[vert_indices]
+    faces = faces[face_indices]
 
-        A = vertices[triangle[0]]
-        
-        B = vertices[triangle[1]]
-        
-        C = vertices[triangle[2]]
+    faces_n = []
+    for face in faces:
+        aux = np.hstack([np.where(vert_indices == vert)[0] for vert in face])
+        faces_n.append(aux)
+    faces_n = np.asarray(faces_n)
 
-        area =  np.linalg.norm(np.cross((B - A), (C - A)))/2
+    surface_mesh = o3d.geometry.TriangleMesh()
+    surface_mesh.vertices = o3d.utility.Vector3dVector(vertices)
+    surface_mesh.triangles = o3d.utility.Vector3iVector(faces_n)
 
-        area_of_surface += area
-    
-    return area_of_surface
+    return surface_mesh.get_surface_area()
 
 def generateStatistics(features, mesh, only_stats=False):
     result = {}
@@ -32,6 +35,11 @@ def generateStatistics(features, mesh, only_stats=False):
 
     curves_dict = {}
     surfaces_dict = {}
+
+    mesh_obj = o3d.geometry.TriangleMesh()
+    mesh_obj.vertices = o3d.utility.Vector3dVector(np.asarray(mesh['vertices']))
+    mesh_obj.triangles = o3d.utility.Vector3iVector(np.asarray(mesh['faces']))
+
     if only_stats:
         print("Generating for curves: ")
         for curve in tqdm(features["curves"]):
@@ -42,7 +50,6 @@ def generateStatistics(features, mesh, only_stats=False):
                 curves_dict[tp]['number_vertices'] += len(curve["vert_indices"])
                 curves_dict[tp]['number_curves'] += 1
         result['curves'] = curves_dict
-        # ----------------------------- #
         surfaces_dict['area'] = 0.0
         total_area_of_surfaces = 0.0
         print("Generating for surfaces: ")
@@ -51,14 +58,15 @@ def generateStatistics(features, mesh, only_stats=False):
                 tp = surface["type"]
                 if tp not in surfaces_dict:
                     surfaces_dict[tp] = {'number_vertices': 0, 'number_faces': 0, 'number_surfaces': 0, 'area': 0}
-                surface_area = generateAreaFromSurface(surface, mesh["vertices"], mesh["faces"])
+                # surface_area = generate_area_from_surface(surface, mesh_obj)
+                surface_area = generate_area_from_surface(surface, mesh["vertices"], mesh["faces"])
                 surfaces_dict[tp]['number_vertices'] += len(surface["vert_indices"])
                 surfaces_dict[tp]['number_faces'] += len(surface["face_indices"])
                 surfaces_dict[tp]['number_surfaces'] += 1
                 surfaces_dict[tp]['area'] += surface_area
                 total_area_of_surfaces += surface_area
         surfaces_dict['area'] = total_area_of_surfaces
-        result['surfaces'] = surfaces_dict 
+        result['surfaces'] = surfaces_dict
     else:
         print("Generating for curves: ")
         for curve in tqdm(features['curves']):
@@ -69,7 +77,6 @@ def generateStatistics(features, mesh, only_stats=False):
                 curves_dict[tp]['number_vertices'] += len(curve.vert_indices)
                 curves_dict[tp]['number_curves'] += 1
         result['curves'] = curves_dict
-        # ----------------------------- #
         surfaces_dict['area'] = 0.0
         total_area_of_surfaces = 0.0
         print("Generating for surfaces: ")
@@ -78,12 +85,13 @@ def generateStatistics(features, mesh, only_stats=False):
                 tp = surface.primitiveType() if surface.primitiveType() != 'BaseSurface' else 'Other'
                 if tp not in surfaces_dict:
                     surfaces_dict[tp] = {'number_vertices': 0, 'number_faces': 0, 'number_surfaces': 0, 'area': 0}
-                surface_area = generateAreaFromSurface(surface, mesh["vertices"], mesh["faces"])
+                # surface_area = generate_area_from_surface(surface, mesh_obj)
+                surface_area = generate_area_from_surface(surface, mesh["vertices"], mesh["faces"])
                 surfaces_dict[tp]['number_vertices'] += len(surface.vert_indices)
                 surfaces_dict[tp]['number_faces'] += len(surface.face_indices)
                 surfaces_dict[tp]['number_surfaces'] += 1
                 surfaces_dict[tp]['area'] += surface_area
                 total_area_of_surfaces += surface_area
         surfaces_dict['area'] = total_area_of_surfaces
-        result['surfaces'] = surfaces_dict 
+        result['surfaces'] = surfaces_dict
     return result
