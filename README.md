@@ -2,16 +2,16 @@
 ## Overview
 **Authors: Igor Maurell (igormaurell@gmail.com), Pedro Corçaque (pedrollcorc@gmail.com)**
 
-The 3D Geometry Dataset Generator software uses Pythonocc and Gmsh API to process BRep CAD files to generate a machine learning geometry dataset. Furthermore, the h5_parser.py can be used to pass all the generated data to h5 format.
+The 3D Geometry Dataset Generator software uses Pythonocc and Gmsh API to process BRep CAD files to generate a machine learning geometry dataset.
 
 ## Formats
 ### Input Formats
-- STEP
-- BRep
-- Iges
+- STEP, BRep, Iges (CAD File)
+- YAML (Metadata File)
 ### Output Formats
 - JSON, YAML, PKL (Geometry Features)
-- OBJ (CAD Mesh)
+- PLY (CAD Mesh)
+- JSON (Stats)
 
 ## Dependencies
 Just a list of dependencies, follow the installation steps to install them all.
@@ -22,7 +22,6 @@ Just a list of dependencies, follow the installation steps to install them all.
 - [tqdm](https://github.com/tqdm/tqdm)
 - [PyYAML](https://pypi.org/project/PyYAML/)
 - [numpy](https://pypi.org/project/numpy/)
-- [termcolor](https://pypi.org/project/termcolor/)
 
 ## Installation
 
@@ -64,10 +63,9 @@ On your workspace folder, download:
     git clone https://github.com/AeroScan/3DGeometryDatasetGenerator
     cd 3DGeometryDatasetGenerator
     pip install -r requirements.txt
-    conda install -c conda-forge igl
 
 ## Using
 After install, you can use:
     
     conda activate pyoccenv
-    python dataset_generator.py --help
+    python data_generator.py --help

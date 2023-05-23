@@ -80,11 +80,6 @@ def generateFeaturesYAML(features: dict) -> str:
 def gpXYZ2List(gp):
     return [gp.X(), gp.Y(), gp.Z()]
 
-
-YAML_NAMES = ['yaml', 'yml']
-JSON_NAMES = ['json']
-PKL_NAMES  = ['pkl']
-
 # Write features file
 def writeYAML(features_name: str, features: dict):
     with open(features_name+".yaml", 'w') as f:
@@ -98,6 +93,10 @@ def writeJSON(features_name: str, features: dict):
 def writePKL(features_name: str, features: dict):
     with open(features_name+".pkl", 'wb') as f:
         pickle.dump(features, f)
+
+YAML_NAMES = ['yaml', 'yml']
+JSON_NAMES = ['json']
+PKL_NAMES  = ['pkl']
 
 def writeFeatures(features_name: str, features: dict, tp: str):
     for feature in features['surfaces']:
@@ -177,6 +176,12 @@ def output_name_converter(input_path, formats):
         if f in filename:
             filename = filename.replace(f, '')
     return filename
+
+def remove_by_filename(filename, formats):
+    for format in formats:
+        filename_curr = filename + format
+        if os.path.exists(filename_curr):
+            os.remove(filename_curr)
 
 def rotation_matrix_from_vectors(vec1, vec2=np.array([0., 0., 1.])):
     """ Find the rotation matrix that aligns vec1 to vec2
