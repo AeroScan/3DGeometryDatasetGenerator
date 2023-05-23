@@ -167,6 +167,8 @@ def main():
             s = 1./unit_scale
             vertices *= s
 
+            mesh["vertices"] = vertices
+
             FeaturesFactory.normalizeShape(features, R=R, t=t, s=s)
             print("\n[Normalization] Done.")
 
