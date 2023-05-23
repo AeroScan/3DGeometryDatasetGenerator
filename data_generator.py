@@ -11,6 +11,7 @@ from lib.tools import (
     rotation_matrix_from_vectors,
     get_files_from_input_path,
     output_name_converter,
+    remove_by_filename,
     writeJSON,
     loadMeshPLY,
     loadFeatures,
@@ -24,15 +25,15 @@ from lib.generate_statistics import generateStatistics
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.ply', '.PLY']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
-STATISTICS_FORMATS = [".json", ".JSON"]
+STATS_FORMATS = [".json", ".JSON"]
 
 def parse_opt():
     """ Function to organize all the possible arguments """
     parser = argparse.ArgumentParser(description='General arguments')
     parser.add_argument('input_path', type=str, default='./dataset/step/', help='Path to the input directory')
     parser.add_argument('output_path', type=str, default='./results/', help='Path to the output directory where processed files will be saved')
-    parser.add_argument('use_highest_dim', action='store_true', help='Boolean flag to indicate whether to use the highest dimension of the input CAD as reference or not')
     parser.add_argument('--meta_path', type=str, default='', help="Path to the directory containing metadata information such as file URLs, author names, vertical up axis of the model, and model type (large or small plant and large or small part)")
+    parser.add_argument('--use_highest_dim', action='store_true', help='Boolean flag to indicate whether to use the highest dimension of the input CAD as reference or not')
     parser.add_argument('--delete_old_data', action='store_true', help='Boolean flag indicating whether to delete old data in the output directory')
     parser.add_argument('--verbose', action='store_true', help='Boolean flag indicating whether to run the code in debug mode.')
 
@@ -48,7 +49,7 @@ def parse_opt():
     # Feature parser general
     feature_parser = parser.add_argument_group("Feature arguments")
     feature_parser.add_argument('--features_folder', type=str, default="features", help='Path to the folder containing the features to be extracted')
-    feature_parser.add_argument('--features_file_type', type=str, default='json', choices=["json", "pkl", "yaml"], help='The file type of the features')
+    feature_parser.add_argument('--features_file_type', type=str, default='pkl', choices=["pkl", "json", "yaml"], help='The file type of the features')
 
     # Stats parser general
     stats_parser = parser.add_argument_group("Stats arguments")
@@ -101,7 +102,7 @@ def main():
     mesh_files = [mesh_file[(mesh_file.rfind('/') + 1):mesh_file.rindex('.')] for mesh_file in mesh_files]
     features_files = list_files(features_folder_dir, FEATURES_FORMATS, return_str=True)
     features_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in features_files]
-    statistics_files = list_files(stats_folder_dir, STATISTICS_FORMATS, return_str=True)
+    statistics_files = list_files(stats_folder_dir, STATS_FORMATS, return_str=True)
     statistics_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in statistics_files]
 
     i = 0
@@ -120,7 +121,16 @@ def main():
             file = str(file)
             filename = file.rsplit("/", maxsplit=1)[-1]
             output_name = output_name_converter(file, CAD_FORMATS)
+
+            features_name = os.path.join(features_folder_dir, output_name)
+            remove_by_filename(features_name, FEATURES_FORMATS)
             mesh_name = os.path.join(mesh_folder_dir, output_name)
+            remove_by_filename(mesh_name, MESH_FORMATS)
+            stats_name = os.path.join(stats_folder_dir, output_name)
+            remove_by_filename(stats_name, STATS_FORMATS)
+
+            
+
             print(f'\nProcessing file - Model {filename} - [{idx+1}/{len(files)}]:')
 
             shape, features, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
@@ -182,12 +192,10 @@ def main():
 
             print('\n[Writing Features]')
             features = FeaturesFactory.getListOfDictFromPrimitive(features)
-            features_name = os.path.join(features_folder_dir, output_name)
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
             print("\n[Writing Features] Done.")
 
             print('\n[Writing Statistics]')
-            stats_name = os.path.join(stats_folder_dir, output_name)
             writeJSON(stats_name, stats)
             print("\n[Writing Statistics] Done.")
 
@@ -201,9 +209,11 @@ def main():
         print("Reading features list...")
         features = list(set(features_files) - set(statistics_files)) if not delete_old_data else \
                                                                     features_files
-
         for idx, feature_name in enumerate(features):
             print(f"\nProcessing file - Model {feature_name} - [{idx+1}/{len(features)}]:")
+
+            stats_name = os.path.join(stats_folder_dir, feature_name)
+            remove_by_filename(stats_name, STATS_FORMATS)
 
             mesh_p = Path(os.path.join(mesh_folder_dir, feature_name))
 
@@ -216,8 +226,6 @@ def main():
             stats = generateStatistics(features_data, mesh, only_stats=only_stats)
 
             print("Writing stats in statistic file...")
-            os.makedirs(stats_folder_dir, exist_ok=True)
-            stats_name = os.path.join(stats_folder_dir, feature_name)
             writeJSON(stats_name, stats)
 
             del mesh, features_data, stats
