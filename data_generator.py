@@ -28,28 +28,31 @@ STATISTICS_FORMATS = [".json", ".JSON"]
 
 def parse_opt():
     """ Function to organize all the possible arguments """
-    parser = argparse.ArgumentParser(description='Dataset Generator')
+    parser = argparse.ArgumentParser(description='General arguments')
     parser.add_argument('input_path', type=str, default='./dataset/step/', help='Path to the input directory')
     parser.add_argument('output_path', type=str, default='./results/', help='Path to the output directory where processed files will be saved')
+    parser.add_argument('use_highest_dim', action='store_true', help='Boolean flag to indicate whether to use the highest dimension of the input CAD as reference or not')
     parser.add_argument('--meta_path', type=str, default='', help="Path to the directory containing metadata information such as file URLs, author names, vertical up axis of the model, and model type (large or small plant and large or small part)")
     parser.add_argument('--delete_old_data', action='store_true', help='Boolean flag indicating whether to delete old data in the output directory')
     parser.add_argument('--verbose', action='store_true', help='Boolean flag indicating whether to run the code in debug mode.')
 
-    # Meta parser general
-    mesh_parser = parser.add_argument_group("Mesh commands")
+    # Mesh parser general
+    mesh_parser = parser.add_argument_group("Mesh arguments")
     mesh_parser.add_argument("--mesh_generator", type=str, default="occ", choices=["occ", "gmsh"], help="Name of the mesh generator to use")
     mesh_parser.add_argument('--mesh_folder', type=str, default="mesh", help='Path to the folder where the mesh will be saved')
-    mesh_parser.add_argument('use_highest_dim', action='store_true', help='Boolean flag indicating whether to use the highest dimension of the mesh')
-    mesh_parser.add_argument('--mesh_size', type=float, default=1e+22, help="The edge size of the mesh, used in conjunction with the GMSH mesh generator")
+
+    # Gmsh parser general
+    gmsh_parser = parser.add_argument_group("GMSH arguments")
+    gmsh_parser.add_argument('--mesh_size', type=float, default=1e+22, help="The edge size of the mesh, used in conjunction with the GMSH mesh generator")
 
     # Feature parser general
-    feature_parser = parser.add_argument_group("Feature commands")
+    feature_parser = parser.add_argument_group("Feature arguments")
     feature_parser.add_argument('--features_folder', type=str, default="features", help='Path to the folder containing the features to be extracted')
     feature_parser.add_argument('--features_file_type', type=str, default='json', choices=["json", "pkl", "yaml"], help='The file type of the features')
 
     # Stats parser general
-    stats_parser = parser.add_argument_group("Stats commands")
-    stats_parser.add_argument('--statistics_folder', type=str, default="stats", help='Path to the folder where statistics will be saved')
+    stats_parser = parser.add_argument_group("Stats arguments")
+    stats_parser.add_argument('--stats_folder', type=str, default="stats", help='Path to the folder where statistics will be saved')
     stats_parser.add_argument('--only_stats', action='store_true', help='Boolean flag indicating whether to only generate statistics without processing the data.')
 
     return parser.parse_args()
@@ -61,6 +64,7 @@ def main():
     # ---> General arguments
     input_path = args.input_path
     output_path = args.output_path
+    use_highest_dim = args.use_highest_dim
     meta_path = args.meta_path
     delete_old_data = args.delete_old_data
     verbose = args.verbose
@@ -69,9 +73,11 @@ def main():
     # ---> Mesh arguments
     mesh_generator = args.mesh_generator
     mesh_folder = args.mesh_folder
-    use_highest_dim = args.use_highest_dim
-    mesh_size = args.mesh_size
     # <--- Mesh arguments
+
+    # ---> GMSH arguments
+    mesh_size = args.mesh_size
+    # <--- GMSH arguments
 
     # ---> Features arguments
     features_folder = args.features_folder
@@ -79,7 +85,7 @@ def main():
     # <--- Features arguments
 
     # ---> Stats arguments
-    statistics_folder = args.statistics_folder
+    stats_folder = args.stats_folder
     only_stats = args.only_stats
     # <--- Stats arguments
 
@@ -88,14 +94,14 @@ def main():
     
     mesh_folder_dir = os.path.join(output_path, mesh_folder)
     features_folder_dir = os.path.join(output_path, features_folder)
-    statistics_folder_dir = os.path.join(output_path, statistics_folder)
-    create_dirs(output_path, mesh_folder_dir, features_folder_dir, statistics_folder_dir)
+    stats_folder_dir = os.path.join(output_path, stats_folder)
+    create_dirs(output_path, mesh_folder_dir, features_folder_dir, stats_folder_dir)
 
     mesh_files = list_files(mesh_folder_dir, MESH_FORMATS, return_str=True)
     mesh_files = [mesh_file[(mesh_file.rfind('/') + 1):mesh_file.rindex('.')] for mesh_file in mesh_files]
     features_files = list_files(features_folder_dir, FEATURES_FORMATS, return_str=True)
     features_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in features_files]
-    statistics_files = list_files(statistics_folder_dir, STATISTICS_FORMATS, return_str=True)
+    statistics_files = list_files(stats_folder_dir, STATISTICS_FORMATS, return_str=True)
     statistics_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in statistics_files]
 
     i = 0
@@ -179,7 +185,7 @@ def main():
             print("\n[Writing Features] Done.")
 
             print('\n[Writing Statistics]')
-            stats_name = os.path.join(statistics_folder_dir, output_name)
+            stats_name = os.path.join(stats_folder_dir, output_name)
             writeJSON(stats_name, stats)
             print("\n[Writing Statistics] Done.")
 
@@ -208,8 +214,8 @@ def main():
             stats = generateStatistics(features_data, mesh, only_stats=only_stats)
 
             print("Writing stats in statistic file...")
-            os.makedirs(statistics_folder_dir, exist_ok=True)
-            stats_name = os.path.join(statistics_folder_dir, feature_name)
+            os.makedirs(stats_folder_dir, exist_ok=True)
+            stats_name = os.path.join(stats_folder_dir, feature_name)
             writeJSON(stats_name, stats)
 
             del mesh, features_data, stats
