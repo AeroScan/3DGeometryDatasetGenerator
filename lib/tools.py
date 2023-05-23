@@ -172,7 +172,6 @@ def list_files(input_dir: str, formats: list, return_str=False) -> list:
 
 def output_name_converter(input_path, formats):
     filename = str(input_path).split('/')[-1]
-    
     for f in formats:
         if f in filename:
             filename = filename.replace(f, '')
