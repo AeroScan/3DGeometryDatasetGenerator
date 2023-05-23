@@ -11,20 +11,23 @@ def generate_area_from_surface(surface, vertices: np.array, faces: np.array) -> 
         face_indices = surface.face_indices
         vert_indices = np.unique(surface.vert_indices)
 
-    vertices = vertices[vert_indices]
-    faces = faces[face_indices]
+    if len(vert_indices) > 0 and len(face_indices) > 0:
+        vertices = vertices[vert_indices]
+        faces = faces[face_indices]
 
-    faces_n = []
-    for face in faces:
-        aux = np.hstack([np.where(vert_indices == vert)[0] for vert in face])
-        faces_n.append(aux)
-    faces_n = np.asarray(faces_n)
+        faces_n = []
+        for face in faces:
+            aux = np.hstack([np.where(vert_indices == vert)[0] for vert in face])
+            faces_n.append(aux)
+        faces_n = np.asarray(faces_n)
 
-    surface_mesh = o3d.geometry.TriangleMesh()
-    surface_mesh.vertices = o3d.utility.Vector3dVector(vertices)
-    surface_mesh.triangles = o3d.utility.Vector3iVector(faces_n)
+        surface_mesh = o3d.geometry.TriangleMesh()
+        surface_mesh.vertices = o3d.utility.Vector3dVector(vertices)
+        surface_mesh.triangles = o3d.utility.Vector3iVector(faces_n)
 
-    return surface_mesh.get_surface_area()
+        return surface_mesh.get_surface_area()
+
+    return 0.
 
 def generateStatistics(features, mesh, only_stats=False):
     result = {}
@@ -32,13 +35,15 @@ def generateStatistics(features, mesh, only_stats=False):
     result['number_faces'] = len(mesh['faces'])
     result['number_curves'] = len(features['curves'])
     result['number_surfaces'] = len(features['surfaces'])
-
+    
     curves_dict = {}
     surfaces_dict = {}
 
     mesh_obj = o3d.geometry.TriangleMesh()
     mesh_obj.vertices = o3d.utility.Vector3dVector(np.asarray(mesh['vertices']))
     mesh_obj.triangles = o3d.utility.Vector3iVector(np.asarray(mesh['faces']))
+
+    result['bounding_box'] = mesh_obj.get_min_bound().tolist() + (mesh_obj.get_max_bound() - mesh_obj.get_min_bound()).tolist() 
 
     if only_stats:
         print("Generating for curves: ")
