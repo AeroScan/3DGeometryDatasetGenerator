@@ -4,7 +4,6 @@ import pickle
 import json
 import yaml
 import open3d as o3d
-import igl
 from pathlib import Path
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
