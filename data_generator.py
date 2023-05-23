@@ -22,7 +22,7 @@ from lib.features_factory import FeaturesFactory
 from lib.generate_statistics import generateStatistics
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
-MESH_FORMATS = ['.OBJ', '.obj', ".PLY", ".ply"]
+MESH_FORMATS = ['.ply', '.PLY']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
 STATISTICS_FORMATS = [".json", ".JSON"]
 
