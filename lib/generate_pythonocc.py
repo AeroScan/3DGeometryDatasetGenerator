@@ -1,10 +1,12 @@
 from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
-from OCC.Core.TopoDS import TopoDS_Face
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
 from lib.features_factory import FeaturesFactory
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
+
+from OCC.Core.BRep import BRep_Tool
+from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge
 
 from tqdm import tqdm
 import numpy as np
@@ -37,7 +39,7 @@ def processEdgesAndFaces(edges, faces, topology, generate_mesh):
     mesh = {}
     edges_mesh_data = [{} for x in edges]
     faces_mesh_data = [{} for x in faces]
-
+        
     if generate_mesh:
         mesh['vertices'], mesh['faces'], edges_mesh_data, faces_mesh_data = computeMeshData(edges, faces, topology)
     

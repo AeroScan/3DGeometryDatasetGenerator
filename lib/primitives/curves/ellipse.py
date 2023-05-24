@@ -28,7 +28,7 @@ class Ellipse(BaseCurve):
             self.fromMesh(mesh=mesh)
 
     def fromShape(self, shape):
-        shape = shape.Ellipse()
+        shape = self.geometryFromShape(shape)
         self.focus1 = gpXYZ2List(shape.Focus1())
         self.focus2 = gpXYZ2List(shape.Focus2())
         self.x_axis = gpXYZ2List(shape.XAxis().Direction())
@@ -73,3 +73,11 @@ class Ellipse(BaseCurve):
         self.x_axis = self.x_axis.tolist()
         self.y_axis = self.y_axis.tolist()
         self.z_axis = self.z_axis.tolist()
+    
+    def geometryFromShape(self, shape):
+        orientation = shape.Edge().Orientation()
+        tp = self.primitiveType()
+        shape = getattr(shape, tp)()
+        if orientation == 1:
+            shape.Mirror(shape.Position())
+        return shape

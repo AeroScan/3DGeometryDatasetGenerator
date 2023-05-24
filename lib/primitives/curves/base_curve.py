@@ -31,6 +31,14 @@ class BaseCurve:
         features['vert_parameters'] = self.vert_parameters
 
         return features
+
+    def geometryFromShape(self, shape):
+        orientation = shape.Edge().Orientation()
+        tp = self.primitiveType()
+        shape = getattr(shape, tp)()
+        if orientation == 1:
+            shape.Reverse()
+        return shape
     
     @abstractmethod
     def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):

@@ -48,7 +48,7 @@ class BSplineCurve(BaseCurve):
         return weights
 
     def fromShape(self, shape):
-        shape = shape.BSpline()
+        shape = self.geometryFromShape(shape)
         self.rational = shape.IsRational()
         self.closed = shape.IsClosed()
         self.continuity = shape.Continuity()

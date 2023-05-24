@@ -23,7 +23,7 @@ class Line(BaseCurve):
             self.fromMesh(mesh=mesh)
 
     def fromShape(self, shape):
-        shape = shape.Line()
+        shape = self.geometryFromShape(shape)
         self.location = gpXYZ2List(shape.Location())
         self.direction = gpXYZ2List(shape.Direction())
 

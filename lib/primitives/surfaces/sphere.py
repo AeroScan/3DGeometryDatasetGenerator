@@ -34,7 +34,7 @@ class Sphere(BaseSurface):
         return [x_axis.tolist(), y_axis.tolist(), z_axis.tolist()]
     
     def fromShape(self, shape):
-        shape = shape.Sphere()
+        shape = self.geometryFromShape(shape)
         axis = self.getAxis(shape)
         self.location = gpXYZ2List(shape.Location())
         self.x_axis = axis[0]

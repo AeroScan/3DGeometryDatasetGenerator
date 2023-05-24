@@ -26,7 +26,7 @@ class Circle(BaseCurve):
             self.fromMesh(mesh=mesh)
 
     def fromShape(self, shape):
-        shape = shape.Circle()
+        shape = self.geometryFromShape(shape)
         self.location = gpXYZ2List(shape.Location())
         self.x_axis = gpXYZ2List(shape.XAxis().Direction())
         self.y_axis = gpXYZ2List(shape.YAxis().Direction())
@@ -62,4 +62,12 @@ class Circle(BaseCurve):
         self.x_axis = self.x_axis.tolist()
         self.y_axis = self.y_axis.tolist()
         self.z_axis = self.z_axis.tolist()
+    
+    def geometryFromShape(self, shape):
+        orientation = shape.Edge().Orientation()
+        tp = self.primitiveType()
+        shape = getattr(shape, tp)()
+        if orientation == 1:
+            shape.Mirror(shape.Position())
+        return shape
         

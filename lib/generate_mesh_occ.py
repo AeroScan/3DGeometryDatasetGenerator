@@ -169,7 +169,7 @@ def computeMeshData(edges, faces, topology):
                 #print('ERROR: ignoring faces with repeated vertices (temporary solution)')
                 continue
             if face_orientation == 0:
-                verts_of_face = np.array([i1 , i2, i3])
+                verts_of_face = np.array([i1, i2, i3])
                 mesh_faces.append(verts_of_face)
                 face_indices.append(len(mesh_faces) - 1)
             elif face_orientation == 1:

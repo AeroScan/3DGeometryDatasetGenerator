@@ -24,8 +24,8 @@ class Extrusion(BaseSurface):
 
     def _getCurveObject(self, curve):
         return CurveFactory.getPrimitiveObject(type=curve.GetType(), shape=curve, mesh={})
-        
 
+    ## Missing fix orientation part 
     def fromShape(self, shape):
         surface = shape
         curve = shape.BasisCurve()

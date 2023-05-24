@@ -5,7 +5,7 @@ class BaseSurface:
     @staticmethod
     def primitiveType():
         return 'BaseSurface'
-
+    
     def __init__(self, shape = None, mesh: dict = None):
         self.vert_indices = None
         self.vert_parameters = None
@@ -31,6 +31,14 @@ class BaseSurface:
         features['face_indices'] = self.face_indices
         
         return features
+
+    def geometryFromShape(self, shape):
+        orientation = shape.Face().Orientation()
+        tp = self.primitiveType()
+        shape = getattr(shape, tp)()
+        if orientation == 1:
+            shape.Mirror(shape.Position().Ax2())
+        return shape
     
     @abstractmethod
     def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):

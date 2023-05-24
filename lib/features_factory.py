@@ -2,7 +2,7 @@ from .primitives import CurveFactory, SurfaceFactory
 
 class FeaturesFactory:
     @staticmethod
-    def getPrimitiveObject(type, shape=None, mesh=None,):
+    def getPrimitiveObject(type, shape=None, mesh=None):
         type = type.lower()
         if type in CurveFactory.CURVE_TYPES.keys():
             return CurveFactory.getPrimitiveObject(type, shape, mesh)

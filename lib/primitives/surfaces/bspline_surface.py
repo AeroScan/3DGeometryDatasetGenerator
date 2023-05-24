@@ -55,7 +55,7 @@ class BSplineSurface(BaseSurface):
         return columns
 
     def fromShape(self, shape):
-        shape = shape.BSpline()
+        shape = self.geometryFromShape(shape)
         self.u_rational = shape.IsURational()
         self.v_rational = shape.IsVRational()
         self.u_closed = shape.IsUClosed()

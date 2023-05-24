@@ -29,7 +29,7 @@ class Cone(BaseSurface):
             self.fromMesh(mesh=mesh)
 
     def fromShape(self, shape):
-        shape = shape.Cone()
+        shape = self.geometryFromShape(shape)
         self.location = gpXYZ2List(shape.Location())
         self.x_axis = gpXYZ2List(shape.XAxis().Direction())
         self.y_axis = gpXYZ2List(shape.YAxis().Direction())
