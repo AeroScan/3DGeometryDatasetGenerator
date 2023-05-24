@@ -2,11 +2,8 @@ from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
-from lib.features_factory import FeaturesFactory
+from lib.primitives import generateBRepAdaptorObject
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
-
-from OCC.Core.BRep import BRep_Tool
-from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge
 
 from tqdm import tqdm
 import numpy as np
@@ -32,31 +29,29 @@ def updateEntitiesDictBySearchCode(entity, hash_code, search_code, dictionary):
     return dictionary
 
 def processEdgesAndFaces(edges, faces, topology, generate_mesh):
-    features = {}
-    features['curves'] = []
-    features['surfaces'] = []
-
     mesh = {}
     edges_mesh_data = [{} for x in edges]
-    faces_mesh_data = [{} for x in faces]
-        
+    faces_mesh_data = [{} for x in faces]        
     if generate_mesh:
         mesh['vertices'], mesh['faces'], edges_mesh_data, faces_mesh_data = computeMeshData(edges, faces, topology)
+
+    edges_brepadaptor = []
+    faces_brepadaptor = []
     
     print('\n[PythonOCC] Generating Features...')
-    for i, edge in enumerate(tqdm(edges)):
-        curve = BRepAdaptor_Curve(edge)
-        tp = str(GeomAbs_CurveType(curve.GetType())).split('_')[-1].lower()
+    for edge in tqdm(edges):
+        edges_brepadaptor.append(generateBRepAdaptorObject(edge))
 
-        features['curves'].append(FeaturesFactory.getPrimitiveObject(tp, shape=curve, mesh=edges_mesh_data[i]))
+    for face in tqdm(faces):
+        faces_brepadaptor.append(generateBRepAdaptorObject(face))
 
-    for i, face in enumerate(tqdm(faces)):
-        surface = BRepAdaptor_Surface(face, True)
-        tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
-        
-        features['surfaces'].append(FeaturesFactory.getPrimitiveObject(tp, shape=surface, mesh=faces_mesh_data[i]))
+    geometries_data = {'curves': [], 'surfaces': []}
+    for i in range(len(edges_brepadaptor)):
+        geometries_data['curves'].append({'brep_adaptor': edges_brepadaptor[i], 'mesh_data': edges_mesh_data[i]})
+    for i in range(len(faces_brepadaptor)):
+        geometries_data['surfaces'].append({'brep_adaptor': faces_brepadaptor[i], 'mesh_data': faces_mesh_data[i]})
 
-    return features, mesh
+    return geometries_data, mesh
 
 def addEdgesToDict(edges, edges_dict):
     for edge in edges:
@@ -111,9 +106,9 @@ def processHighestDim(topology, generate_mesh):
     for key in faces_dict:
         faces += faces_dict[key]
 
-    features, mesh = processEdgesAndFaces(edges, faces, topology, generate_mesh)
+    geometries_data, mesh = processEdgesAndFaces(edges, faces, topology, generate_mesh)
 
-    return features, mesh
+    return geometries_data, mesh
     
 
 def processNoHighestDim(topology, generate_mesh):
@@ -122,9 +117,9 @@ def processNoHighestDim(topology, generate_mesh):
     edges = [e for e in topology.edges()]
     faces = [f for f in topology.faces()]
 
-    features, mesh = processEdgesAndFaces(edges, faces, topology, generate_mesh)
+    geometries_data, mesh = processEdgesAndFaces(edges, faces, topology, generate_mesh)
 
-    return features, mesh
+    return geometries_data, mesh
 
 # Generate features by dimensions
 def process(shape, generate_mesh=True, use_highest_dim=True):
@@ -138,19 +133,19 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
     mesh = {}
     
     if use_highest_dim:
-        features, mesh = processHighestDim(topology, generate_mesh)
+        geometries_data, mesh = processHighestDim(topology, generate_mesh)
     else:
-        features, mesh = processNoHighestDim(topology, generate_mesh)
+        geometries_data, mesh = processNoHighestDim(topology, generate_mesh)
 
     if mesh != {}:
         mesh['vertices'] = np.asarray(mesh['vertices'])
         mesh['faces'] = np.asarray(mesh['faces'])
     
-    return features, mesh
+    return geometries_data, mesh
 
 def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, debug=False) -> dict:
     shape = read_step_file(input_name, verbosity=debug)
 
-    features, mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
+    geometries_data, mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
     
-    return shape, features, mesh
+    return shape, geometries_data, mesh

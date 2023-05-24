@@ -16,11 +16,13 @@ from lib.tools import (
     loadMeshPLY,
     loadFeatures,
     create_dirs,
-    list_files)
+    list_files,
+    transforms2gpTrsf)
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
-from lib.features_factory import FeaturesFactory
 from lib.generate_statistics import generateStatistics
+
+import lib.primitives as primitives
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.ply', '.PLY']
@@ -129,11 +131,9 @@ def main():
             stats_name = os.path.join(stats_folder_dir, output_name)
             remove_by_filename(stats_name, STATS_FORMATS)
 
-            
-
             print(f'\nProcessing file - Model {filename} - [{idx+1}/{len(files)}]:')
 
-            shape, features, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
+            shape, geometries_data, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
                                                      use_highest_dim=use_highest_dim, \
                                                         debug=verbose)
             print("\n[PythonOCC] Done.")
@@ -165,25 +165,26 @@ def main():
                         unit_scale = file_info["unit_scale"] if "unit_scale" \
                                         in file_info.keys() else 1000
 
+
             vertices = mesh["vertices"]
-
-            R = rotation_matrix_from_vectors(vertical_up_axis)
-
-            vertices = (R @ vertices.T).T
-
             t = computeTranslationVector(vertices)
-            vertices += t
-
+            R = rotation_matrix_from_vectors(vertical_up_axis)
             s = 1./unit_scale
+            
+            vertices = (R @ vertices.T).T
+            vertices += t
             vertices *= s
-
             mesh["vertices"] = vertices
 
-            FeaturesFactory.normalizeShape(features, R=R, t=t, s=s)
+            trsf = transforms2gpTrsf(R=R, t=t, s=s)
+
+            features = {}
+            for key, entities in geometries_data.items():        
+                features[key] = [primitives.toDict(e['brep_adaptor'], mesh_data=e['mesh_data'], transform=trsf) for e in entities]
             print("\n[Normalization] Done.")
 
             print('\n[Generating statistics]')
-            stats = generateStatistics(features, mesh)
+            #stats = generateStatistics(features, mesh)
             print("\n[Statistics] Done.")
 
             print('\n[Writing meshes]')
@@ -191,17 +192,16 @@ def main():
             print('\n[Writing meshes] Done.')
 
             print('\n[Writing Features]')
-            features = FeaturesFactory.getListOfDictFromPrimitive(features)
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
             print("\n[Writing Features] Done.")
 
             print('\n[Writing Statistics]')
-            writeJSON(stats_name, stats)
+            #writeJSON(stats_name, stats)
             print("\n[Writing Statistics] Done.")
 
             print('\n[Generator] Process done.')
 
-            del stats
+            #del stats
             del features
             del mesh
             gc.collect()

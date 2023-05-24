@@ -6,6 +6,8 @@ import yaml
 import open3d as o3d
 from pathlib import Path
 
+from OCC.Core.gp import gp_Trsf, gp_Vec, gp_Quaternion, gp_Mat
+
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.OBJ', '.obj']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
@@ -79,6 +81,14 @@ def generateFeaturesYAML(features: dict) -> str:
 # Convert the gpXYZ (gmsh data) to list
 def gpXYZ2List(gp):
     return [gp.X(), gp.Y(), gp.Z()]
+
+def transforms2gpTrsf(R=np.eye(3,3), t=np.zeros(3), s=1.):
+    transformation = gp_Trsf()
+    transformation.SetTranslation(gp_Vec(*t))
+    transformation.SetRotation(gp_Quaternion(gp_Mat(*(R.flatten()))))
+    transformation.SetScaleFactor(s)
+
+    return transformation
 
 # Write features file
 def writeYAML(features_name: str, features: dict):

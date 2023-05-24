@@ -1,4 +1,3 @@
-from .primitives import CurveFactory, SurfaceFactory
 
 class FeaturesFactory:
     @staticmethod
