@@ -4,13 +4,14 @@ from OCC.Core.gp import gp_Trsf
 class Plane:
 
     @classmethod
-    def toDict(cls, brep_adaptor, mesh_data=None, transform=None):        
-        if transform is None:
-            transform = gp_Trsf()
+    def toDict(cls, brep_adaptor, mesh_data=None, transforms=None):        
+        if transforms is None:
+            transforms = []
         
         plane = brep_adaptor.Plane()
 
-        plane.Transform(transform)
+        for T in transforms:
+            plane.Transform(T)
 
         features = {}
         features['type'] = cls.__name__

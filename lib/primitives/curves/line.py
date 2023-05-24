@@ -1,24 +1,13 @@
-from lib.tools import gpXYZ2List
-from OCC.Core.gp import gp_Trsf
+from .base_curve import BaseCurve
 
-class Line:
+class Line(BaseCurve):
 
     @classmethod
-    def toDict(cls, brep_adaptor, mesh_data=None, transform=None):        
-        if transform is None:
-            transform = gp_Trsf()
+    def toDict(cls, brep_adaptor, mesh_data=None, transforms=None):        
         
-        line = brep_adaptor.Line()
+        _, features = super().toDict(brep_adaptor, mesh_data=mesh_data,
+                                         transforms=transforms)
 
-        line.Transform(transform)
-
-        features = {}
-        features['type'] = cls.__name__
-        features['location'] = gpXYZ2List(line.Location())
-        features['direction'] = gpXYZ2List(line.Direction())
-
-        features['sharp'] = mesh_data['sharp'] if 'sharp' in mesh_data.keys() else True
-        features['vert_indices'] = mesh_data['vert_indices'] if 'vert_indices' in mesh_data.keys() else []
-        features['vert_parameters'] = mesh_data['vert_parameters'] if 'vert_parameters' in mesh_data.keys() else []
+        print(features['direction'])
 
         return features

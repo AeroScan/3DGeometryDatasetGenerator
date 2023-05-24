@@ -17,7 +17,7 @@ from lib.tools import (
     loadFeatures,
     create_dirs,
     list_files,
-    transforms2gpTrsf)
+    transforms2ListOfGpTrsf)
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.generate_statistics import generateStatistics
@@ -176,11 +176,11 @@ def main():
             vertices *= s
             mesh["vertices"] = vertices
 
-            trsf = transforms2gpTrsf(R=R, t=t, s=s)
+            transforms_trsf = transforms2ListOfGpTrsf(R=R, t=t, s=s)
 
             features = {}
             for key, entities in geometries_data.items():        
-                features[key] = [primitives.toDict(e['brep_adaptor'], mesh_data=e['mesh_data'], transform=trsf) for e in entities]
+                features[key] = [primitives.toDict(e['brep_adaptor'], mesh_data=e['mesh_data'], transforms=transforms_trsf) for e in entities]
             print("\n[Normalization] Done.")
 
             print('\n[Generating statistics]')

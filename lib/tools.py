@@ -82,13 +82,13 @@ def generateFeaturesYAML(features: dict) -> str:
 def gpXYZ2List(gp):
     return [gp.X(), gp.Y(), gp.Z()]
 
-def transforms2gpTrsf(R=np.eye(3,3), t=np.zeros(3), s=1.):
-    transformation = gp_Trsf()
-    transformation.SetTranslation(gp_Vec(*t))
-    transformation.SetRotation(gp_Quaternion(gp_Mat(*(R.flatten()))))
-    transformation.SetScaleFactor(s)
+def transforms2ListOfGpTrsf(R=np.eye(3,3), t=np.zeros(3), s=1.):
+    transforms = [gp_Trsf(), gp_Trsf(), gp_Trsf()]
+    transforms[0].SetRotation(gp_Quaternion(gp_Mat(*(R.flatten()))))
+    transforms[1].SetTranslation(gp_Vec(*t))
+    transforms[2].SetScaleFactor(s)
 
-    return transformation
+    return transforms
 
 # Write features file
 def writeYAML(features_name: str, features: dict):
