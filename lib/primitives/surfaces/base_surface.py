@@ -13,11 +13,11 @@ class BaseSurface:
     GEOM_OTHERS_TYPE = [GeomAbs_SurfaceType.GeomAbs_OffsetSurface, GeomAbs_SurfaceType.GeomAbs_OtherSurface]
 
     @classmethod
-    def toDict(cls, geom_adaptor, mesh_data=None, transforms=None, shape_orientation=0):        
+    def toDict(cls, adaptor, mesh_data=None, transforms=None, shape_orientation=0):        
         if transforms is None:
             transforms = []
         
-        shape = getattr(geom_adaptor, cls.__name__)()
+        shape = getattr(adaptor, cls.__name__)()
 
         for T in transforms:
             shape.Transform(T)
@@ -25,7 +25,7 @@ class BaseSurface:
         features = {}
         features['type'] = cls.__name__
 
-        tp = GeomAbs_SurfaceType(geom_adaptor.GetType())
+        tp = GeomAbs_SurfaceType(adaptor.GetType())
 
         if tp in BaseSurface.GEOM_ELEMENTARY_TYPE:
             
