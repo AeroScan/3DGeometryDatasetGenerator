@@ -1,6 +1,10 @@
-from .base_curve import BaseCurve
+from .base_curves import BaseLineCurve
 
-class Line(BaseCurve):
+class Line(BaseLineCurve):
+
+    @staticmethod
+    def getName():
+        return 'Line'
 
     @classmethod
     def toDict(cls, adaptor, mesh_data=None, transforms=None, shape_orientation=0):        

@@ -1,11 +1,13 @@
-from .base_curve import BaseCurve
-
 from OCC.Core.TColStd import TColStd_Array1OfReal
 from OCC.Core.TColgp import TColgp_Array1OfPnt
 
-from .base_curve import BaseCurve
+from .base_curves import BaseBoundedCurve
 
-class BSplineCurve(BaseCurve):
+class BSpline(BaseBoundedCurve):
+
+    @staticmethod
+    def getName():
+        return 'BSpline'
 
     @classmethod
     def toDict(cls, adaptor, mesh_data=None, transforms=None, shape_orientation=0):        
@@ -17,9 +19,9 @@ class BSplineCurve(BaseCurve):
         features['closed'] = shape.IsClosed()
         features['continuity'] = shape.Continuity()
         features['degree'] = shape.Degree()
-        features['poles'] = BSplineCurve._getPoles(shape)
-        features['knots'] = BSplineCurve._getKnots(shape=shape)
-        features['weights'] = BSplineCurve._getWeights(shape=shape)
+        features['poles'] = BSpline._getPoles(shape)
+        features['knots'] = BSpline._getKnots(shape=shape)
+        features['weights'] = BSpline._getWeights(shape=shape)
 
         return features
     

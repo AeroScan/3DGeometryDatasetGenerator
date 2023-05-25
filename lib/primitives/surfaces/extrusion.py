@@ -1,4 +1,4 @@
-from .base_surface import BaseSurface
+from .base_surfaces import BaseSurface
 from lib.primitives.curves.curve_factory import CurveFactory
 
 import numpy as np

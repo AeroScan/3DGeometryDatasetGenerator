@@ -1,7 +1,11 @@
-from .base_curve import BaseCurve
+from .base_curves import BaseConicCurve
 from lib.tools import gpXYZ2List
 
-class Ellipse(BaseCurve):
+class Ellipse(BaseConicCurve):
+
+    @staticmethod
+    def getName():
+        return 'Ellipse'
 
     @classmethod
     def toDict(cls, adaptor, mesh_data=None, transforms=None, shape_orientation=0):        

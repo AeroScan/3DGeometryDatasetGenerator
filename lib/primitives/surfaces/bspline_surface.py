@@ -1,4 +1,4 @@
-from .base_surface import BaseSurface
+from .base_surfaces import BaseSurface
 
 from OCC.Core.TColgp import TColgp_Array2OfPnt
 from OCC.Core.TColStd import TColStd_Array1OfReal, TColStd_Array2OfReal

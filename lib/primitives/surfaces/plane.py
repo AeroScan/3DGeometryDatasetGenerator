@@ -1,6 +1,10 @@
-from .base_surface import BaseSurface
+from .base_surfaces import BaseElementarySurface
 
-class Plane(BaseSurface):
+class Plane(BaseElementarySurface):
+
+    @staticmethod
+    def getName():
+        return 'Plane'
 
     @classmethod
     def toDict(cls, adaptor, mesh_data=None, transforms=None, shape_orientation=0):   

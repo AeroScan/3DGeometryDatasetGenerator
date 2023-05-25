@@ -1,6 +1,10 @@
-from .base_curve import BaseCurve
+from .base_curves import BaseConicCurve
 
-class Circle(BaseCurve):
+class Circle(BaseConicCurve):
+
+    @staticmethod
+    def getName():
+        return 'Circle'
 
     @classmethod
     def toDict(cls, adaptor, mesh_data=None, transforms=None, shape_orientation=0):        
