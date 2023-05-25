@@ -1,29 +1,11 @@
-from lib.tools import gpXYZ2List
-from OCC.Core.gp import gp_Trsf
+from .base_surface import BaseSurface
 
-class Plane:
+class Plane(BaseSurface):
 
     @classmethod
-    def toDict(cls, brep_adaptor, mesh_data=None, transforms=None):        
-        if transforms is None:
-            transforms = []
-        
-        plane = brep_adaptor.Plane()
+    def toDict(cls, geom_adaptor, mesh_data=None, transforms=None, shape_orientation=0):   
 
-        for T in transforms:
-            plane.Transform(T)
-
-        features = {}
-        features['type'] = cls.__name__
-        features['location'] = gpXYZ2List(plane.Location())
-        features['x_axis'] = gpXYZ2List(plane.XAxis().Direction())
-        features['y_axis'] = gpXYZ2List(plane.YAxis().Direction())
-        features['z_axis'] = gpXYZ2List(plane.Axis().Direction())
-        features['coefficients'] = list(plane.Coefficients())
-        features['normal'] = gpXYZ2List(plane.Axis().Direction())
-
-        features['vert_indices'] = mesh_data['vert_indices'] if 'vert_indices' in mesh_data.keys() else []
-        features['vert_parameters'] = mesh_data['vert_parameters'] if 'vert_parameters' in mesh_data.keys() else []
-        features['face_indices'] = mesh_data['face_indices'] if 'face_indices' in mesh_data.keys() else []
+        _, features = super().toDict(geom_adaptor, mesh_data=mesh_data,
+                                         transforms=transforms, shape_orientation=shape_orientation)
 
         return features

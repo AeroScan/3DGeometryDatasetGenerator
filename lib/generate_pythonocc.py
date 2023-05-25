@@ -2,7 +2,6 @@ from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
-from lib.primitives import generateBRepAdaptorObject
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
 
 from tqdm import tqdm
@@ -35,21 +34,11 @@ def processEdgesAndFaces(edges, faces, topology, generate_mesh):
     if generate_mesh:
         mesh['vertices'], mesh['faces'], edges_mesh_data, faces_mesh_data = computeMeshData(edges, faces, topology)
 
-    edges_brepadaptor = []
-    faces_brepadaptor = []
-    
-    print('\n[PythonOCC] Generating Features...')
-    for edge in tqdm(edges):
-        edges_brepadaptor.append(generateBRepAdaptorObject(edge))
-
-    for face in tqdm(faces):
-        faces_brepadaptor.append(generateBRepAdaptorObject(face))
-
     geometries_data = {'curves': [], 'surfaces': []}
-    for i in range(len(edges_brepadaptor)):
-        geometries_data['curves'].append({'brep_adaptor': edges_brepadaptor[i], 'mesh_data': edges_mesh_data[i]})
-    for i in range(len(faces_brepadaptor)):
-        geometries_data['surfaces'].append({'brep_adaptor': faces_brepadaptor[i], 'mesh_data': faces_mesh_data[i]})
+    for i in range(len(edges)):
+        geometries_data['curves'].append({'topods': edges[i], 'mesh_data': edges_mesh_data[i]})
+    for i in range(len(faces)):
+        geometries_data['surfaces'].append({'topods': faces[i], 'mesh_data': faces_mesh_data[i]})
 
     return geometries_data, mesh
 

@@ -180,7 +180,7 @@ def main():
 
             features = {}
             for key, entities in geometries_data.items():        
-                features[key] = [primitives.toDict(e['brep_adaptor'], mesh_data=e['mesh_data'], transforms=transforms_trsf) for e in entities]
+                features[key] = [primitives.toDict(e['topods'], mesh_data=e['mesh_data'], transforms=transforms_trsf) for e in entities]
             print("\n[Normalization] Done.")
 
             print('\n[Generating statistics]')
