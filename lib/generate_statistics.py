@@ -1,6 +1,12 @@
 import numpy as np
 from tqdm import tqdm
+from tqdm.contrib.concurrent import process_map
 import open3d as o3d
+from functools import partial
+
+def remap_vertices(vert_indices, face):
+    """ Task to make the remap of the vertices using multiprocessing """
+    return np.hstack([np.where(vert_indices == vert)[0] for vert in face])
 
 def generate_area_from_surface(surface, vertices: np.array, faces: np.array) -> float:
     """ This function returns the area from the received surface """
@@ -15,11 +21,7 @@ def generate_area_from_surface(surface, vertices: np.array, faces: np.array) -> 
         vertices = vertices[vert_indices]
         faces = faces[face_indices]
 
-        faces_n = []
-        for face in faces:
-            aux = np.hstack([np.where(vert_indices == vert)[0] for vert in face])
-            faces_n.append(aux)
-        faces_n = np.asarray(faces_n)
+        faces_n = np.asarray(process_map(partial(remap_vertices, vert_indices), faces))
 
         surface_mesh = o3d.geometry.TriangleMesh()
         surface_mesh.vertices = o3d.utility.Vector3dVector(vertices)
