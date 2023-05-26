@@ -1,11 +1,11 @@
-from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
-from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
-from OCC.Extend.DataExchange import read_step_file
-from OCC.Extend.TopologyUtils import TopologyExplorer
-from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
-
 from tqdm import tqdm
 import numpy as np
+
+from OCC.Extend.DataExchange import read_step_file
+from OCC.Extend.TopologyUtils import TopologyExplorer
+
+from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
+from lib.AsGeometryOCCWrapper import CurveFactory, SurfaceFactory
 
 MAX_INT = 2**31 - 1
 
@@ -29,16 +29,20 @@ def updateEntitiesDictBySearchCode(entity, hash_code, search_code, dictionary):
 
 def processEdgesAndFaces(edges, faces, topology, generate_mesh):
     mesh = {}
-    edges_mesh_data = [{} for x in edges]
-    faces_mesh_data = [{} for x in faces]        
+    edges_mesh_data = [{} for _ in edges]
+    faces_mesh_data = [{} for _ in faces]        
     if generate_mesh:
         mesh['vertices'], mesh['faces'], edges_mesh_data, faces_mesh_data = computeMeshData(edges, faces, topology)
 
     geometries_data = {'curves': [], 'surfaces': []}
     for i in range(len(edges)):
-        geometries_data['curves'].append({'topods': edges[i], 'mesh_data': edges_mesh_data[i]})
+        geometry = CurveFactory.fromTopoDS(edges[i])
+        if geometry is not None:
+            geometries_data['curves'].append({'geometry': geometry, 'mesh_data': edges_mesh_data[i]})
     for i in range(len(faces)):
-        geometries_data['surfaces'].append({'topods': faces[i], 'mesh_data': faces_mesh_data[i]})
+        geometry = SurfaceFactory.fromTopoDS(faces[i])
+        if geometry is not None:
+            geometries_data['surfaces'].append({'geometry': geometry, 'mesh_data': faces_mesh_data[i]})
 
     return geometries_data, mesh
 

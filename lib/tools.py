@@ -78,10 +78,6 @@ def generateFeaturesYAML(features: dict) -> str:
             value.pop(0)
     return result
 
-# Convert the gpXYZ (gmsh data) to list
-def gpXYZ2List(gp):
-    return [gp.X(), gp.Y(), gp.Z()]
-
 def transforms2ListOfGpTrsf(R=np.eye(3,3), t=np.zeros(3), s=1.):
     transforms = [gp_Trsf(), gp_Trsf(), gp_Trsf()]
     transforms[0].SetRotation(gp_Quaternion(gp_Mat(*(R.flatten()))))

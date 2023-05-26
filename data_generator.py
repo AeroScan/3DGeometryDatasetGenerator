@@ -22,8 +22,6 @@ from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.generate_statistics import generateStatistics
 
-import lib.primitives as primitives
-
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.ply', '.PLY']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
@@ -176,12 +174,12 @@ def main():
             vertices *= s
             mesh["vertices"] = vertices
 
-            transforms_trsf = transforms2ListOfGpTrsf(R=R, t=t, s=s)
-
+            transforms = [{'rotation': R}, {'translation': t}, {'scale': s}]
+            #
             features = {}
-            for key, entities in geometries_data.items():        
-                feat = [primitives.toDict(e['topods'], mesh_data=e['mesh_data'], transforms=transforms_trsf) for e in entities]
-                features[key] = [f for f in feat if f is not None]
+            for key, entities in geometries_data.items():
+                features[key] = [dict(e['geometry'].applyTransformsAndReturn(transforms).toDict(), **(e['mesh_data'])) for e in entities]
+
             print("\n[Normalization] Done.")
 
             print('\n[Generating statistics]')
