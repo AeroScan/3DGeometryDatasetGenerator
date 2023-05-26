@@ -20,7 +20,7 @@ from lib.tools import (
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.features_factory import FeaturesFactory
-from lib.generate_statistics import generateStatistics
+from lib.generate_statistics import generate_statistics
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.ply', '.PLY']
@@ -92,7 +92,7 @@ def main():
 
     # ---> Directories verifications
     files = get_files_from_input_path(input_path)
-    
+
     mesh_folder_dir = os.path.join(output_path, mesh_folder)
     features_folder_dir = os.path.join(output_path, features_folder)
     stats_folder_dir = os.path.join(output_path, stats_folder)
@@ -128,8 +128,6 @@ def main():
             remove_by_filename(mesh_name, MESH_FORMATS)
             stats_name = os.path.join(stats_folder_dir, output_name)
             remove_by_filename(stats_name, STATS_FORMATS)
-
-            
 
             print(f'\nProcessing file - Model {filename} - [{idx+1}/{len(files)}]:')
 
@@ -183,7 +181,7 @@ def main():
             print("\n[Normalization] Done.")
 
             print('\n[Generating statistics]')
-            stats = generateStatistics(features, mesh)
+            stats = generate_statistics(features, mesh)
             print("\n[Statistics] Done.")
 
             print('\n[Writing meshes]')
@@ -223,7 +221,7 @@ def main():
             features_data = loadFeatures(features_path, features_file_type)
 
             print("\nGenerating statistics...")
-            stats = generateStatistics(features_data, mesh, only_stats=only_stats)
+            stats = generate_statistics(features_data, mesh, only_stats=only_stats)
 
             print("Writing stats in statistic file...")
             writeJSON(stats_name, stats)
