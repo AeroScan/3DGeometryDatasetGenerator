@@ -3,7 +3,7 @@ from .base_surfaces import BaseElementarySurface
 class Cylinder(BaseElementarySurface):
 
     @staticmethod
-    def getName():
+    def getType():
         return 'Cylinder'
     
     def getRadius(self):

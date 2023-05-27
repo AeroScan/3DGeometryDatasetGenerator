@@ -12,23 +12,25 @@ class BaseGeometry(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def getName():
+    def getType():
         pass
+
+    @abc.abstractmethod
+    def _fixOrientation(self, tp: str, face_orientation: int):
+        pass
+
+    def _generateInternalData(self, adaptor: Union[GeomAdaptor_Curve, GeomAdaptor_Surface, BRepAdaptor_Curve, BRepAdaptor_Surface]):
+        self._shape = getattr(adaptor, self.getType())()
 
     def __init__(self, adaptor: Union[GeomAdaptor_Curve, GeomAdaptor_Surface, BRepAdaptor_Curve, BRepAdaptor_Surface],
                  transforms: list = {}, face_orientation: int = 0):
         
-        tp = self.getName()
-
-        self._shape = getattr(adaptor, tp)()
-
+        self._generateInternalData(adaptor)       
         self.applyTransforms(transforms)
-
         self._fixOrientation(face_orientation)
 
-    def applyTransformAndReturn(self, transform: dict):
-        self.applyTransform(transform)
-        return self
+    def doTransformOCC(self, trsf: gp_Trsf):
+        self._shape.Transform(trsf)
     
     def applyTransform(self, transform: dict):
         transform_exists = [key in BaseGeometry.POSSIBLE_TRANSFORMS for key in transform.keys()]
@@ -45,24 +47,24 @@ class BaseGeometry(metaclass=abc.ABCMeta):
             trsf.SetScaleFactor(transform['scale'])
         if 'mirror' in transform.keys():
             pass
-
-        self._shape.Transform(trsf)
-
-    def applyTransformsAndReturn(self, transforms: list):
-        self.applyTransforms(transforms)
+    
+        self.doTransformOCC(trsf)
+    
+    def applyTransformAndReturn(self, transform: dict):
+        self.applyTransform(transform)
         return self
 
     def applyTransforms(self, transforms: list):
         for transform in transforms:
             self.applyTransform(transform)
+        
+    def applyTransformsAndReturn(self, transforms: list):
+        self.applyTransforms(transforms)
+        return self
 
     def toDict(self):
         
         features = {}
-        features['type'] = self.getName()
+        features['type'] = self.getType()
 
         return features
-
-    @abc.abstractmethod
-    def _fixOrientation(self, tp: str, face_orientation: int):
-        pass

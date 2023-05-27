@@ -5,7 +5,7 @@ from .base_surfaces import BaseElementarySurface
 class Plane(BaseElementarySurface):
 
     @staticmethod
-    def getName():
+    def getType():
         return 'Plane'
     
     def _fixOrientation(self, face_orientation: int):
@@ -18,6 +18,6 @@ class Plane(BaseElementarySurface):
             
             assert np.all(np.isclose(old_axis, -new_axis)) and \
                    np.all(np.isclose(old_loc, new_loc)), \
-                   f'Sanity Check Failed: problem in reversing a {self.getName()}. ' \
+                   f'Sanity Check Failed: problem in reversing a {self.getType()}. ' \
                    f'\n\t\t~~~~~ {old_axis} != {-new_axis} or ' \
                    f'{old_loc} != {new_loc} ~~~~~'

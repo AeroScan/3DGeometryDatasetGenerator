@@ -24,7 +24,7 @@ class BaseLineCurve(BaseCurve, metaclass=abc.ABCMeta):
             new_direction = np.array(self.getDirection())
             
             assert np.all(np.isclose(new_direction, -old_direction)), \
-                   f'Sanity Check Failed: problem in reversing a {self.getName()}. ' \
+                   f'Sanity Check Failed: problem in reversing a {self.getType()}. ' \
                    f'\n\t\t~~~~~ {new_direction} != {-old_direction} ~~~~~'
 
     def getLocation(self):
@@ -53,7 +53,7 @@ class BaseConicCurve(BaseCurve, metaclass=abc.ABCMeta):
             new_axis = np.array(self.getZAxis())
             
             assert np.all(np.isclose(old_axis, -new_axis)) and np.all(np.isclose(old_loc, new_loc)), \
-                    f'Sanity Check Failed: problem in reversing a {str(self.getName())}. ' \
+                    f'Sanity Check Failed: problem in reversing a {str(self.getType())}. ' \
                     f'\n\t\t~~~~~ {old_axis} != {-new_axis} or ' \
                     f'{old_loc} != {new_loc} ~~~~~'
     
@@ -89,7 +89,7 @@ class BaseBoundedCurve(BaseCurve, metaclass=abc.ABCMeta):
                 new_start = np.array(self.getStartPoint())
                 new_end = np.array(self.getEndPoint())
                 assert np.all(np.isclose(old_start, new_end)) and np.all(np.isclose(old_end, new_start)), \
-                       f'Sanity Check Failed: problem in reversing a {str(self.getName())}. '\
+                       f'Sanity Check Failed: problem in reversing a {str(self.getType())}. '\
                        f'\n\t\t~~~~~ {old_start} != {new_end} or ' \
                        f'{old_end} != {new_start} ~~~~~'
                 

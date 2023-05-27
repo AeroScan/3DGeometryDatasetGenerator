@@ -1,58 +1,35 @@
-from .base_surfaces import BaseSurface
-from lib.AsGeometryOCCWrapper.curves.curve_factory import CurveFactory
+from typing import Union
 
-import numpy as np
+from OCC.Core.GeomAdaptor import GeomAdaptor_Surface
+from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+from OCC.Core.gp import gp_Trsf
 
-class Revolution(BaseSurface):
+from .base_surfaces import BaseSweptSurface
+
+class Revolution(BaseSweptSurface):
 
     @staticmethod
-    def primitiveType():
+    def getType():
         return 'Revolution'
-
-    @staticmethod
-    def getPrimitiveParams():
-        return ['location', 'z_axis', 'curve', 'vert_indices', 'vert_parameters', 'face_indices']
     
-    def __init__(self, shape=None, mesh: dict = None):
-        super().__init__()
-        self.location = None
-        self.z_axis = None
-        self.curve = None
-        if shape is not None:
-            self.fromShape(shape=shape)
-        if mesh is not None:
-            self.fromMesh(mesh=mesh)
+    def _generateInternalData(self, adaptor: Union[GeomAdaptor_Surface, BRepAdaptor_Surface]):
+        super()._generateInternalData(adaptor)
+        self._axe_of_revolution = adaptor.AxeOfRevolution()
 
-    def _getCurveObject(self, curve):
-        return CurveFactory.getPrimitiveObject(type=curve.GetType(), shape=curve, mesh={})
+    def doTransformOCC(self, trsf: gp_Trsf):
+        super().doTransformOCC(trsf)
+        self._axe_of_revolution.Transform(trsf)
 
-    ## Missing fix orientation part 
-    def fromShape(self, shape):
-        surface = shape.AxeOfRevolution()
-        curve = shape.BasisCurve()
-        self.location = list(surface.Location().Coord())
-        self.z_axis = list(surface.Direction().Coord())
-        self.curve = self._getCurveObject(curve=curve)
-
-    def fromMesh(self, mesh):
-        super().fromMesh(mesh=mesh)
+    def getZAxis(self):
+        return self._axe_of_revolution.Direction().Coord()
+    
+    def getLocation(self):
+        return self._axe_of_revolution.Location().Coord()
 
     def toDict(self):
         features = super().toDict()
-        features['type'] = Revolution.primitiveType()
-        features['location'] = self.location
-        features['z_axis'] = self.z_axis
-        features['curve'] = CurveFactory.getDictFromPrimitive(primitive=self.curve)
+
+        features['location'] = self.getLocation()
+        features['z_axis'] = self.getZAxis()
 
         return features
-
-    def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
-        self.curve = self.curve.normalize(R=R, t=t, s=s)
-
-        self.location = R @ self.location
-        self.z_axis = R @ self.z_axis
-
-        self.location += t
-
-        self.location = self.location.tolist()
-        self.z_axis = self.z_axis.tolist()

@@ -3,7 +3,7 @@ from .base_curves import BaseConicCurve
 class Ellipse(BaseConicCurve):
 
     @staticmethod
-    def getName():
+    def getType():
         return 'Ellipse'
     
     def getFocus1(self):

@@ -10,8 +10,8 @@ from .plane import Plane
 from .torus import Torus
 from .sphere import Sphere
 from .cylinder import Cylinder
-#from .extrusion import Extrusion
-#from .revolution import Revolution
+from .extrusion import Extrusion
+from .revolution import Revolution
 from .bspline_surface import BSplineSurface
 
 class SurfaceFactory:
@@ -22,7 +22,9 @@ class SurfaceFactory:
         GeomAbs_SurfaceType.GeomAbs_Cone: Cone,
         GeomAbs_SurfaceType.GeomAbs_Sphere: Sphere,
         GeomAbs_SurfaceType.GeomAbs_Torus: Torus,
-        GeomAbs_SurfaceType.GeomAbs_BSplineSurface: BSplineSurface
+        GeomAbs_SurfaceType.GeomAbs_BSplineSurface: BSplineSurface,
+        GeomAbs_SurfaceType.GeomAbs_SurfaceOfExtrusion: Extrusion,
+        GeomAbs_SurfaceType.GeomAbs_SurfaceOfRevolution: Revolution
     }
     @staticmethod
     def fromTopoDS(topods: TopoDS_Face, transforms: list = []):

@@ -1,13 +1,14 @@
 import abc
 from typing import Union
 
-from OCC.Core.gp import gp_Ax2
+from OCC.Core.gp import gp_Ax2, gp_Trsf
 from OCC.Core.GeomAdaptor import GeomAdaptor_Surface
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
 
 import numpy as np
 
 from ..geometry.base_geometry import BaseGeometry
+from ..curves import CurveFactory
 
 class BaseSurface(BaseGeometry, metaclass=abc.ABCMeta):
 
@@ -31,7 +32,7 @@ class BaseElementarySurface(BaseSurface, metaclass=abc.ABCMeta):
             assert np.all(np.isclose(old_xaxis, -new_xaxis)) and  \
                    np.all(np.isclose(old_yaxis, -new_yaxis)) and  \
                    np.all(np.isclose(old_loc, new_loc)), \
-                   f'Sanity Check Failed: problem in reversing a {self.getName()}. ' \
+                   f'Sanity Check Failed: problem in reversing a {self.getType()}. ' \
                    f'\n\t\t~~~~~ {old_xaxis} != {-new_xaxis} or ' \
                    f'{old_yaxis} != {-new_yaxis} or ' \
                    f'{old_loc} != {new_loc} ~~~~~'
@@ -78,7 +79,7 @@ class BaseBoundedSurface(BaseSurface, metaclass=abc.ABCMeta):
             
     #         assert np.all(np.isclose(old_lower_bound, new_upper_bound)) and \
     #                np.all(np.isclose(old_upper_bound, new_lower_bound)), \
-    #                f'Sanity Check Failed: problem in reversing a {self.getName()}. ' \
+    #                f'Sanity Check Failed: problem in reversing a {self.getType()}. ' \
     #                f'\n\t\t~~~~~ {old_lower_bound} != {new_upper_bound} or' \
     #                f'{old_upper_bound} != {np.flip(new_lower_bound)} ~~~~~'
         
@@ -94,11 +95,22 @@ class BaseBoundedSurface(BaseSurface, metaclass=abc.ABCMeta):
         return features
     
 class BaseSweptSurface(BaseSurface, metaclass=abc.ABCMeta):
- 
+
+    def _generateInternalData(self, adaptor: Union[GeomAdaptor_Surface, BRepAdaptor_Surface]):
+        self._curve = CurveFactory.fromAdaptor(adaptor.BasisCurve())
+         
     def _fixOrientation(self, face_orientation: int):
         pass
 
+    def doTransformOCC(self, trsf: gp_Trsf):
+        self._curve.doTransformOCC(trsf)
+
+    def getCurve(self):
+        return self._curve
+
     def toDict(self):
         features = super().toDict()
+
+        features['curve'] = self._curve.toDict()
             
         return features

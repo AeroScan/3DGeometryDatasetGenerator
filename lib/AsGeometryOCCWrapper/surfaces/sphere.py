@@ -5,7 +5,7 @@ from .base_surfaces import BaseElementarySurface
 class Sphere(BaseElementarySurface):
 
     @staticmethod
-    def getName():
+    def getType():
         return 'Sphere'
     
     def getRadius(self):

@@ -3,7 +3,7 @@ from .base_surfaces import BaseElementarySurface
 class Cone(BaseElementarySurface):
 
     @staticmethod
-    def getName():
+    def getType():
         return 'Cone'
 
     def getRadius(self):

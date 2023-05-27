@@ -3,5 +3,5 @@ from .base_curves import BaseLineCurve
 class Line(BaseLineCurve):
     
     @staticmethod
-    def getName():
+    def getType():
         return 'Line'

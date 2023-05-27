@@ -1,51 +1,31 @@
-from .base_surfaces import BaseSurface
-from lib.AsGeometryOCCWrapper.curves.curve_factory import CurveFactory
+from typing import Union
 
-import numpy as np
+from OCC.Core.GeomAdaptor import GeomAdaptor_Surface
+from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+from OCC.Core.gp import gp_Trsf
 
-class Extrusion(BaseSurface):
+from .base_surfaces import BaseSweptSurface
+
+class Extrusion(BaseSweptSurface):
 
     @staticmethod
-    def primitiveType():
+    def getType():
         return 'Extrusion'
-
-    @staticmethod
-    def getPrimitiveParams():
-        return ['direction', 'curve', 'vert_indices', 'vert_parameters', 'face_indices']
-
-    def __init__(self, shape=None, mesh: dict = None):
-        super().__init__()
-        self.direction = None
-        self.curve = None
-        if shape is not None:
-            self.fromShape(shape=shape)
-        if mesh is not None:
-            self.fromMesh(mesh=mesh)
-
-    def _getCurveObject(self, curve):
-        return CurveFactory.getPrimitiveObject(type=curve.GetType(), shape=curve, mesh={})
-
-    ## Missing fix orientation part 
-    def fromShape(self, shape):
-        surface = shape
-        curve = shape.BasisCurve()
-        self.direction = list(surface.Direction().Coord())
-        self.curve = self._getCurveObject(curve=curve)
-
-    def fromMesh(self, mesh):
-        super().fromMesh(mesh=mesh)
     
+    def _generateInternalData(self, adaptor: Union[GeomAdaptor_Surface, BRepAdaptor_Surface]):
+        super()._generateInternalData(adaptor)
+        self._direction = adaptor.Direction()
+
+    def doTransformOCC(self, trsf: gp_Trsf):
+        super().doTransformOCC(trsf)
+        self._direction.Transform(trsf)
+
+    def getDirection(self):
+        return self._direction.Coord()
+
     def toDict(self):
         features = super().toDict()
-        features['type'] = Extrusion.primitiveType()
-        features['direction'] = self.direction
-        features['curve'] = CurveFactory.getDictFromPrimitive(primitive=self.curve)
+
+        features['direction'] = self.getDirection()
 
         return features
-
-    def normalize(self, R=np.eye(3,3), t=np.zeros(3), s=1.):
-        self.curve = self.curve.normalize(R=R, t=t, s=s)
-
-        self.direction = R @ self.direction
-
-        self.direction = self.direction.tolist()

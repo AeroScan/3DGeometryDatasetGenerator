@@ -165,12 +165,11 @@ def main():
 
 
             vertices = mesh["vertices"]
-            t = computeTranslationVector(vertices)
             R = rotation_matrix_from_vectors(vertical_up_axis)
-            s = 1./unit_scale
-            
             vertices = (R @ vertices.T).T
+            t = computeTranslationVector(vertices)
             vertices += t
+            s = 1./unit_scale
             vertices *= s
             mesh["vertices"] = vertices
 

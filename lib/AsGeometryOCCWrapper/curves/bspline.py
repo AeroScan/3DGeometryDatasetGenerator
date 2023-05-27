@@ -6,7 +6,7 @@ from .base_curves import BaseBoundedCurve
 class BSpline(BaseBoundedCurve):
 
     @staticmethod
-    def getName():
+    def getType():
         return 'BSpline'
     
     def getIsRational(self):

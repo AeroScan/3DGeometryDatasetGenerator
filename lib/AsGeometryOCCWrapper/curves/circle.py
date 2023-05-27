@@ -3,7 +3,7 @@ from .base_curves import BaseConicCurve
 class Circle(BaseConicCurve):
 
     @staticmethod
-    def getName():
+    def getType():
         return 'Circle'
     
     def getRadius(self):

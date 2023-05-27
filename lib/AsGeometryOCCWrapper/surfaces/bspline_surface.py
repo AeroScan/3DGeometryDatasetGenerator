@@ -6,7 +6,7 @@ from .base_surfaces import BaseBoundedSurface
 class BSplineSurface(BaseBoundedSurface):
 
     @staticmethod
-    def getName():
+    def getType():
         return 'BSpline'
     
     def getPoles(self):
