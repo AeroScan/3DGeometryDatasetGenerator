@@ -1,3 +1,5 @@
+from OCC.Core.Geom import Geom_SphericalSurface
+
 import numpy as np
 
 from .base_surfaces import BaseElementarySurface
@@ -8,13 +10,12 @@ class Sphere(BaseElementarySurface):
     def getType():
         return 'Sphere'
     
-    def getRadius(self):
-        return self._shape.Radius()
+    @staticmethod
+    def adaptor2Geom(adaptor):
+        return Geom_SphericalSurface(adaptor.Sphere())
     
-    def getZAxis(self):
-        x_axis = np.array(self.getXAxis())
-        y_axis = np.array(self.getYAxis())
-        return tuple(np.cross(x_axis, y_axis))
+    def getRadius(self):
+        return self._geom.Radius()
 
     def toDict(self):   
         features = super().toDict()

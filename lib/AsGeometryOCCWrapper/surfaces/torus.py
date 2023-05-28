@@ -1,3 +1,5 @@
+from OCC.Core.Geom import Geom_ToroidalSurface
+
 from .base_surfaces import BaseElementarySurface
 
 class Torus(BaseElementarySurface):
@@ -6,14 +8,18 @@ class Torus(BaseElementarySurface):
     def getType():
         return 'Torus'
     
+    @staticmethod
+    def adaptor2Geom(adaptor):
+        return Geom_ToroidalSurface(adaptor.Torus())
+    
     def getCoefficients(self):    
         return []
     
     def getMajorRadius(self):    
-        return self._shape.MajorRadius()
+        return self._geom.MajorRadius()
     
     def getMinorRadius(self):    
-        return self._shape.MinorRadius()
+        return self._geom.MinorRadius()
 
     def toDict(self):
         features = super().toDict()

@@ -9,34 +9,38 @@ class BSpline(BaseBoundedCurve):
     def getType():
         return 'BSpline'
     
+    @staticmethod
+    def adaptor2Geom(adaptor):
+        return adaptor.BSpline()
+    
     def getIsRational(self):
-        return self._shape.IsRational()
+        return self._geom.IsRational()
     
     def getIsClosed(self):
-        return self._shape.IsClosed()
+        return self._geom.IsClosed()
     
     def getContinuity(self):
-        return self._shape.Continuity()
+        return self._geom.Continuity()
     
     def getDegree(self):
-        return self._shape.Degree()
+        return self._geom.Degree()
     
     def getPoles(self):
-        k_degree = TColgp_Array1OfPnt(1, self._shape.NbPoles())
-        self._shape.Poles(k_degree)
+        k_degree = TColgp_Array1OfPnt(1, self._geom.NbPoles())
+        self._geom.Poles(k_degree)
         points = [list(k_degree.Value(i+1).Coord() for i in range(k_degree.Length()))]
         return points
 
     def getKnots(self):
-        k_degree = TColStd_Array1OfReal(1, self._shape.NbPoles() +
-                                        self._shape.Degree() + 1)
-        self._shape.KnotSequence(k_degree)
+        k_degree = TColStd_Array1OfReal(1, self._geom.NbPoles() +
+                                        self._geom.Degree() + 1)
+        self._geom.KnotSequence(k_degree)
         knots = [k_degree.Value(i+1) for i in range(k_degree.Length())]
         return knots
 
     def getWeights(self):
-        k_degree = TColStd_Array1OfReal(1, self._shape.NbPoles())
-        self._shape.Weights(k_degree)
+        k_degree = TColStd_Array1OfReal(1, self._geom.NbPoles())
+        self._geom.Weights(k_degree)
         weights = [k_degree.Value(i+1) for i in range(k_degree.Length())]
         return weights
 

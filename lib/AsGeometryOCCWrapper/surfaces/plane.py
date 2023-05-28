@@ -1,3 +1,5 @@
+from OCC.Core.Geom import Geom_Plane
+
 import numpy as np
 
 from .base_surfaces import BaseElementarySurface
@@ -8,11 +10,15 @@ class Plane(BaseElementarySurface):
     def getType():
         return 'Plane'
     
-    def _fixOrientation(self, face_orientation: int):
-        if face_orientation == 1:
+    @staticmethod
+    def adaptor2Geom(adaptor):
+        return Geom_Plane(adaptor.Plane())
+    
+    def _fixOrientation(self):
+        if self._orientation == 1:
             old_loc = np.array(self.getLocation())
             old_axis = np.array(self.getZAxis())
-            self._shape.Mirror(self._shape.Position().Ax2())
+            self._geom.Mirror(self._geom.Position().Ax2())
             new_loc = np.array(self.getLocation())
             new_axis = np.array(self.getZAxis())
             
@@ -21,3 +27,5 @@ class Plane(BaseElementarySurface):
                    f'Sanity Check Failed: problem in reversing a {self.getType()}. ' \
                    f'\n\t\t~~~~~ {old_axis} != {-new_axis} or ' \
                    f'{old_loc} != {new_loc} ~~~~~'
+            
+            # orientation = 0

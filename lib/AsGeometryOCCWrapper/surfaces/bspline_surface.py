@@ -9,46 +9,50 @@ class BSplineSurface(BaseBoundedSurface):
     def getType():
         return 'BSpline'
     
+    @staticmethod
+    def adaptor2Geom(adaptor):
+        return adaptor.BSpline()
+    
     def getPoles(self):
-        k_degree = TColgp_Array2OfPnt(1, self._shape.NbUPoles(), 1, self._shape.NbVPoles())
-        self._shape.Poles(k_degree)
+        k_degree = TColgp_Array2OfPnt(1, self._geom.NbUPoles(), 1, self._geom.NbVPoles())
+        self._geom.Poles(k_degree)
         columns = [list(list(k_degree.Value(i+1, j+1).Coord()) for j in range(k_degree.RowLength())) for i in range(k_degree.ColLength())]
         return columns
 
     def getUKnots(self):
-        u_knots = [knots for _, knots in enumerate(self._shape.UKnots())]
+        u_knots = [knots for _, knots in enumerate(self._geom.UKnots())]
         return u_knots
 
     def getVKnots(self):
-        v_knots = [knots for _, knots in enumerate(self._shape.VKnots())]
+        v_knots = [knots for _, knots in enumerate(self._geom.VKnots())]
         return v_knots
 
     def getWeights(self):
-        k_degree = TColStd_Array2OfReal(1, self._shape.NbUPoles(), 1, self._shape.NbVPoles())
-        self._shape.Weights(k_degree)
+        k_degree = TColStd_Array2OfReal(1, self._geom.NbUPoles(), 1, self._geom.NbVPoles())
+        self._geom.Weights(k_degree)
         columns = [list(k_degree.Value(i+1, j+1) for j in range(k_degree.RowLength())) for i in range(k_degree.ColLength())]
         return columns
     
     def getIsURational(self):
-        return self._shape.IsURational()
+        return self._geom.IsURational()
 
     def getIsVRational(self):
-        return self._shape.IsVRational()
+        return self._geom.IsVRational()
     
     def getIsUClosed(self):
-        return self._shape.IsUClosed()
+        return self._geom.IsUClosed()
     
     def getIsVClosed(self):
-        return self._shape.IsVClosed()
+        return self._geom.IsVClosed()
     
     def getContinuity(self):
-        return self._shape.Continuity()
+        return self._geom.Continuity()
     
     def getUDegree(self):
-        return self._shape.UDegree()
+        return self._geom.UDegree()
     
     def getVDegree(self):
-        return self._shape.VDegree()
+        return self._geom.VDegree()
         
     def toDict(self):
         features = super().toDict()

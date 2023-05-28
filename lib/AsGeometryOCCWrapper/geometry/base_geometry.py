@@ -1,36 +1,41 @@
 import abc
 from typing import Union
 
-from OCC.Core.GeomAdaptor import GeomAdaptor_Curve, GeomAdaptor_Surface
-from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
+from OCC.Core.Geom import Geom_Curve, Geom_Surface
 from OCC.Core.gp import gp_Trsf, gp_Quaternion, gp_Vec, gp_Mat
+from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
+from OCC.Core.GeomAdaptor import GeomAdaptor_Curve, GeomAdaptor_Surface
 
 class BaseGeometry(metaclass=abc.ABCMeta):
 
     POSSIBLE_TRANSFORMS = ['rotation', 'translation',
                            'scale', 'mirror']
-
+    
     @staticmethod
     @abc.abstractmethod
     def getType():
         pass
 
+    @staticmethod
     @abc.abstractmethod
-    def _fixOrientation(self, tp: str, face_orientation: int):
+    def adaptor2Geom(adaptor: Union[BRepAdaptor_Curve, GeomAdaptor_Curve, BRepAdaptor_Surface, GeomAdaptor_Surface]):
         pass
 
-    def _generateInternalData(self, adaptor: Union[GeomAdaptor_Curve, GeomAdaptor_Surface, BRepAdaptor_Curve, BRepAdaptor_Surface]):
-        self._shape = getattr(adaptor, self.getType())()
+    def __init__(self, geom: Union[Geom_Curve, Geom_Surface], topods_orientation: int = 0):
+        self._geom = geom
+        self._orientation = topods_orientation
 
-    def __init__(self, adaptor: Union[GeomAdaptor_Curve, GeomAdaptor_Surface, BRepAdaptor_Curve, BRepAdaptor_Surface],
-                 transforms: list = {}, face_orientation: int = 0):
-        
-        self._generateInternalData(adaptor)       
-        self.applyTransforms(transforms)
-        self._fixOrientation(face_orientation)
+        self._fixOrientation()
 
-    def doTransformOCC(self, trsf: gp_Trsf):
-        self._shape.Transform(trsf)
+    @abc.abstractmethod
+    def projectPointsOnGeometry(self, points):
+        pass
+
+    def _fixOrientation(self):
+        pass
+
+    def _doTransformOCC(self, trsf: gp_Trsf):
+        self._geom.Transform(trsf)
     
     def applyTransform(self, transform: dict):
         transform_exists = [key in BaseGeometry.POSSIBLE_TRANSFORMS for key in transform.keys()]
@@ -48,7 +53,7 @@ class BaseGeometry(metaclass=abc.ABCMeta):
         if 'mirror' in transform.keys():
             pass
     
-        self.doTransformOCC(trsf)
+        self._doTransformOCC(trsf)
     
     def applyTransformAndReturn(self, transform: dict):
         self.applyTransform(transform)
@@ -63,8 +68,8 @@ class BaseGeometry(metaclass=abc.ABCMeta):
         return self
 
     def toDict(self):
-        
         features = {}
         features['type'] = self.getType()
 
         return features
+    

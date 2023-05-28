@@ -3,8 +3,10 @@ from typing import Union
 from OCC.Core.GeomAdaptor import GeomAdaptor_Surface
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
 from OCC.Core.gp import gp_Trsf
+from OCC.Core.Geom import Geom_SurfaceOfLinearExtrusion
 
 from .base_surfaces import BaseSweptSurface
+from ..curves import CurveFactory
 
 class Extrusion(BaseSweptSurface):
 
@@ -12,16 +14,12 @@ class Extrusion(BaseSweptSurface):
     def getType():
         return 'Extrusion'
     
-    def _generateInternalData(self, adaptor: Union[GeomAdaptor_Surface, BRepAdaptor_Surface]):
-        super()._generateInternalData(adaptor)
-        self._direction = adaptor.Direction()
-
-    def doTransformOCC(self, trsf: gp_Trsf):
-        super().doTransformOCC(trsf)
-        self._direction.Transform(trsf)
+    @staticmethod
+    def adaptor2Geom(adaptor):
+        return Geom_SurfaceOfLinearExtrusion(CurveFactory.adaptor2Geom(adaptor.BasisCurve()), adaptor.Direction())
 
     def getDirection(self):
-        return self._direction.Coord()
+        return self._geom.Direction().Coord()
 
     def toDict(self):
         features = super().toDict()

@@ -1,3 +1,5 @@
+from OCC.Core.Geom import Geom_Ellipse
+
 from .base_curves import BaseConicCurve
 
 class Ellipse(BaseConicCurve):
@@ -6,17 +8,21 @@ class Ellipse(BaseConicCurve):
     def getType():
         return 'Ellipse'
     
+    @staticmethod
+    def adaptor2Geom(adaptor):
+        return Geom_Ellipse(adaptor.Ellipse())
+    
     def getFocus1(self):
-        return self._shape.Focus1().Coord()
+        return self._geom.Focus1().Coord()
     
     def getFocus2(self):
-        return self._shape.Focus2().Coord()
+        return self._geom.Focus2().Coord()
     
     def getMinorRadius(self):
-        return self._shape.MinorRadius()
+        return self._geom.MinorRadius()
     
     def getMajorRadius(self):
-        return self._shape.MajorRadius()
+        return self._geom.MajorRadius()
 
     def toDict(self):        
         features = super().toDict()

@@ -21,6 +21,7 @@ from lib.tools import (
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.generate_statistics import generateStatistics
+import open3d as o3d
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.ply', '.PLY']
@@ -57,6 +58,20 @@ def parse_opt():
     stats_parser.add_argument('--only_stats', action='store_true', help='Boolean flag indicating whether to only generate statistics without processing the data.')
 
     return parser.parse_args()
+
+def are_points_close(points1, points2, tolerance=1e-6):
+    distances = np.linalg.norm(points1 - points2, axis=1)
+    is_close = distances < tolerance
+    return np.all(is_close)
+
+def are_parallel(vectors1, vectors2, angle_tolerance_deg):
+    dot_products = np.sum(vectors1 * vectors2, axis=1)
+    magnitudes = np.linalg.norm(vectors1, axis=1) * np.linalg.norm(vectors2, axis=1)
+    cos_angles = dot_products / magnitudes
+    angles = np.arccos(cos_angles)
+    angle_tolerance_rad = np.radians(angle_tolerance_deg)
+    is_parallel = np.less_equal(angles, angle_tolerance_rad)
+    return np.all(is_parallel)
 
 def main():
     """ The main loop of the generator """
@@ -164,20 +179,53 @@ def main():
                                         in file_info.keys() else 1000
 
 
-            vertices = mesh["vertices"]
             R = rotation_matrix_from_vectors(vertical_up_axis)
-            vertices = (R @ vertices.T).T
-            t = computeTranslationVector(vertices)
-            vertices += t
+            mesh["vertices"] = (R @ mesh["vertices"].T).T
+            t = computeTranslationVector(mesh["vertices"])
+            mesh["vertices"] += t
             s = 1./unit_scale
-            vertices *= s
-            mesh["vertices"] = vertices
+            mesh["vertices"] *= s
+
 
             transforms = [{'rotation': R}, {'translation': t}, {'scale': s}]
-            #
-            features = {}
-            for key, entities in geometries_data.items():
-                features[key] = [dict(e['geometry'].applyTransformsAndReturn(transforms).toDict(), **(e['mesh_data'])) for e in entities]
+            features = {'curves': [], 'surfaces': []}
+            for edge_data in geometries_data['curves']:
+                features['curves'].append(dict(edge_data['geometry'].applyTransformsAndReturn(transforms).toDict(), **(edge_data['mesh_data'])))
+            for face_data in geometries_data['surfaces']:
+                mesh_data = face_data['mesh_data']
+
+                # vert_indices = np.asarray(mesh_data['vert_indices'])
+
+                # vertices_curr = mesh["vertices"][np.asarray(mesh_data['vert_indices'])]
+                # uvs_curr = np.asarray(mesh_data['vert_parameters'])
+
+                # faces_cur = mesh['faces'][np.asarray(mesh_data['face_indices'])]
+                # faces_n = []
+                # for face in faces_cur:
+                #     aux = np.hstack([np.where(vert_indices == vert)[0] for vert in face])
+                #     faces_n.append(aux)
+                # faces_n = np.asarray(faces_n)
+
+                # surface_mesh = o3d.geometry.TriangleMesh()
+                # surface_mesh.vertices = o3d.utility.Vector3dVector(vertices_curr)
+                # surface_mesh.triangles = o3d.utility.Vector3iVector(faces_n[:, [1, 2, 0]])
+                # surface_mesh.compute_vertex_normals()
+
+                # normals_curr = np.asarray(surface_mesh.vertex_normals)
+
+                surface = face_data['geometry']
+                surface.applyTransforms(transforms)
+
+                # proj_vertices, proj_normals, proj_uvs = surface.projectPointsOnGeometry(vertices_curr.tolist())
+                
+                # print(np.asarray(proj_normals))
+
+                # assert are_points_close(vertices_curr, proj_vertices), 'Vertices Error'
+
+                # assert are_parallel(normals_curr, proj_normals, 15), 'Normals Error'
+
+                features['surfaces'].append(dict(surface.toDict(), **(mesh_data)))
+
 
             print("\n[Normalization] Done.")
 
