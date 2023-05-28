@@ -24,9 +24,9 @@ class SurfaceFactory:
         GeomAbs_SurfaceType.GeomAbs_Cone: Cone,
         GeomAbs_SurfaceType.GeomAbs_Sphere: Sphere,
         GeomAbs_SurfaceType.GeomAbs_Torus: Torus,
-        # GeomAbs_SurfaceType.GeomAbs_BSplineSurface: BSplineSurface,
-        # GeomAbs_SurfaceType.GeomAbs_SurfaceOfExtrusion: Extrusion,
-        # GeomAbs_SurfaceType.GeomAbs_SurfaceOfRevolution: Revolution
+        GeomAbs_SurfaceType.GeomAbs_BSplineSurface: BSplineSurface,
+        GeomAbs_SurfaceType.GeomAbs_SurfaceOfExtrusion: Extrusion,
+        GeomAbs_SurfaceType.GeomAbs_SurfaceOfRevolution: Revolution
     }
         
     @classmethod

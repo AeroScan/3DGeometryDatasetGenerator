@@ -9,11 +9,14 @@ from OCC.Core.GeomLib import geomlib_NormEstim
 from OCC.Core.Geom import Geom_Surface
 
 import numpy as np
+import open3d as o3d
 
-from ..geometry.base_geometry import BaseGeometry
+from ..geometry.base_geometry import BaseGeometry, angleDeviation, distanceDeviation
 from ..curves import CurveFactory
 
 class BaseSurface(BaseGeometry, metaclass=abc.ABCMeta):
+
+    MESH_INFO_KEYS = BaseGeometry.MESH_INFO_KEYS + ['face_indices']
 
     @staticmethod
     @abc.abstractmethod
@@ -23,53 +26,109 @@ class BaseSurface(BaseGeometry, metaclass=abc.ABCMeta):
     def __init__(self, geom: Geom_Surface, topods_orientation: int = 0):
         super().__init__(geom, topods_orientation=topods_orientation)
 
-    def projectPointsOnGeometry(self, points: list):
-        proj_points = []
-        normals = []
-        uvs = []
-        if len(points) == 0:
-            return proj_points, normals, uvs
-
-        geom_surf = self._getGeomOCC()
-
-        t = gp_Trsf()
-        self._geom.Mirror(self._geom.Position().Ax2())
-        t.SetMirror(geom_surf.Position().Ax2())
-        #print(geom_surf.Axis().Direction().Coord())
-        geom_surf.Transform(t)
-        print(geom_surf.Axis().Direction().Coord())
-        #self.geom_surf.Mirror(self._geom.Position().Ax2())
-
-
-        projector = GeomAPI_ProjectPointOnSurf()
-
-        projector.Init(gp_Pnt(*(points[0])), geom_surf)
+    def _getPointNormalParamFromProjector(self, projector):
         proj_point = projector.NearestPoint()
         u, v = projector.LowerDistanceParameters()
         normal = gp_Dir()
-        r = geomlib_NormEstim(geom_surf, gp_Pnt2d(u, v),  1e-6, normal)
-        print(normal.Coord())
-        print()
+        geomlib_NormEstim(self._geom, gp_Pnt2d(u, v),  1e-6, normal)
+        if self._orientation == 1:
+            normal.Reverse()
+        return proj_point.Coord(), normal.Coord(), (u, v)
 
+    def projectPointsOnGeometry(self, points: list):
+        proj_points = []
+        proj_normals = []
+        proj_params = []
 
+        if len(points) == 0:
+            return [], [], []
 
-        proj_points.append(list(proj_point.Coord()))
-        normals.append(list(normal.Coord()))
-        uvs.append([u, v])
+        projector = GeomAPI_ProjectPointOnSurf()
+
+        projector.Init(gp_Pnt(*(points[0])), self._geom)
+
+        pt, nr, pr = self._getPointNormalParamFromProjector(projector)
+        
+        proj_points.append(pt)
+        proj_normals.append(nr)
+        proj_params.append(pr)
 
         for i in range(1, len(points)):
             projector.Perform(gp_Pnt(*(points[i])))
 
-            proj_point = projector.NearestPoint()
-            u, v = projector.LowerDistanceParameters()
-            normal = gp_Dir()
-            r = geomlib_NormEstim(geom_surf, gp_Pnt2d(u, v),  1e-6, normal)
-
-            proj_points.append(list(proj_point.Coord()))
-            normals.append(list(normal.Coord()))
-            uvs.append([u, v])
+            pt, nr, pr = self._getPointNormalParamFromProjector(projector)
+        
+            proj_points.append(pt)
+            proj_normals.append(nr)
+            proj_params.append(pr)
                 
-        return proj_points, normals, uvs
+        return proj_points, proj_normals, proj_params
+    
+    def setMeshByGlobal(self, global_mesh: o3d.geometry.TriangleMesh, mesh_info: dict):
+        res = super().setMeshByGlobal(global_mesh, mesh_info)
+
+        if res == 0:
+            return res
+                
+        vert_indices = np.asarray(mesh_info['vert_indices'], dtype=np.uint64)
+        reverse_vert_map = dict([(vi, i) for i, vi in enumerate(vert_indices)])
+        face_indices = np.asarray(mesh_info['face_indices'], dtype=np.uint64)
+        faces_local = np.vectorize(reverse_vert_map.get)(np.asarray(global_mesh.triangles)[face_indices])
+
+        self._mesh = global_mesh.select_by_index(vert_indices, cleanup=False)
+        
+        mask = ~np.all(np.isin(np.asarray(self._mesh.triangles), faces_local), axis=1)
+
+        self._mesh.remove_triangles_by_mask(mask.tolist())
+
+        if not self._mesh.has_triangle_normals():
+            self._mesh.compute_triangle_normals()
+
+    def validateMesh(self, dtol: float = 1e-6, atol: float = 10):
+        assert self._mesh_info is not None and self._mesh is not None, 'There is no mesh_info or mesh on the Object.'
+        
+        if not self._mesh.has_vertex_normals():
+            if not self._mesh.has_triangle_normals():
+                self._mesh.compute_triangle_normals()
+            self._mesh.compute_vertex_normals()
+        
+
+        vertices = np.asarray(self._mesh.vertices)
+        normals = np.asarray(self._mesh.vertex_normals)
+        params = np.asarray(self._mesh_info['vert_parameters'])
+
+        p_vertices, p_normals, p_params = self.projectPointsOnGeometry(self._mesh.vertices)
+
+        p_vertices = np.asarray(p_vertices)
+        p_normals = np.asarray(p_normals)
+        p_params = np.asarray(p_params)
+
+        distances = distanceDeviation(vertices, p_vertices)
+        dist_erros = distances[distances > dtol]
+
+        deviations = angleDeviation(normals, p_normals)
+        dev_errors = deviations[deviations > atol]
+
+        #ERROR
+        ret = True
+        if len(dist_erros) > 0:
+            ret = False
+            mean_error = float(np.mean(dist_erros))
+            percent_error = (len(dist_erros)/len(distances))
+            print(f'VERTICES ERROR: error of {percent_error:.2%} and {mean_error:.8f} m')
+        
+        if len(dev_errors) > 0:
+            ret = False
+            mean_error = float(np.mean(dev_errors))
+            percent_error = (len(dev_errors)/len(deviations))
+            print(f'NORMALS ERROR: error of {percent_error:.2%} and {mean_error:.2f}°')
+        
+        return ret
+            
+
+        
+
+
 
 class BaseElementarySurface(BaseSurface, metaclass=abc.ABCMeta):
 

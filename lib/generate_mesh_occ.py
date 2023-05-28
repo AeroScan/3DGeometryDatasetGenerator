@@ -168,16 +168,16 @@ def computeMeshData(edges, faces, topology):
             if i1 == i2 or i1 == i3 or i2 == i3:
                 #print('ERROR: ignoring faces with repeated vertices (temporary solution)')
                 continue
-            #if face_orientation == 0:
-            verts_of_face = np.array([i1, i2, i3])
-            mesh_faces.append(verts_of_face)
-            face_indices.append(len(mesh_faces) - 1)
-            # elif face_orientation == 1:
-            #     verts_of_face = np.array([i3, i2, i1])
-            #     mesh_faces.append(verts_of_face)
-            #     face_indices.append(len(mesh_faces) - 1)
-            # else:
-            #     assert False, 'Face Orientation not Supported yet.'
+            if face_orientation == 0:
+                verts_of_face = np.array([i1, i2, i3])
+                mesh_faces.append(verts_of_face)
+                face_indices.append(len(mesh_faces) - 1)
+            elif face_orientation == 1:
+                verts_of_face = np.array([i3, i2, i1])
+                mesh_faces.append(verts_of_face)
+                face_indices.append(len(mesh_faces) - 1)
+            else:
+                assert False, 'Face Orientation not Supported yet.'
         
         faces_mesh_data[face_index] = {'vert_indices': vert_indices.tolist(), 'vert_parameters': vert_parameters, 'face_indices': face_indices}
 

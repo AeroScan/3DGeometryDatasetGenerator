@@ -59,20 +59,6 @@ def parse_opt():
 
     return parser.parse_args()
 
-def are_points_close(points1, points2, tolerance=1e-6):
-    distances = np.linalg.norm(points1 - points2, axis=1)
-    is_close = distances < tolerance
-    return np.all(is_close)
-
-def are_parallel(vectors1, vectors2, angle_tolerance_deg):
-    dot_products = np.sum(vectors1 * vectors2, axis=1)
-    magnitudes = np.linalg.norm(vectors1, axis=1) * np.linalg.norm(vectors2, axis=1)
-    cos_angles = dot_products / magnitudes
-    angles = np.arccos(cos_angles)
-    angle_tolerance_rad = np.radians(angle_tolerance_deg)
-    is_parallel = np.less_equal(angles, angle_tolerance_rad)
-    return np.all(is_parallel)
-
 def main():
     """ The main loop of the generator """
     args = parse_opt()
@@ -186,43 +172,25 @@ def main():
             s = 1./unit_scale
             mesh["vertices"] *= s
 
+            #TODO: need to use o3d mesh in whole code
+            o3d_mesh = o3d.geometry.TriangleMesh()
+            o3d_mesh.vertices = o3d.utility.Vector3dVector(np.asarray(mesh['vertices']))
+            o3d_mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh['faces']))
+
 
             transforms = [{'rotation': R}, {'translation': t}, {'scale': s}]
             features = {'curves': [], 'surfaces': []}
             for edge_data in geometries_data['curves']:
                 features['curves'].append(dict(edge_data['geometry'].applyTransformsAndReturn(transforms).toDict(), **(edge_data['mesh_data'])))
             for face_data in geometries_data['surfaces']:
-                mesh_data = face_data['mesh_data']
-
-                # vert_indices = np.asarray(mesh_data['vert_indices'])
-
-                # vertices_curr = mesh["vertices"][np.asarray(mesh_data['vert_indices'])]
-                # uvs_curr = np.asarray(mesh_data['vert_parameters'])
-
-                # faces_cur = mesh['faces'][np.asarray(mesh_data['face_indices'])]
-                # faces_n = []
-                # for face in faces_cur:
-                #     aux = np.hstack([np.where(vert_indices == vert)[0] for vert in face])
-                #     faces_n.append(aux)
-                # faces_n = np.asarray(faces_n)
-
-                # surface_mesh = o3d.geometry.TriangleMesh()
-                # surface_mesh.vertices = o3d.utility.Vector3dVector(vertices_curr)
-                # surface_mesh.triangles = o3d.utility.Vector3iVector(faces_n[:, [1, 2, 0]])
-                # surface_mesh.compute_vertex_normals()
-
-                # normals_curr = np.asarray(surface_mesh.vertex_normals)
-
                 surface = face_data['geometry']
                 surface.applyTransforms(transforms)
 
-                # proj_vertices, proj_normals, proj_uvs = surface.projectPointsOnGeometry(vertices_curr.tolist())
-                
-                # print(np.asarray(proj_normals))
+                mesh_data = face_data['mesh_data']
 
-                # assert are_points_close(vertices_curr, proj_vertices), 'Vertices Error'
+                surface.setMeshByGlobal(o3d_mesh, mesh_data)
 
-                # assert are_parallel(normals_curr, proj_normals, 15), 'Normals Error'
+                surface.validateMesh()
 
                 features['surfaces'].append(dict(surface.toDict(), **(mesh_data)))
 

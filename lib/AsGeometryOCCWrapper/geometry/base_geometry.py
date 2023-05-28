@@ -6,10 +6,25 @@ from OCC.Core.gp import gp_Trsf, gp_Quaternion, gp_Vec, gp_Mat
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Core.GeomAdaptor import GeomAdaptor_Curve, GeomAdaptor_Surface
 
+import numpy as np
+import open3d as o3d
+
+EPS = np.finfo(np.float32).eps
+
+#TODO: change the place of these functions
+def angleDeviation(arrs1, arrs2):
+    dot = np.einsum('ijk,ijk->ij',[arrs1,arrs1,arrs2],[arrs2,arrs1,arrs2])
+    return np.degrees(np.arccos(dot[0,:]/(np.sqrt(dot[1,:])*np.sqrt(dot[2,:]) + EPS)))
+
+def distanceDeviation(arrs1, arrs2):
+    return np.linalg.norm(arrs1 - arrs2, axis=1)
+
 class BaseGeometry(metaclass=abc.ABCMeta):
 
     POSSIBLE_TRANSFORMS = ['rotation', 'translation',
                            'scale', 'mirror']
+    
+    MESH_INFO_KEYS = ['vert_indices', 'vert_parameters']
     
     @staticmethod
     @abc.abstractmethod
@@ -21,12 +36,15 @@ class BaseGeometry(metaclass=abc.ABCMeta):
     def adaptor2Geom(adaptor: Union[BRepAdaptor_Curve, GeomAdaptor_Curve, BRepAdaptor_Surface, GeomAdaptor_Surface]):
         pass
 
-    def __init__(self, geom: Union[Geom_Curve, Geom_Surface], topods_orientation: int = 0):
-        self._geom = geom
-        self._orientation = topods_orientation
+    def __init__(self, geom: Union[Geom_Curve, Geom_Surface], topods_orientation: int = 0,
+                 mesh_info: dict = None):
+        
+        self.setGeom(geom, topods_orientation=topods_orientation)
 
-        self._fixOrientation()
+        self._mesh = None #optional
 
+        self.setMeshInfo(mesh_info)
+    
     @abc.abstractmethod
     def projectPointsOnGeometry(self, points):
         pass
@@ -37,6 +55,8 @@ class BaseGeometry(metaclass=abc.ABCMeta):
     def _doTransformOCC(self, trsf: gp_Trsf):
         self._geom.Transform(trsf)
     
+    #TODO: transform mesh too
+    #TODO: may change this BaseGeometry static call
     def applyTransform(self, transform: dict):
         transform_exists = [key in BaseGeometry.POSSIBLE_TRANSFORMS for key in transform.keys()]
         if not all(transform_exists):
@@ -73,3 +93,73 @@ class BaseGeometry(metaclass=abc.ABCMeta):
 
         return features
     
+    def setGeom(self, geom: Union[Geom_Curve, Geom_Surface], topods_orientation: int = 0):
+        self._geom = geom
+        self._orientation = topods_orientation
+        self._fixOrientation()
+
+    #TODO: test it
+    def _testMeshInfo(self, mesh_info):
+        print(self.__class__.MESH_INFO_KEYS)
+        print(mesh_info.keys())
+        mesh_info_sizes = {}
+        mesh_info_errors = []
+        for mi, miv in mesh_info.items():
+            error1 = not(mi in self.__class__.MESH_INFO_KEYS)
+            error2 = False
+            if not error1:
+                sub_mi = mi.split('_')[0]
+                if sub_mi in mesh_info_sizes.keys():
+                    error2 = not(mesh_info_sizes[sub_mi] == len(miv))
+            mesh_info_errors.append(error1 or error2)
+
+        print(mesh_info_errors)
+        return any(mesh_info_errors)
+
+    #TODO
+    @classmethod
+    def _testMeshIndices(cls, local_mesh):
+        return True
+
+    #TODO: create a enum
+    '''
+    0  - NOTHING
+    1  - JUST_MESH_INFO
+    2  - JUST_LOCAL_MESH
+    3  - BOTH_MAY_WRONG
+    4  - BOTH_RIGHT
+    '''
+
+    def setMeshInfo(self, mesh_info: dict):     
+        self._mesh_info = mesh_info
+
+        if self._mesh_info is None:
+            if self._mesh is None:
+                return 0
+            return 2
+
+        #TODO: add a more robust logic, testing if the size of mesh info parts are equal to vertices of existing mesh
+        if self._mesh is not None:
+            self._mesh = None
+
+        return 1
+
+    def setMesh(self, local_mesh: Union[o3d.geometry.LineSet, o3d.geometry.TriangleMesh], mesh_info: dict = None):
+        self.setMeshInfo(mesh_info)
+
+        if self._mesh_info:
+            self._mesh_info = None
+
+        self._mesh = local_mesh
+        return 2
+    
+    def setMeshByGlobal(self, global_mesh: Union[o3d.geometry.LineSet, o3d.geometry.TriangleMesh], mesh_info: dict):
+        self._mesh = None
+
+        if self.setMeshInfo(mesh_info) == 0:
+            return 0
+        
+        return 1
+        
+
+        
