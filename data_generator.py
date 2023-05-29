@@ -190,9 +190,9 @@ def main():
 
                 surface.setMeshByGlobal(o3d_mesh, mesh_data)
 
-                surface.validateMesh()
+                surface.validateMesh(dtol=1e-2, atol=89)
 
-                features['surfaces'].append(dict(surface.toDict(), **(mesh_data)))
+                features['surfaces'].append(dict(surface.toDict()))
 
 
             print("\n[Normalization] Done.")

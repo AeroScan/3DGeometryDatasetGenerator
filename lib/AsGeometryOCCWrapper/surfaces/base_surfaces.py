@@ -1,7 +1,7 @@
 import abc
 from typing import Union
 
-from OCC.Core.gp import gp_Ax2, gp_Trsf, gp_Pnt, gp_Dir, gp_Pnt2d
+from OCC.Core.gp import gp_Pnt, gp_Dir, gp_Pnt2d
 from OCC.Core.GeomAdaptor import GeomAdaptor_Surface
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
 from OCC.Core.GeomAPI import GeomAPI_ProjectPointOnSurf
@@ -26,11 +26,11 @@ class BaseSurface(BaseGeometry, metaclass=abc.ABCMeta):
     def __init__(self, geom: Geom_Surface, topods_orientation: int = 0):
         super().__init__(geom, topods_orientation=topods_orientation)
 
-    def _getPointNormalParamFromProjector(self, projector):
+    def _getPointNormalParamFromProjector(self, projector, normal_tol=1e-3):
         proj_point = projector.NearestPoint()
         u, v = projector.LowerDistanceParameters()
         normal = gp_Dir()
-        geomlib_NormEstim(self._geom, gp_Pnt2d(u, v),  1e-6, normal)
+        r = geomlib_NormEstim(self._geom, gp_Pnt2d(u, v),  normal_tol, normal)
         if self._orientation == 1:
             normal.Reverse()
         return proj_point.Coord(), normal.Coord(), (u, v)
@@ -64,34 +64,40 @@ class BaseSurface(BaseGeometry, metaclass=abc.ABCMeta):
                 
         return proj_points, proj_normals, proj_params
     
+    def computeMeshNormals(self, normalized=True):
+        self._mesh.compute_vertex_normals(normalized)
+        #self._mesh.vertex_normals = o3d.utility.Vector3dVector(-np.asarray(self._mesh.vertex_normals))
+    
     def setMeshByGlobal(self, global_mesh: o3d.geometry.TriangleMesh, mesh_info: dict):
         res = super().setMeshByGlobal(global_mesh, mesh_info)
 
         if res == 0:
             return res
+        
+        if len(mesh_info['vert_indices']) == 0 or len(mesh_info['face_indices']) == 0:
+            return 1
                 
         vert_indices = np.asarray(mesh_info['vert_indices'], dtype=np.uint64)
         reverse_vert_map = dict([(vi, i) for i, vi in enumerate(vert_indices)])
         face_indices = np.asarray(mesh_info['face_indices'], dtype=np.uint64)
         faces_local = np.vectorize(reverse_vert_map.get)(np.asarray(global_mesh.triangles)[face_indices])
 
-        self._mesh = global_mesh.select_by_index(vert_indices, cleanup=False)
+        self._mesh = o3d.geometry.TriangleMesh()
+        self._mesh.vertices = o3d.utility.Vector3dVector(np.asarray(global_mesh.vertices)[vert_indices])
+        self._mesh.triangles = o3d.utility.Vector3iVector(faces_local)
+        #TODO: add if for the other possible data from global_mesh
+    
+        if not self._mesh.has_vertex_normals():
+            self.computeMeshNormals()
         
-        mask = ~np.all(np.isin(np.asarray(self._mesh.triangles), faces_local), axis=1)
-
-        self._mesh.remove_triangles_by_mask(mask.tolist())
-
-        if not self._mesh.has_triangle_normals():
-            self._mesh.compute_triangle_normals()
+        return 4
 
     def validateMesh(self, dtol: float = 1e-6, atol: float = 10):
-        assert self._mesh_info is not None and self._mesh is not None, 'There is no mesh_info or mesh on the Object.'
+        if self._mesh_info is None or self._mesh is None:
+            return False
         
         if not self._mesh.has_vertex_normals():
-            if not self._mesh.has_triangle_normals():
-                self._mesh.compute_triangle_normals()
-            self._mesh.compute_vertex_normals()
-        
+            self.computeMeshNormals()
 
         vertices = np.asarray(self._mesh.vertices)
         normals = np.asarray(self._mesh.vertex_normals)
@@ -115,13 +121,14 @@ class BaseSurface(BaseGeometry, metaclass=abc.ABCMeta):
             ret = False
             mean_error = float(np.mean(dist_erros))
             percent_error = (len(dist_erros)/len(distances))
-            print(f'VERTICES ERROR: error of {percent_error:.2%} and {mean_error:.8f} m')
+            print(f'[ERROR] Vertices on {self.getType()}: error of {percent_error:.2%} and {mean_error:.8f} m')
         
         if len(dev_errors) > 0:
             ret = False
             mean_error = float(np.mean(dev_errors))
             percent_error = (len(dev_errors)/len(deviations))
-            print(f'NORMALS ERROR: error of {percent_error:.2%} and {mean_error:.2f}°')
+            normals_with_error = np.hstack((normals[deviations > atol], p_normals[deviations > atol]))
+            print(f'[ERROR] Normals on {self.getType()}: error of {percent_error:.2%} and {mean_error:.2f}° \n {normals_with_error}')
         
         return ret
             

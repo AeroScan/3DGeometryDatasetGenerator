@@ -45,6 +45,7 @@ def addEntityToMap(index, entity, map):
     else:
         map[hc] = [(index, entity)]
 
+#TODO:remove unreferenced vertices per surface or curve
 def computeMeshData(edges, faces, topology):
     edges_mesh_data = []
     edges_map = {}
@@ -74,6 +75,7 @@ def computeMeshData(edges, faces, topology):
         transform = location.Transformation()
 
         if triangulation is None:
+            #WARNING
             surface = BRepAdaptor_Surface(face, True)
             tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
             continue
@@ -88,6 +90,7 @@ def computeMeshData(edges, faces, topology):
             polygon = brep_tool.PolygonOnTriangulation(edge, triangulation, location)
 
             if polygon is None:
+                #WARNING
                 continue
 
             polygon_nodes = list(polygon.Nodes())
@@ -166,6 +169,7 @@ def computeMeshData(edges, faces, topology):
             i2 = vert_indices[i2 - 1]
             i3 = vert_indices[i3 - 1]
             if i1 == i2 or i1 == i3 or i2 == i3:
+                #WARNING
                 #print('ERROR: ignoring faces with repeated vertices (temporary solution)')
                 continue
             if face_orientation == 0:

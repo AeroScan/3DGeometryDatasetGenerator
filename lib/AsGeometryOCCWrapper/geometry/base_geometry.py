@@ -13,8 +13,15 @@ EPS = np.finfo(np.float32).eps
 
 #TODO: change the place of these functions
 def angleDeviation(arrs1, arrs2):
-    dot = np.einsum('ijk,ijk->ij',[arrs1,arrs1,arrs2],[arrs2,arrs1,arrs2])
-    return np.degrees(np.arccos(dot[0,:]/(np.sqrt(dot[1,:])*np.sqrt(dot[2,:]) + EPS)))
+    angles = []
+    for i in range(len(arrs1)):
+        angles.append(angleVectors(arrs1[i], arrs2[i]))
+    return np.degrees(np.array(angles))
+
+def angleVectors(n1, n2):
+    n1_unit = n1/(np.linalg.norm(n1) + EPS)
+    n2_unit = n2/(np.linalg.norm(n2) + EPS)
+    return np.arccos(np.clip(np.dot(n1_unit, n2_unit), -1.0, 1.0))
 
 def distanceDeviation(arrs1, arrs2):
     return np.linalg.norm(arrs1 - arrs2, axis=1)
@@ -90,6 +97,9 @@ class BaseGeometry(metaclass=abc.ABCMeta):
     def toDict(self):
         features = {}
         features['type'] = self.getType()
+
+        if self._mesh_info is not None:
+            features = dict(features, **(self._mesh_info))
 
         return features
     
