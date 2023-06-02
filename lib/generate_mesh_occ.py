@@ -8,8 +8,8 @@ from OCC.Core.gp import gp_Pnt
 from OCC.Core.STEPConstruct import STEPConstruct_PointHasher
 from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
 from OCC.Core.IMeshTools import IMeshTools_Parameters
-from OCC.Core.GeomAbs import GeomAbs_SurfaceType
-from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
+from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
 
 from tqdm import tqdm
 
@@ -67,25 +67,33 @@ def computeMeshData(edges, faces, topology):
     mesh_faces = []
     print('\n[PythonOCC] Generating Mesh Data...')
     for face_index, face in enumerate(tqdm(faces)):
+        print(str(GeomAbs_SurfaceType(BRepAdaptor_Surface(face).GetType())))
+        print('============================================================================')
+
         face_orientation = face.Orientation()
 
         brep_tool = BRep_Tool()
         location = TopLoc_Location()
-        triangulation = brep_tool.Triangulation(face, location)
+        triangulation = brep_tool.Triangulation(face, location, 0)
         transform = location.Transformation()
 
         if triangulation is None:
-            #WARNING
-            surface = BRepAdaptor_Surface(face, True)
-            tp = str(GeomAbs_SurfaceType(surface.GetType())).split('_')[-1].lower()
             continue
 
         number_vertices = triangulation.NbNodes()
-        vert_indices = np.zeros(number_vertices, dtype=np.int64) - 1
-        vert_parameters = []
+        face_vert_global_map = np.zeros(number_vertices, dtype=np.int64) - 1
+        face_vert_params = []
 
-        for edge_index in face_edges_map[face_index]:
+        #starting with edges that already have vertices
+        edges_index = face_edges_map[face_index]
+        edges_index = sorted(edges_index, key=lambda x: len(edges_mesh_data[x]['vert_indices']))[::-1]
+        print([len(edges_mesh_data[x]['vert_indices']) for x in edges_index])
+        for edge_index in edges_index:
+            #print(face_vert_global_map)
+            #print('====')
+            #print(edge_index)
             edge = edges[edge_index]
+            print(str(GeomAbs_CurveType(BRepAdaptor_Curve(edge).GetType())), edge_index)
 
             polygon = brep_tool.PolygonOnTriangulation(edge, triangulation, location)
 
@@ -93,84 +101,103 @@ def computeMeshData(edges, faces, topology):
                 #WARNING
                 continue
 
-            polygon_nodes = list(polygon.Nodes())
-            polygon_parameters = list(polygon.Parameters())
+            closed = brep_tool.IsClosed(edge)
 
-            vert_indices_curr = edges_mesh_data[edge_index]['vert_indices']
-            vert_parameters_curr = edges_mesh_data[edge_index]['vert_parameters']
+            edge_vert_local = np.asarray(polygon.Nodes(), dtype=np.int64) - 1
+            edge_param_local = np.asarray(polygon.Parameters())
 
-            vert_indices_curr_final = []
-            vert_local_indices_curr_final = []
-            vert_parameters_curr_final = []
+            if closed:
+                last_vert = edge_vert_local[-1]
+                edge_vert_local[-1] = edge_vert_local[0]
+                print(edge_vert_local)
 
-            i = 0
-            j = 0
-            while i < len(polygon_nodes) and j < len(vert_indices_curr):
-                if polygon_parameters[i] == vert_parameters_curr[j]:
-                    vert_indices_curr_final.append(vert_indices_curr[j])
-                    vert_local_indices_curr_final.append(-1)
-                    vert_parameters_curr_final.append(polygon_parameters[i])
-                    vert_indices[polygon_nodes[i] - 1] = vert_indices_curr[j]
-                    j += 1
-                    i += 1
-                elif polygon_parameters[i] > vert_parameters_curr[j]:
-                    vert_indices_curr_final.append(vert_indices_curr[j])
-                    vert_local_indices_curr_final.append(-1)
-                    vert_parameters_curr_final.append(vert_parameters_curr[j])
-                    j += 1
-                else:
-                    vert_indices_curr_final.append(-1)
-                    vert_local_indices_curr_final.append(polygon_nodes[i] - 1)
-                    vert_parameters_curr_final.append(polygon_parameters[i])
-                    i += 1
+            edge_vert_global = np.asarray(edges_mesh_data[edge_index]['vert_indices'], dtype=np.int64)
+            edge_param_global = np.asarray(edges_mesh_data[edge_index]['vert_parameters'])
+            #print(edge_vert_global)
+
+            if len(edge_vert_global) > 0:
+                #Edge already has global params, need to verify consistecy and pass the node ids to face
+
+                assert len(edge_vert_local) == len(edge_vert_global), \
+                       f'{len(edge_vert_local)} != {len(edge_vert_global)}'
+                
+                #Verify if params are the same (may me reversed oriented)
+                assert np.all(np.isclose(edge_param_local, edge_param_global)), \
+                   f'Edge {edge_index} has different vertex parameters. \n' \
+                   f'{edge_param_local} != {edge_param_global}'
+                
+                #Verify if nodes that are already global mapped have the same global ids to the current one
+                already_mapped_edge_mask = face_vert_global_map[edge_vert_local] != -1
+                #print(already_mapped_edge_mask)
+                #print(face_vert_global_map[edge_vert_local][already_mapped_edge_mask] == edge_param_global[already_mapped_edge_mask])
+                print('map:', face_vert_global_map)
+                print('edge_local:', edge_vert_local)
+                print('edge_global:', edge_vert_global)
+                assert np.all(face_vert_global_map[edge_vert_local][already_mapped_edge_mask] \
+                              == edge_vert_global[already_mapped_edge_mask]), \
+                             'Failed in match global indices from different edges.' \
+                             f'\n{face_vert_global_map[edge_vert_local][already_mapped_edge_mask]}' \
+                             f'!= {edge_vert_global[already_mapped_edge_mask]}' \
+                             f'\n{np.asarray(mesh_vertices)[face_vert_global_map[edge_vert_local][already_mapped_edge_mask]]}' \
+                             f'== {np.asarray(mesh_vertices)[edge_vert_global[already_mapped_edge_mask]]}?'
+                
+                assert (closed and edge_vert_global[0] == edge_vert_global[-1]) or not closed
+                
+                face_vert_global_map[edge_vert_local] = edge_vert_global
+                if closed:
+                    face_vert_global_map[last_vert] = face_vert_global_map[edge_vert_local[0]]
             
-            while i < len(polygon_nodes):
-                vert_indices_curr_final.append(-1)
-                vert_local_indices_curr_final.append(polygon_nodes[i] - 1)
-                vert_parameters_curr_final.append(polygon_parameters[i])
-                i += 1
+            else:
+                #face_edges_data[edge_index] = {}   
+                #face_edges_data[edge_index]['vert_indices_local'] = edge_vert_local
+                #face_edges_data[edge_index]['vert_parameters'] = edge_param_local
+                
+                for i in (edge_vert_local + 1):
+                    if face_vert_global_map[i - 1] == -1:
+                        pnt = triangulation.Node(int(i))
+                        pnt.Transform(transform)
+                        pnt_array = np.array(pnt.Coord())
+                        mesh_vertices.append(pnt_array)
+                        face_vert_global_map[i - 1] = len(mesh_vertices) - 1
+                
+                if closed:
+                    face_vert_global_map[last_vert] = face_vert_global_map[edge_vert_local[0]]
+                
+                edges_mesh_data[edge_index]['vert_indices'] = face_vert_global_map[edge_vert_local].tolist()
+                edges_mesh_data[edge_index]['vert_parameters'] = edge_param_local.tolist()
+                
+
             
-            while j < len(vert_indices_curr):
-                vert_indices_curr_final.append(vert_indices_curr[j])
-                vert_local_indices_curr_final.append(-1)
-                vert_parameters_curr_final.append(vert_parameters_curr[j])
-                j += 1
-
-            new_edge_mesh_data = {'vert_indices': np.asarray(vert_indices_curr_final), 'vert_local_indices': np.asarray(vert_local_indices_curr_final), 'vert_parameters': vert_parameters_curr_final}
-
-            edges_mesh_data[edge_index] = new_edge_mesh_data
+            #print(face_vert_global_map)
 
         for i in range(1, number_vertices + 1):
-            pnt = triangulation.Node(i)
-            pnt.Transform(transform)
-            pnt_array = np.array(pnt.Coord())
-
-            if vert_indices[i - 1] == -1:
+            if face_vert_global_map[i - 1] == -1:
+                pnt = triangulation.Node(i)
+                pnt.Transform(transform)
+                pnt_array = np.array(pnt.Coord())
                 mesh_vertices.append(pnt_array)
-                vert_indices[i - 1] = len(mesh_vertices) - 1
+                face_vert_global_map[i - 1] = len(mesh_vertices) - 1
 
             uv_node = triangulation.UVNode(i)
-            vert_parameters.append(list(uv_node.Coord()))
+            face_vert_params.append(list(uv_node.Coord()))
 
-        for edge_index in face_edges_map[face_index]:
-            mask = (edges_mesh_data[edge_index]['vert_indices'] == -1)
-            edges_mesh_data[edge_index]['vert_indices'][mask] = vert_indices[edges_mesh_data[edge_index]['vert_local_indices'][mask]]
-            edges_mesh_data[edge_index]['vert_indices'] = edges_mesh_data[edge_index]['vert_indices'].tolist()
-            edges_mesh_data[edge_index].pop('vert_local_indices')
+
+        #print(face_vert_global_map)
 
         face_indices = []
 
+        print(face_vert_global_map)
+
         number_faces = triangulation.NbTriangles()
-        vert_count = np.zeros(number_vertices)
         for i in range(1, number_faces + 1):
             i1, i2, i3 = triangulation.Triangle(i).Get()
-            vert_count[np.array([i1, i2, i3]) - 1] = 1 
-            i1 = vert_indices[i1 - 1]
-            i2 = vert_indices[i2 - 1]
-            i3 = vert_indices[i3 - 1]
+            #print(i1, i2, i3)
+            i1 = face_vert_global_map[i1 - 1]
+            i2 = face_vert_global_map[i2 - 1]
+            i3 = face_vert_global_map[i3 - 1]
             if i1 == i2 or i1 == i3 or i2 == i3:
                 #WARNING
-                #print('ERROR: ignoring faces with repeated vertices (temporary solution)')
+                print('ERROR: ignoring faces with repeated vertices (temporary solution)')
                 continue
             if face_orientation == 0:
                 verts_of_face = np.array([i1, i2, i3])
@@ -183,51 +210,24 @@ def computeMeshData(edges, faces, topology):
             else:
                 assert False, 'Face Orientation not Supported yet.'
         
-        faces_mesh_data[face_index] = {'vert_indices': vert_indices.tolist(), 'vert_parameters': vert_parameters, 'face_indices': face_indices}
+        #for edge_index, edge_data in face_edges_data.items():
+        #    edges_mesh_data[edge_index]['vert_indices'] = face_vert_global_map[edge_data['vert_indices_local']].tolist()
+        #    edges_mesh_data[edge_index]['vert_parameters'] = edge_data['vert_parameters'].tolist()
 
-    valid_vert_mask = np.zeros(len(mesh_vertices), dtype=np.uint32)
-    for face in mesh_faces:
-        valid_vert_mask[face] = 1
-    invalid_vert_mask = valid_vert_mask == 0
+        print('--------------------------------------')
+        print(len(mesh_vertices), number_vertices)
+        unique_vert = np.arange(len(mesh_vertices))
+        #print(unique_vert)
+        unique_vert_faces = np.unique(np.asarray(mesh_faces))
+        #print(unique_vert_faces)
 
-    invalid_count = np.count_nonzero(invalid_vert_mask)
-    if  invalid_count > 0:
-        print("\n[PythonOCC] Post-proccessing required, there are {} verticies without a triangle.".format(invalid_count))
+        #print(unique_vert_faces)
+        #print(unique_vert)
 
-        vert_map = np.arange(len(mesh_vertices), dtype=np.int32)
-        invalid_vert_indices = np.sort(np.arange(len(mesh_vertices), dtype=np.uint32)[invalid_vert_mask])
-        last_index = 0
-        for c, index in enumerate(invalid_vert_indices):
-            vert_map[last_index:index] -= c
-            vert_map[index] = -1
-            last_index = index + 1
-        if last_index < len(vert_map):
-            vert_map[last_index:] -= len(invalid_vert_indices)
-
-        mesh_vertices = (np.asarray(mesh_vertices)[(vert_map != -1)]).tolist()
-        assert (len(mesh_vertices) - 1) == np.max(vert_map)
+        assert np.all(unique_vert_faces == unique_vert), \
+               f'ERROR: unreferenced vertices'
         
-        for ie in range(len(edges_mesh_data)):
-            vert_indices = (vert_map[np.asarray(edges_mesh_data[ie]['vert_indices'], dtype=np.int32)])
-            vert_indices = vert_indices[vert_indices != -1]
-            edges_mesh_data[ie]['vert_indices'] = vert_indices.tolist()
-        
-        for ifa in range(len(faces_mesh_data)):
-            vert_indices = (vert_map[np.asarray(faces_mesh_data[ifa]['vert_indices'], dtype=np.int32)])
-            vert_indices = vert_indices[vert_indices != -1]
-            faces_mesh_data[ifa]['vert_indices'] = vert_indices.tolist()
-
-        mesh_faces = (vert_map[np.asarray(mesh_faces)])
-
-        assert not np.isin(-1, mesh_faces).any(), 'Some face has a removed vertex. (Code BUG probably)'
-
-        valid_vert_mask = np.zeros(len(mesh_vertices), dtype=np.uint32)
-        for face in mesh_faces:
-            valid_vert_mask[face] = 1
-        invalid_vert_mask = valid_vert_mask == 0
-        invalid_count = np.count_nonzero(invalid_vert_mask)
-
-        assert invalid_count == 0, 'Post-proccess did not work.'
+        faces_mesh_data[face_index] = {'vert_indices': face_vert_global_map.tolist(), 'vert_parameters': face_vert_params, 'face_indices': face_indices}
 
     return mesh_vertices, mesh_faces, edges_mesh_data, faces_mesh_data
 
