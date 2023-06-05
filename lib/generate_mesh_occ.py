@@ -10,6 +10,7 @@ from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
 from OCC.Core.IMeshTools import IMeshTools_Parameters
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
 from OCC.Core.GeomAbs import GeomAbs_CurveType, GeomAbs_SurfaceType
+from OCC.Core.BRepTools import breptools_Compare
 
 from tqdm import tqdm
 
@@ -67,6 +68,7 @@ def computeMeshData(vertices, edges, faces, topology):
     print('\n[PythonOCC] Generating Mesh Data...')
     #Loop for faces 
     for face_index, face in enumerate(tqdm(faces)):
+        print('----------------------------------------')
 
         face_orientation = face.Orientation()
 
@@ -107,8 +109,14 @@ def computeMeshData(vertices, edges, faces, topology):
             '''
             closed = brep_tool.IsClosed(edge)
             if closed:
+                print(f'IF: {brep_tool.SameRange(edge)} {brep_tool.SameParameter(edge)} {brep_tool.HasContinuity(edge)}')
                 last_vert = edge_vert_local[-1]
                 edge_vert_local[-1] = edge_vert_local[0]
+            else:
+                print(f'ELSE: {brep_tool.SameRange(edge)} {brep_tool.SameParameter(edge)} {brep_tool.HasContinuity(edge)}')
+            
+            #if edge_index == 2400:
+            #    
 
             egi = np.asarray(edges_mesh_data[edge_index]['vert_indices'], dtype=np.int64)
             edge_vert_global_map = egi if len(egi) > 0 else (np.zeros(len(edge_vert_local), dtype=np.int64) - 1) # map from mesh edge indices to global mesh indices
@@ -116,7 +124,6 @@ def computeMeshData(vertices, edges, faces, topology):
             edge_param_global = egp if len(egp) > 0 else (np.zeros(len(edge_param_local), dtype=np.float64) - 1)
 
             vertices_index = edge_vertices_map[edge_index]
-            #print('vi:', vertices_index)
             vertices_local_index_map = np.zeros(len(vertices_index), dtype=np.int64) - 1
             vertices_global_index_map = np.zeros(len(vertices_index), dtype=np.int64) - 1
             for id, vertex_index in enumerate(vertices_index):
@@ -157,6 +164,9 @@ def computeMeshData(vertices, edges, faces, topology):
 
             #Edge already has global params, need to verify consistecy and pass the node ids to face
             if np.any(edge_mask):
+                #print(edge_vert_local)
+                #print(edge_vert_global_map)
+                #print(face_vert_global_map)
 
                 #Verify if params are the same, may me reverse oriented (or not)
                 assert np.all(np.isclose(edge_param_local[edge_mask], edge_param_global[edge_mask])), \
@@ -169,21 +179,16 @@ def computeMeshData(vertices, edges, faces, topology):
                                                     == edge_vert_global_map[edge_mask][face_mask]), \
                        f'Failed in match global indices from different edges. ' \
                        f'{face_vert_global_map[edge_vert_local[edge_mask]][face_mask]} != ' \
-                       f'{edge_vert_global_map[edge_mask][face_mask]}'
-                
-                #assert (closed and edge_vert_global_map[0] == edge_vert_global_map[-1]) or not closed
-                
-                #print('face_vert_global_map:', face_vert_global_map)
+                       f'{edge_vert_global_map[edge_mask][face_mask]}'  \
+                       f'Closed: {closed} {edge_index} {brep_tool.SameRange(edge)} {brep_tool.SameParameter(edge)}' \
+                       f'{brep_tool.Tolerance(edge)} {brep_tool.IsGeometric(edge)} {brep_tool.Degenerated(edge)} {brep_tool.HasContinuity(edge)}'
+                                
                 face_vert_global_map[edge_vert_local[edge_mask]] = edge_vert_global_map[edge_mask]
-                #print('face_vert_global_map:', face_vert_global_map)
 
-                # need to change this
-                if closed:
-                    face_vert_global_map[last_vert] = face_vert_global_map[edge_vert_local[0]]
-            
+            if closed:
+                face_vert_global_map[last_vert] = face_vert_global_map[edge_vert_local[0]]
+                
             # to deal with edges that have not been global mapped before
-            #print(face_vert_global_map)
-            #print(vertices_local_index_map)
             for i in (edge_vert_local + 1):
                 if face_vert_global_map[i - 1] == -1:
                     pnt = triangulation.Node(int(i))
@@ -191,10 +196,8 @@ def computeMeshData(vertices, edges, faces, topology):
                     pnt_array = np.array(pnt.Coord())
                     mesh_vertices.append(pnt_array)
                     face_vert_global_map[i - 1] = len(mesh_vertices) - 1
-            #print(face_vert_global_map)
             
-            if closed:
-                face_vert_global_map[last_vert] = face_vert_global_map[edge_vert_local[0]]
+            
             
             edges_mesh_data[edge_index]['vert_indices'] = face_vert_global_map[edge_vert_local].tolist()
             edges_mesh_data[edge_index]['vert_parameters'] = edge_param_local.tolist()
