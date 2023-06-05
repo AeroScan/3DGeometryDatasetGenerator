@@ -27,12 +27,12 @@ def updateEntitiesDictBySearchCode(entity, hash_code, search_code, dictionary):
         dictionary[hash_code].append(entity) 
     return dictionary
 
-def processEdgesAndFaces(edges, faces, topology, generate_mesh):
+def processEdgesAndFaces(vertices, edges, faces, topology, generate_mesh):
     mesh = {}
     edges_mesh_data = [{} for _ in edges]
     faces_mesh_data = [{} for _ in faces]        
     if generate_mesh:
-        mesh['vertices'], mesh['faces'], edges_mesh_data, faces_mesh_data = computeMeshData(edges, faces, topology)
+        mesh['vertices'], mesh['faces'], edges_mesh_data, faces_mesh_data = computeMeshData(vertices, edges, faces, topology)
 
     geometries_data = {'curves': [], 'surfaces': []}
     for i in range(len(edges)):
@@ -46,27 +46,49 @@ def processEdgesAndFaces(edges, faces, topology, generate_mesh):
 
     return geometries_data, mesh
 
-def addEdgesToDict(edges, edges_dict):
+# def addEdgesToDict(edges, edges_dict):
+#     for edge in edges:
+#         edge_hc = edge.HashCode(MAX_INT)
+#         search_code = searchEntityByHashCode(edge, edge_hc, edges_dict)
+#         if search_code == 2:
+#             continue
+#         else:
+#             edges_dict = updateEntitiesDictBySearchCode(edge, edge_hc, search_code, edges_dict)
+#     return edges_dict
+
+def addVerticesToDict(vertices, vertices_dict):
+    for vertex in vertices:
+        vertex_hc = vertex.HashCode(MAX_INT)
+        search_code = searchEntityByHashCode(vertex, vertex_hc, vertices_dict)
+        if search_code == 2:
+            continue
+        else:
+            vertices_dict = updateEntitiesDictBySearchCode(vertex, vertex_hc, search_code, vertices_dict)
+    return vertices_dict
+
+def addEdgesAndAssociatedVerticesToDict(edges, topology, edges_dict, vertices_dict):
     for edge in edges:
         edge_hc = edge.HashCode(MAX_INT)
         search_code = searchEntityByHashCode(edge, edge_hc, edges_dict)
         if search_code == 2:
             continue
         else:
+            vertices_dict = addVerticesToDict(topology.vertices_from_edge(edge), vertices_dict)
             edges_dict = updateEntitiesDictBySearchCode(edge, edge_hc, search_code, edges_dict)
-    return edges_dict
+   
+    return edges_dict, vertices_dict
 
-def addFacesAndAssociatedEdgesToDict(faces, topology, faces_dict, edges_dict):
+def addFacesAndAssociatedEdgesToDict(faces, topology, faces_dict, edges_dict, vertices_dict):
     for face in faces:
         face_hc = face.HashCode(MAX_INT)
         search_code = searchEntityByHashCode(face, face_hc, faces_dict)
         if search_code == 2:
             continue
         else:
-            edges_dict = addEdgesToDict(topology.edges_from_face(face), edges_dict)
+            edges_dict, vertices_dict = addEdgesAndAssociatedVerticesToDict(topology.edges_from_face(face), edges_dict)
             faces_dict = updateEntitiesDictBySearchCode(face, face_hc, search_code, faces_dict)
    
-    return faces_dict, edges_dict
+    return faces_dict, edges_dict, vertices_dict
 
 def processHighestDim(topology, generate_mesh):
     print('\n[PythonOCC] Using Highest Dim Only, trying with Solids...')
@@ -75,21 +97,25 @@ def processHighestDim(topology, generate_mesh):
 
     done = False
     for solid in tqdm(topology.solids()):
-        faces_dict, edges_dict = addFacesAndAssociatedEdgesToDict(topology.faces_from_solids(solid), topology, faces_dict, edges_dict)   
+        faces_dict, edges_dict, vertices_dict = addFacesAndAssociatedEdgesToDict(topology.faces_from_solids(solid), topology, faces_dict, edges_dict)   
         done = True
 
     if not done:
         print('\n[PythonOCC] There are no Solids, using Faces as highest dim...')
-        faces_dict, edges_dict = addFacesAndAssociatedEdgesToDict(topology.faces(), topology, faces_dict, edges_dict)
+        faces_dict, edges_dict, vertices_dict = addFacesAndAssociatedEdgesToDict(topology.faces(), topology, faces_dict, edges_dict)
         done = (faces_dict != {})
 
         if not done == 0:
             print('\n[PythonOCC] There are no Faces, using Curves as highest dim...')
-            edges_dict = addEdgesToDict(topology.edges(), edges_dict) 
+            edges_dict, vertices_dict = addEdgesAndAssociatedVerticesToDict(topology.edges(), edges_dict) 
             done = (edges_dict != {})
 
             if not done == 0:
                 print('\n[PythonOCC] There are no Entities to use...')
+    
+    vertices = []
+    for key in vertices_dict:
+        vertices += vertices_dict[key]
 
     edges= []
     for key in edges_dict:
@@ -99,7 +125,7 @@ def processHighestDim(topology, generate_mesh):
     for key in faces_dict:
         faces += faces_dict[key]
 
-    geometries_data, mesh = processEdgesAndFaces(edges, faces, topology, generate_mesh)
+    geometries_data, mesh = processEdgesAndFaces(vertices, edges, faces, topology, generate_mesh)
 
     return geometries_data, mesh
     
@@ -107,10 +133,11 @@ def processHighestDim(topology, generate_mesh):
 def processNoHighestDim(topology, generate_mesh):
     print('\n[PythonOCC] Using all the Shapes')
 
+    vertices = [v for v in topology.vertices()]
     edges = [e for e in topology.edges()]
     faces = [f for f in topology.faces()]
 
-    geometries_data, mesh = processEdgesAndFaces(edges, faces, topology, generate_mesh)
+    geometries_data, mesh = processEdgesAndFaces(vertices, edges, faces, topology, generate_mesh)
 
     return geometries_data, mesh
 
