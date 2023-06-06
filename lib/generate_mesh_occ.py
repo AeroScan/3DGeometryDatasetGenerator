@@ -9,11 +9,23 @@ from OCC.Core.IMeshTools import IMeshTools_Parameters
 from OCC.Core.GeomAbs import GeomAbs_CurveType
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
 from OCC.Core.BRepTools import breptools_Compare
+from OCC.Core.STEPConstruct import STEPConstruct_PointHasher
+from OCC.Core.gp import gp_Pnt
 
 from tqdm import tqdm
 
 MAX_INT = 2**31 - 1
 
+# def findPointInListWithHashCode(point, points, hash_codes):
+#     hc = STEPConstruct_PointHasher.HashCode(point, MAX_INT)
+#     index = -1
+#     if hc in hash_codes:
+#         index = -2
+#         for i in hash_codes[hc]:
+#             if STEPConstruct_PointHasher.IsEqual(point, points[i]):
+#                 index = i
+#                 break
+#     return index, hc
 
 def searchEntityInMap(entity, map):
     hc = entity.HashCode(MAX_INT)
@@ -80,6 +92,39 @@ def computeMeshData(vertices, edges, faces, topology):
             continue
 
         number_vertices = triangulation.NbNodes()
+        
+        # vertices_local_faces_indices = []
+        # number_faces = triangulation.NbTriangles()
+        # for i in range(1, number_faces + 1):
+        #     i1, i2, i3 = triangulation.Triangle(i).Get()
+        #     if i1 == i2 or i1 == i3 or i2 == i3:
+        #         #WARNING: ignoring faces with repeated vertices (temporary solution)
+        #         continue
+        #     if face_orientation == 0:
+        #         vertices_local_faces_indices += [i1 - 1, i2 - 1, i3 - 1]
+        #     elif face_orientation == 1:
+        #         vertices_local_faces_indices += [i3 - 1, i2 - 1, i1 - 1]
+        #     else:
+        #         assert False, 'Face Orientation not Supported yet.'
+
+        # face_all_nodes = np.unique(vertices_local_faces_indices)
+
+        # face_vert_mask = np.zeros(number_vertices).astype(np.bool)
+        # face_vert_mask[face_all_nodes] = True
+
+        # face_nodes = []
+        # face_uvnodes = []
+
+        # for i in range(1, number_vertices + 1):
+        #     pnt = triangulation.Node(i)
+        #     pnt.Transform(transform)
+        #     pnt_array = np.array(pnt.Coord())
+        #     mesh_vertices.append(pnt_array)
+        #     face_vert_global_map[i - 1] = len(mesh_vertices) - 1
+
+        #     uv_node = triangulation.UVNode(i)
+        #     face_vert_params.append(list(uv_node.Coord()))
+
         face_vert_global_map = np.zeros(number_vertices, dtype=np.int64) - 1 # map local face mesh id to global mesh id
         face_vert_params = []
         face_vert_local_map = np.arange(number_vertices, dtype=np.int64)     # map ids to another local ids (useful in deal with repeated vertices)
@@ -90,9 +135,6 @@ def computeMeshData(vertices, edges, faces, topology):
             #print('vmd:', vertices_mesh_data)
 
             edge = edges[edge_index] #TopoDS_Edge object
-
-            brep_adaptor = BRepAdaptor_Curve(edge)
-            #print(str(GeomAbs_CurveType(brep_adaptor.GetType())))
             
             polygon = brep_tool.PolygonOnTriangulation(edge, triangulation, location) # projecting edge in the face triangulation
             if polygon is None:
@@ -110,19 +152,24 @@ def computeMeshData(vertices, edges, faces, topology):
             vertices_index = edge_vertices_map[edge_index]
             vertices_params = np.array([brep_tool.Parameter(vertices[vertex_index], edge, face) for vertex_index in vertices_index])
 
-            edge_vert_local_unique, unique_indices = np.unique(edge_vert_local, return_index=True)
+            edge_vert_local_unique = np.unique(edge_vert_local)
             len_diff = len(edge_vert_local) - len(edge_vert_local_unique)
             assert len_diff <= 1, \
                    'More than one repreated vertex in Polygon On Triangulation'
             
+            vertices_local_index_map = np.zeros(len(vertices_index), dtype=np.int64) - 1
+            vertices_global_index_map = np.zeros(len(vertices_index), dtype=np.int64) - 1
+
             if len(vertices_index) == 1:
-                is_first = np.allclose(vertices_params, edge_param_local[0])
-                is_last = np.allclose(vertices_params, edge_param_local[-1])
+                is_first = np.allclose(vertices_params, edge_param_local[0], rtol=0.)
+                is_last = np.allclose(vertices_params, edge_param_local[-1], rtol=0.)
                 
                 assert is_first or is_last, 'It is not repeating in the start and end vertices.'
 
                 if len_diff == 0:
-                    print('Problem 1 to be Solved')
+                    #triangulation is not closed but the egde is
+
+                    #print('Problem 1 to be Solved')
                     
                     #assuming that reapeated vertex happen just at the start and end indices
                     if is_first:
@@ -130,18 +177,12 @@ def computeMeshData(vertices, edges, faces, topology):
                     elif is_last:
                         bound_indices = [-1, 0]
 
-                    #print(edge_param_local[bound_indices])
-
                     first_vertex, last_vertex = edge_vert_local[bound_indices]
 
-                    #print(first_vertex, last_vertex)
-                    #assert face_vert_global_map[last_vertex] == -1 or face_vert_global_map[last_vertex] == -2, \
-                    #       f'{face_vert_global_map[last_vertex]} {face_vert_global_map[first_vertex]}'
-
-                    #face_vert_global_map[last_vertex] = -2
                     edge_vert_local[bound_indices[1]] = first_vertex
 
                     assert face_vert_local_map[last_vertex] == last_vertex or face_vert_local_map[last_vertex] == first_vertex
+
                     face_vert_local_map[last_vertex] = first_vertex
 
                     #print(face_vert_local_map)
@@ -150,21 +191,61 @@ def computeMeshData(vertices, edges, faces, topology):
                 assert not breptools_Compare(vertices[vertices_index[0]], vertices[vertices_index[1]]), \
                        f'Edge has two equal bound vertices with different ids.'
 
-                assert np.allclose(vertices_params, edge_param_local[[0,-1]]) or np.allclose(vertices_params, edge_param_local[[-1,0]]), \
-                       'Solution to fix NOT closed problem did not work.' 
+                assert np.allclose(vertices_params, edge_param_local[[0, -1]], rtol=0.) or \
+                       np.allclose(vertices_params, edge_param_local[[-1, 0]], rtol=0.), \
+                       'It is not repeating in the start and end vertices.'
                 
                 if len_diff == 1:
-                    print('Problem 2 to be Solved')
+                    assert edge_vert_local[0] == edge_vert_local[-1], \
+                           'Wrong Assumption. Closeness is not about first and last nodes always'
+
+                    brep_adaptor = BRepAdaptor_Curve(edge)
+                    #print(str(GeomAbs_CurveType(brep_adaptor.GetType())))
+                    #triangulation is closed but the egde is not
+                    
+                    #print('Problem 2 to be Solved')
+
+                    #print(vertices_params)
+                    #print(edge_vert_local)
+                    #print(edge_param_local)
+                    #print(triangulation.Node(int(edge_vert_local[0] + 1)).Coord())
+                    #print([brep_tool.Pnt(vertices[vertex_index]).Coord() for vertex_index in vertices_index])
+
+                    local_vertices = [vertices[vertex_index] for vertex_index in vertices_index]
+
+                    vertex_node_match = np.array([triangulation.Node(int(edge_vert_local[0] + 1)).IsEqual(brep_tool.Pnt(lv), brep_tool.Tolerance(lv))
+                                                  for lv in local_vertices])
+                                    
+                    assert np.count_nonzero(vertex_node_match) == 1
+
+                    id_to_change = 0
+                    if vertex_node_match[0]:
+                        id_to_change = -1
+
+                    #print(id_to_change)
+                    right_tol = brep_tool.Tolerance(local_vertices[id_to_change])
+                    right_pnt = brep_tool.Pnt(local_vertices[id_to_change])
+                    #print(right_pnt.Coord())     
+
+                    face_nodes_match_indices = []
+                    for i in range(1, number_vertices + 1):
+                        pnt = triangulation.Node(i)
+                        if pnt.IsEqual(right_pnt, right_tol):
+                            face_nodes_match_indices.append(i - 1)
+                    
+                    assert len(face_nodes_match_indices) == 1
+
+                    edge_vert_local[id_to_change] = face_nodes_match_indices[0]
 
             else:
                 assert False, f'Edge {edge_index} has {len(vertices_index)} bound vertices'
                            
-            vertices_local_index_map = np.zeros(len(vertices_index), dtype=np.int64) - 1
-            vertices_global_index_map = np.zeros(len(vertices_index), dtype=np.int64) - 1
+            
+            #TODO: maybe this part can be merged in the closeness correction
             for id, vertex_index in enumerate(vertices_index):
                 param = vertices_params[id]
                 
-                mask = np.isclose(edge_param_local, param)
+                mask = np.isclose(edge_param_local, param, rtol=0.)
                 indices = np.where(mask)[0]
                 
                 assert len(indices) == 1, f'{len(indices)} params close to the same vertex.'
@@ -197,15 +278,12 @@ def computeMeshData(vertices, edges, faces, topology):
             if np.any(edge_mask):
 
                 #Verify if params are the same, may me reverse oriented (or not)
-                assert np.all(np.isclose(edge_param_local[edge_mask], edge_param_global[edge_mask])), \
+                assert np.allclose(edge_param_local[edge_mask], edge_param_global[edge_mask], rtol=0.), \
                        f'Edge {edge_index} has different vertex parameters. \n' \
                        f'{edge_param_local[edge_mask]} != {edge_param_global[edge_mask]}'
 
                 face_mask = face_vert_global_map[edge_vert_local[edge_mask]] != -1 # already mapped face vertex mask
                 
-                #Assert to verify local remap
-                assert np.all(face_vert_global_map[edge_vert_local[edge_mask]][face_mask] == \
-                              face_vert_global_map[face_vert_local_map][edge_vert_local[edge_mask]][face_mask])
                 #assert face_vert_global_map[edge_vert_local[edge_mask]][face_mask]
 
                 #('aaaaaaaaaa:', edge_vert_global_map[edge_mask][face_mask])
@@ -217,9 +295,12 @@ def computeMeshData(vertices, edges, faces, topology):
                                 
                 face_vert_global_map[edge_vert_local[edge_mask]] = edge_vert_global_map[edge_mask]
             
+            mask_minus_one = face_vert_global_map == -1
+            assert np.all(np.logical_or(mask_minus_one, face_vert_global_map == face_vert_global_map[face_vert_local_map]))
+
             # to deal with edges that have not been global mapped before
             for i in (edge_vert_local + 1):
-                if face_vert_global_map[i - 1] == -1:
+                if face_vert_global_map[i - 1] == -1 and face_vert_local_map[i - 1] == (i - 1):
                     pnt = triangulation.Node(int(i))
                     pnt.Transform(transform)
                     pnt_array = np.array(pnt.Coord())
@@ -231,7 +312,7 @@ def computeMeshData(vertices, edges, faces, topology):
             vertices_mesh_data[np.array(vertices_index)] = face_vert_global_map[np.array(vertices_local_index_map)]
                 
         for i in range(1, number_vertices + 1):
-            if face_vert_global_map[i - 1] != -2:
+            if face_vert_local_map[i - 1] == (i - 1):
                 if face_vert_global_map[i - 1] == -1:
                     pnt = triangulation.Node(i)
                     pnt.Transform(transform)
@@ -242,7 +323,6 @@ def computeMeshData(vertices, edges, faces, topology):
                 uv_node = triangulation.UVNode(i)
                 face_vert_params.append(list(uv_node.Coord()))
         
-
         face_vert_global_map = face_vert_global_map[face_vert_local_map]
 
         vertices_local_faces_indices = []
@@ -268,17 +348,18 @@ def computeMeshData(vertices, edges, faces, topology):
             else:
                 assert False, 'Face Orientation not Supported yet.'
 
-        occ_error = not np.all(np.unique(vertices_local_faces_indices) - 1 == np.arange(number_vertices))
+        occ_diff = np.setdiff1d(np.arange(number_vertices), np.unique(vertices_local_faces_indices) - 1)
 
         unique_vert = np.unique(face_vert_global_map)
         unique_vert_faces = np.unique(np.asarray(mesh_faces[face_indices[0]:(face_indices[-1] + 1)]), axis=None)
                                       
         diff = np.setdiff1d(unique_vert, unique_vert_faces)
+        
         #Verifying unreferenced vertices
-        if not occ_error:
-            assert len(diff) == 0, f'ERROR: unreferenced vertices local mesh: {diff}'
-        else:
-            print('OCC ERROR')
+        assert len(diff) == len(occ_diff), f'ERROR: unreferenced vertices local mesh: {len(diff)} !={len(occ_diff)}, {diff}'
+
+        if len(occ_diff) > 0:
+            print('OCC Error')
         
         faces_mesh_data[face_index] = {'vert_indices': face_vert_global_map.tolist(), 'vert_parameters': face_vert_params, 'face_indices': face_indices}
 
@@ -304,19 +385,3 @@ def OCCMeshGeneration(shape):
     brep_mesh = BRepMesh_IncrementalMesh(shape, parameters)
     brep_mesh.Perform()
     assert brep_mesh.IsDone()
-
-
-
-
-# def findPointInListWithHashCode(point, points, hash_codes):
-#     hc = STEPConstruct_PointHasher.HashCode(point, MAX_INT)
-#     index = -1
-#     if hc in hash_codes:
-#         index = -2
-#         for i in hash_codes[hc]:
-#             array = points[i]
-#             point2 = gp_Pnt(array[0], array[1], array[2])
-#             if STEPConstruct_PointHasher.IsEqual(point, point2):
-#                 index = i
-#                 break
-#     return index, hc
