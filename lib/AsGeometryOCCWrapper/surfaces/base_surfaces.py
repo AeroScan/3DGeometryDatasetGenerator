@@ -98,7 +98,7 @@ class BaseSurface(BaseGeometry, metaclass=abc.ABCMeta):
         
         if not self._mesh.has_vertex_normals():
             self.computeMeshNormals()
-
+        
         vertices = np.asarray(self._mesh.vertices)
         normals = np.asarray(self._mesh.vertex_normals)
         params = np.asarray(self._mesh_info['vert_parameters'])
