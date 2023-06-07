@@ -92,43 +92,12 @@ def computeMeshData(vertices, edges, faces, topology):
             continue
 
         number_vertices = triangulation.NbNodes()
-        
-        # vertices_local_faces_indices = []
-        # number_faces = triangulation.NbTriangles()
-        # for i in range(1, number_faces + 1):
-        #     i1, i2, i3 = triangulation.Triangle(i).Get()
-        #     if i1 == i2 or i1 == i3 or i2 == i3:
-        #         #WARNING: ignoring faces with repeated vertices (temporary solution)
-        #         continue
-        #     if face_orientation == 0:
-        #         vertices_local_faces_indices += [i1 - 1, i2 - 1, i3 - 1]
-        #     elif face_orientation == 1:
-        #         vertices_local_faces_indices += [i3 - 1, i2 - 1, i1 - 1]
-        #     else:
-        #         assert False, 'Face Orientation not Supported yet.'
-
-        # face_all_nodes = np.unique(vertices_local_faces_indices)
-
-        # face_vert_mask = np.zeros(number_vertices).astype(np.bool)
-        # face_vert_mask[face_all_nodes] = True
-
-        # face_nodes = []
-        # face_uvnodes = []
-
-        # for i in range(1, number_vertices + 1):
-        #     pnt = triangulation.Node(i)
-        #     pnt.Transform(transform)
-        #     pnt_array = np.array(pnt.Coord())
-        #     mesh_vertices.append(pnt_array)
-        #     face_vert_global_map[i - 1] = len(mesh_vertices) - 1
-
-        #     uv_node = triangulation.UVNode(i)
-        #     face_vert_params.append(list(uv_node.Coord()))
 
         face_vert_global_map = np.zeros(number_vertices, dtype=np.int64) - 1 # map local face mesh id to global mesh id
         face_vert_params = []
         face_vert_local_map = np.arange(number_vertices, dtype=np.int64)     # map ids to another local ids (useful in deal with repeated vertices)
 
+        edge_vertices_local_data = []
         #looking to all edges that bound the current face
         edges_index = face_edges_map[face_index]
         for edge_index in edges_index:
@@ -213,8 +182,8 @@ def computeMeshData(vertices, edges, faces, topology):
 
                     local_vertices = [vertices[vertex_index] for vertex_index in vertices_index]
 
-                    vertex_node_match = np.array([triangulation.Node(int(edge_vert_local[0] + 1)).IsEqual(brep_tool.Pnt(lv), brep_tool.Tolerance(lv))
-                                                  for lv in local_vertices])
+                    vertex_node_match = np.array([triangulation.Node(int(edge_vert_local[0] + 1)).IsEqual(brep_tool.Pnt(lv),
+                                                  brep_tool.Tolerance(lv)) for lv in local_vertices])
                                     
                     assert np.count_nonzero(vertex_node_match) == 1
 
@@ -294,9 +263,6 @@ def computeMeshData(vertices, edges, faces, topology):
                        f'{edge_vert_global_map[edge_mask][face_mask]}'
                                 
                 face_vert_global_map[edge_vert_local[edge_mask]] = edge_vert_global_map[edge_mask]
-            
-            mask_minus_one = face_vert_global_map == -1
-            assert np.all(np.logical_or(mask_minus_one, face_vert_global_map == face_vert_global_map[face_vert_local_map]))
 
             # to deal with edges that have not been global mapped before
             for i in (edge_vert_local + 1):
@@ -307,10 +273,27 @@ def computeMeshData(vertices, edges, faces, topology):
                     mesh_vertices.append(pnt_array)
                     face_vert_global_map[i - 1] = len(mesh_vertices) - 1
             
-            edges_mesh_data[edge_index]['vert_indices'] = face_vert_global_map[edge_vert_local].tolist()
-            edges_mesh_data[edge_index]['vert_parameters'] = edge_param_local.tolist()
-            vertices_mesh_data[np.array(vertices_index)] = face_vert_global_map[np.array(vertices_local_index_map)]
-                
+            mask_minus_one = face_vert_global_map == -1
+            # print('mask:', mask_minus_one)
+            # print('global:', face_vert_global_map)
+            # print('remap:', face_vert_local_map)
+            # print('global remapped:', face_vert_global_map[face_vert_local_map])
+            # print(face_vert_global_map[~(face_vert_global_map == face_vert_global_map[face_vert_local_map])])
+            # print(mask_minus_one)
+            assert np.all(np.logical_or(mask_minus_one, face_vert_global_map == face_vert_global_map[face_vert_local_map]))
+
+            face_vert_global_map = face_vert_global_map[face_vert_local_map]
+
+            vertices_mesh_data[np.asarray(vertices_index)] = face_vert_global_map[np.array(vertices_local_index_map)]    
+
+            evld = {
+                'edge_index': edge_index,
+                'vert_indices': edge_vert_local,
+                'vert_parameters': edge_param_local,
+            }
+
+            edge_vertices_local_data.append(evld)
+             
         for i in range(1, number_vertices + 1):
             if face_vert_local_map[i - 1] == (i - 1):
                 if face_vert_global_map[i - 1] == -1:
@@ -322,46 +305,46 @@ def computeMeshData(vertices, edges, faces, topology):
 
                 uv_node = triangulation.UVNode(i)
                 face_vert_params.append(list(uv_node.Coord()))
-        
-        face_vert_global_map = face_vert_global_map[face_vert_local_map]
 
-        vertices_local_faces_indices = []
         face_indices = []
         number_faces = triangulation.NbTriangles()
         for i in range(1, number_faces + 1):
             i1, i2, i3 = triangulation.Triangle(i).Get()
-            vertices_local_faces_indices += [i1, i2, i3]
-            i1 = face_vert_global_map[i1 - 1]
-            i2 = face_vert_global_map[i2 - 1]
-            i3 = face_vert_global_map[i3 - 1]
-            if i1 == i2 or i1 == i3 or i2 == i3:
-                #WARNING: ignoring faces with repeated vertices (temporary solution)
+            i1_m = face_vert_global_map[i1 - 1]
+            i2_m = face_vert_global_map[i2 - 1]
+            i3_m = face_vert_global_map[i3 - 1]
+
+            if i1_m == i2_m or i1_m == i3_m or i2_m == i3_m:
+                if i1 == i2 or i1 == i3 or i2 == i3:
+                    #not a reamapping problem
+                    pass
+                else:
+                    #remapping warning: lets see if vertex coordinates have changed
+                    assert np.allclose(mesh_vertices[i1_m], np.array(triangulation.Node(i1).Coord()), rtol=0.) and \
+                           np.allclose(mesh_vertices[i2_m], np.array(triangulation.Node(i2).Coord()), rtol=0.) and \
+                           np.allclose(mesh_vertices[i3_m], np.array(triangulation.Node(i3).Coord()), rtol=0.), \
+                           f'Vertices remapping problem.'
                 continue
+                
             if face_orientation == 0:
-                verts_of_face = np.array([i1, i2, i3])
+                verts_of_face = np.array([i1_m, i2_m, i3_m])
                 mesh_faces.append(verts_of_face)
                 face_indices.append(len(mesh_faces) - 1)
             elif face_orientation == 1:
-                verts_of_face = np.array([i3, i2, i1])
+                verts_of_face = np.array([i3_m, i2_m, i1_m])
                 mesh_faces.append(verts_of_face)
                 face_indices.append(len(mesh_faces) - 1)
             else:
-                assert False, 'Face Orientation not Supported yet.'
+                assert False, 'Face Orientation not Supported yet.'        
 
-        occ_diff = np.setdiff1d(np.arange(number_vertices), np.unique(vertices_local_faces_indices) - 1)
+        for evld in edge_vertices_local_data:
+            edge_index = evld['edge_index']
 
-        unique_vert = np.unique(face_vert_global_map)
-        unique_vert_faces = np.unique(np.asarray(mesh_faces[face_indices[0]:(face_indices[-1] + 1)]), axis=None)
-                                      
-        diff = np.setdiff1d(unique_vert, unique_vert_faces)
+            edges_mesh_data[edge_index]['vert_indices'] = face_vert_global_map[evld['vert_indices']].tolist()
+            edges_mesh_data[edge_index]['vert_parameters'] = evld['vert_parameters'].tolist()
         
-        #Verifying unreferenced vertices
-        assert len(diff) == len(occ_diff), f'ERROR: unreferenced vertices local mesh: {len(diff)} !={len(occ_diff)}, {diff}'
-
-        if len(occ_diff) > 0:
-            print('OCC Error')
-        
-        faces_mesh_data[face_index] = {'vert_indices': face_vert_global_map.tolist(), 'vert_parameters': face_vert_params, 'face_indices': face_indices}
+        faces_mesh_data[face_index] = {'vert_indices': face_vert_global_map.tolist(), 
+                                       'vert_parameters': face_vert_params, 'face_indices': face_indices}
 
     #unique_vert = np.arange(len(mesh_vertices))
     #unique_vert_faces = np.unique(np.asarray(mesh_faces))
