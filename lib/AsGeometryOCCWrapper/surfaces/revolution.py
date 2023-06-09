@@ -16,7 +16,7 @@ class Revolution(BaseSweptSurface):
     
     @staticmethod
     def adaptor2Geom(adaptor):
-        return Geom_SurfaceOfRevolution(CurveFactory.adaptor2Geom(adaptor.BasisCurve()), adaptor.AxeOfRevolution())
+        return Geom_SurfaceOfRevolution(CurveFactory.adaptor2Geom(adaptor.BasisCurve())[0], adaptor.AxeOfRevolution())
 
     def getXAxis(self):
         return self._geom.ReferencePlane().XDirection().Coord()

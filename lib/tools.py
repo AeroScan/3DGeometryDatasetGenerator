@@ -158,9 +158,10 @@ def filterFeaturesData(features_data, curve_types, surface_types):
 
 def writeMeshPLY(filename, mesh_dict):
     mesh = o3d.geometry.TriangleMesh()
-    mesh.vertices = o3d.utility.Vector3dVector(np.asarray(mesh_dict['vertices']))
-    mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh_dict['faces']))
-    o3d.io.write_triangle_mesh(filename + '.ply', mesh, print_progress=True, compressed=True)
+    if len(mesh_dict['vertices']) > 0:
+        mesh.vertices = o3d.utility.Vector3dVector(np.asarray(mesh_dict['vertices']))
+        mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh_dict['faces']))
+        o3d.io.write_triangle_mesh(filename + '.ply', mesh, print_progress=True, compressed=True)
 
 def loadMeshPLY(filename):
     mesh = o3d.io.read_triangle_mesh(str(filename) + '.ply', print_progress=True)

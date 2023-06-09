@@ -224,6 +224,7 @@ class BaseSweptSurface(BaseSurface, metaclass=abc.ABCMeta):
     def toDict(self):
         features = super().toDict()
 
+        print(self.getCurve())
         features['curve'] = self.getCurve().toDict()
             
         return features

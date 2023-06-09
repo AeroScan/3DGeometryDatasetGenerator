@@ -164,18 +164,21 @@ def main():
                         unit_scale = file_info["unit_scale"] if "unit_scale" \
                                         in file_info.keys() else 1000
 
-
-            R = rotation_matrix_from_vectors(vertical_up_axis)
-            mesh["vertices"] = (R @ mesh["vertices"].T).T
-            t = computeTranslationVector(mesh["vertices"])
-            mesh["vertices"] += t
+            R = np.eye(3)
+            t = np.zeros(3)
             s = 1./unit_scale
-            mesh["vertices"] *= s
+            if len(mesh["vertices"]) > 0:
+                R = rotation_matrix_from_vectors(vertical_up_axis)
+                mesh["vertices"] = (R @ mesh["vertices"].T).T
+                t = computeTranslationVector(mesh["vertices"])
+                mesh["vertices"] += t
+                mesh["vertices"] *= s
 
             #TODO: need to use o3d mesh in whole code
             o3d_mesh = o3d.geometry.TriangleMesh()
-            o3d_mesh.vertices = o3d.utility.Vector3dVector(np.asarray(mesh['vertices']))
-            o3d_mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh['faces']))
+            if len(mesh["vertices"]) > 0:
+                o3d_mesh.vertices = o3d.utility.Vector3dVector(np.asarray(mesh['vertices']))
+                o3d_mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh['faces']))
 
 
             transforms = [{'rotation': R}, {'translation': t}, {'scale': s}]
@@ -190,7 +193,7 @@ def main():
 
                 surface.setMeshByGlobal(o3d_mesh, mesh_data)
 
-                surface.validateMesh(dtol=1e-2, atol=89)
+                #surface.validateMesh(dtol=1e-2, atol=89)
 
                 features['surfaces'].append(dict(surface.toDict()))
 

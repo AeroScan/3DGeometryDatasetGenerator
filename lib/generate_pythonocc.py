@@ -147,6 +147,11 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
 
     topology = TopologyExplorer(shape)
 
+    print('Comp Solids:', topology.number_of_comp_solids())
+    print('Comp:', topology.number_of_compounds())
+    print('Solids:', topology.number_of_solids())
+    print('Shells:', topology.number_of_shells())
+
     if generate_mesh:
         OCCMeshGeneration(shape)
     
@@ -165,6 +170,13 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
 
 def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, debug=False) -> dict:
     shape = read_step_file(input_name, verbosity=debug)
+    transform = shape.Location().Transformation()
+    trans = np.array(transform.TranslationPart().Coord())
+    R = transform.GetRotation()
+    rot = np.array([R.X(), R.Y(), R.Z(), R.W()])
+
+    if not(np.all(trans == [0, 0, 0]) and np.all(rot == [0, 0, 0, 1])):
+        assert False
 
     geometries_data, mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
     
