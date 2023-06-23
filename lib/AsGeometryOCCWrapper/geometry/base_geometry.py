@@ -97,6 +97,7 @@ class BaseGeometry(metaclass=abc.ABCMeta):
     def toDict(self):
         features = {}
         features['type'] = self.getType()
+        features['foward'] = not bool(self._orientation)
 
         if self._mesh_info is not None:
             features = dict(features, **(self._mesh_info))
