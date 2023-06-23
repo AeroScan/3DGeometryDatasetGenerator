@@ -25,6 +25,47 @@ MAX_INT = 2**31 - 1
 #                 break
 #     return index, hc
 
+def paramsMerge(a, b):
+    i = 0
+    j = 0
+    k = 0
+    merge_list = np.zeros(len(a) + len(b), dtype=np.int32) - 1
+    a_map = np.zeros(len(a), dtype=np.int32) - 1
+    b_map = np.zeros(len(b), dtype=np.int32) - 1
+
+    while i < len(a) and j < len(b):
+        if np.isclose(a[i], b[j], rtol=0.): # the 99% case
+            merge_list[k] = a[i]
+            a_map[i] = k
+            b_map[j] = k
+            i+=1
+            j+=1
+        elif a[i] < b[j]:
+            merge_list[k] = a[i]
+            a_map[i] = k
+            i+=1
+        else:
+            merge_list[k] = b[j] 
+            b_map[j] = k
+            j+=1
+        k+=1
+
+    if i < len(a):
+        diff = len(a) - i
+        new_k = k + diff
+        merge_list[k:new_k] = a[i:]
+        a_map[i:] = np.arange(k, new_k)
+        k = new_k
+
+    elif j < len(b):
+        diff = len(b) - j
+        new_k = k + diff
+        merge_list[k:new_k] = b[j:]
+        b_map[j:] = np.arange(k, new_k)
+        k = new_k
+
+    return merge_list[:k], a_map, b_map
+
 def searchEntityInMap(entity, map, use_issame=True):
     hc = entity.HashCode(MAX_INT)
     index = -1
@@ -79,7 +120,7 @@ def computeMeshData(vertices, edges, faces, topology):
     mesh_vertices = []
     mesh_faces = []
     print('\n[PythonOCC] Generating Mesh Data...')
-    for face_index, face in enumerate(tqdm(faces)):
+    for face_index, face in enumerate(tqdm(faces                                                                                           )):
         #print('----------------------------------------------------')
         #print("FACE_INDEX: ", face_index)
 
@@ -104,6 +145,9 @@ def computeMeshData(vertices, edges, faces, topology):
         edges_index = face_edges_map[face_index]
         degenerated_edge = False
         polygons = []
+        #if 385157 not in edges_index:
+        #    continue
+
         for edge_index in edges_index:
             edge = edges[edge_index] #TopoDS_Edge object
 
@@ -113,6 +157,7 @@ def computeMeshData(vertices, edges, faces, topology):
                 continue
 
             edge_vert_local = np.asarray(polygon.Nodes(), dtype=np.int64) - 1 # map from mesh edge indices to face mesh indices
+            edge_param_local = np.asarray(polygon.Parameters())
 
             edge_vert_local_unique = np.unique(edge_vert_local)
             if len(edge_vert_local_unique) == 1:#np.max(edge_vert_local_counts) > 2:
@@ -126,26 +171,51 @@ def computeMeshData(vertices, edges, faces, topology):
 
         for edge_index, polygon in polygons:
             edge = edges[edge_index] #TopoDS_Edge object
-            
-            #polygon = brep_tool.PolygonOnTriangulation(edge, triangulation, location) # projecting edge in the face triangulation
-            #if polygon is None:
-            #    #WARNING
-            #    continue
 
             edge_vert_local = np.asarray(polygon.Nodes(), dtype=np.int64) - 1 # map from mesh edge indices to face mesh indices
             edge_param_local = np.asarray(polygon.Parameters())
             
-            egi = np.asarray(edges_mesh_data[edge_index]['vert_indices'], dtype=np.int64)
-            edge_vert_global_map = egi if len(egi) > 0 else (np.zeros(len(edge_vert_local), dtype=np.int64) - 1) # map from mesh edge indices to global mesh indices
-            egp = np.asarray(edges_mesh_data[edge_index]['vert_parameters'], dtype=np.float64)
-            edge_param_global = egp if len(egp) > 0 else (np.zeros(len(edge_param_local), dtype=np.float64) - 1)
+            is_none = False
+            if len(edges_mesh_data[edge_index]['vert_indices']) == 0:
+                is_none = True
+                edge_vert_global_map = np.zeros(len(edge_vert_local), dtype=np.int64) - 1
+                edge_param_global = np.zeros(len(edge_vert_local), dtype=np.float64) - 1
+            else:
+                edge_vert_global_map = edges_mesh_data[edge_index]['vert_indices'].copy()
+                edge_param_global = edges_mesh_data[edge_index]['vert_parameters'].copy()
+                
+            # if there is already global parameters for the edge
+            local_edge_map = np.arange(len(edge_vert_local))
+            if not is_none:
+                if len(edge_param_local) != len(edge_param_global):
+                    # need to merge two edge params
+                    merge_params, local_edge_map, global_edge_map = paramsMerge(edge_param_local, edge_param_global)
+        
+                    edges_mesh_data[edge_index]['vert_indices'] = np.zeros(len(merge_params), dtype=np.int64) - 1
+                    edges_mesh_data[edge_index]['vert_indices'][global_edge_map] = edge_vert_global_map
+
+                    edges_mesh_data[edge_index]['vert_parameters'] = np.zeros(len(merge_params), dtype=np.float64) - 1
+                    edges_mesh_data[edge_index]['vert_parameters'][global_edge_map] = edge_param_global
+
+                    edge_vert_global_map = edges_mesh_data[edge_index]['vert_indices'][local_edge_map]
+                    edge_param_global = edges_mesh_data[edge_index]['vert_parameters'][local_edge_map]
+
+                else:
+                    assert np.all(edge_param_local == edge_param_global), f'{edge_index}: {edge_param_local} != {edge_param_global}'
+
+
+            assert len(edge_vert_local) == len(edge_vert_global_map), f'{edge_index} {edge_param_local} {edge_param_global}'
 
             vertices_index = edge_vertices_map[edge_index]
-            vertices_params = np.array([brep_tool.Parameter(vertices[vertex_index], edge, face) for vertex_index in vertices_index])
+            vertices_params = np.array([brep_tool.Parameter(vertices[vertex_index], edge, face) 
+                                        for vertex_index in vertices_index])
+            vertices_array = np.asarray([brep_tool.Pnt(vertices[vertex_index]).Transformed(transform.Inverted()).Coord() 
+                                        for vertex_index in vertices_index])
 
             edge_vert_local_unique, edge_vert_local_counts = np.unique(edge_vert_local, return_counts=True)
             mask_major_2 = edge_vert_local_counts >= 2
             len_diff = np.count_nonzero(mask_major_2)
+
             assert len_diff <= 1, \
                    f'More than one repreated vertex in Polygon On Triangulation. {str(BRepAdaptor_Curve(edge).GetType())} {edge_vert_local}'
 
@@ -156,32 +226,28 @@ def computeMeshData(vertices, edges, faces, topology):
                 - a closed curve must have the same node as first and last node (problem 1)
                 - an openned curve must not have the same node as first and last node (problem 2)
             '''
-            if len(vertices_index) == 1:
-                assert len(edge_vert_local_unique) > 1, 'Closed curve with just one Unique Vertex.'
 
-                is_foward = np.allclose(vertices_params, edge_param_local[0], rtol=0.)
-                is_reversed = np.allclose(vertices_params, edge_param_local[-1], rtol=0.)
+            if len(vertices_index) >= 1:
+                indices = [0, -1]
+                if len(vertices_index) == 2:
+                    indices = [[0, -1], [-1, 0]]
+
+                is_foward = np.allclose(vertices_params, edge_param_local[indices[0]], rtol=0.)
+                is_reversed = np.allclose(vertices_params, edge_param_local[indices[1]], rtol=0.)
 
                 if is_foward and is_reversed:
-                    print('NUMERICAL ERROR')
-                    print(vertices_params, edge_param_local[[0, -1]])
-                    foward_distance = np.linalg.norm(vertices_params - edge_param_local[0])
-                    reversed_distance = np.linalg.norm(vertices_params - edge_param_local[-1])
-                    if foward_distance <= reversed_distance:
-                        is_reversed = False
-                    else:
-                        is_foward = False
+                    nodes_array = np.asarray([triangulation.Node(int(evl - 1)).Transformed(transform.Inverted()).Coord()
+                                              for evl in edge_vert_local[[0, -1]]])
                     
-                    print(is_foward, is_reversed)
+                    is_foward = np.allclose(vertices_array, nodes_array[indices[0]], rtol=0.)
+                    is_reversed = np.allclose(vertices_array, nodes_array[indices[1]], rtol=0.)
 
-                assert is_foward or is_reversed, 'It is not repeating in the start and end vertices.'
+                    if is_foward and is_reversed:
+                        continue
 
-                if len_diff == 0:
+                if len(vertices_index) == 1 and len_diff == 0:
                     #triangulation is not closed but the egde is
-
-                    print('Problem 1 to be Solved')
-                    
-                    #assuming that reapeated vertex happen just at the start and end indices
+                    #changing triangulation to be closed too
                     if is_foward:
                         bound_indices = [0, -1]
                     elif is_reversed:
@@ -196,129 +262,62 @@ def computeMeshData(vertices, edges, faces, topology):
                     face_vert_local_map[last_vertex] = first_vertex
 
 
-            elif len(vertices_index) == 2:
-                is_foward = np.allclose(vertices_params, edge_param_local[[0, -1]], rtol=0.)
-                is_reversed = np.allclose(vertices_params, edge_param_local[[-1, 0]], rtol=0.)
-
-                if is_foward and is_reversed:
-                    print('NUMERICAL ERROR')
-                    print(vertices_params, edge_param_local[[0, -1]])
-                    foward_distance = np.linalg.norm(vertices_params - edge_param_local[[0, -1]])
-                    reversed_distance = np.linalg.norm(vertices_params - edge_param_local[[-1, 0]])
-                    if foward_distance <= reversed_distance:
-                        is_reversed = False
+                elif len(vertices_index) == 2 and len_diff == 1:
+                    #triangulation is closed but the egde is not
+                    if is_foward:
+                        edge_vert_local = edge_vert_local[:-1]
+                        edge_vert_global_map = edge_vert_global_map[:-1]
+                        edge_param_local = edge_param_local[:-1]
+                        edge_param_global = edge_param_global[:-1]
+                        local_edge_map = local_edge_map[:-1]
+                        vertices_index = vertices_index[:-1]
                     else:
-                        is_foward = False
-                    print(is_foward, is_reversed)
-
-                assert is_foward or is_reversed, 'It is not repeating in the start and end vertices.'
-                
-                if len_diff == 1:
-                    print('Problem 2 to be Solved')
-                    assert edge_vert_local[0] == edge_vert_local[-1], \
-                        'Wrong Assumption. Closeness is not about first and last nodes always'
+                        edge_vert_local = edge_vert_local[1:]
+                        edge_vert_global_map = edge_vert_global_map[1:]
+                        edge_param_local = edge_param_local[1:]
+                        edge_param_global = edge_param_global[1:]
+                        local_edge_map = local_edge_map[1:]
+                        vertices_index = vertices_index[1:]
                     
-                    print('Type:', str(GeomAbs_CurveType(BRepAdaptor_Curve(edge).GetType())))
-                    print('Index:',edge_index)
-                    print('Edge Local:',edge_vert_local)
-                    print('Edge Param Local:',edge_param_local)
-                    print('Edge Global:', edge_vert_global_map)
-                    print('Edge Param Global:', edge_param_global)
-                    print('Vertices:', vertices_index)
-                    print('Vertices Parmams:', vertices_params)
-                    
-                    #print('Problem 2 to be Solved')
-                    local_vertices = [vertices[vertex_index] for vertex_index in vertices_index]
+                    #print(edge_param_local)
+                    #print(edge_param_global)
 
+                    #continue
 
-                    is_last_id = True
-                    min_dist = float('inf')
-                    node_array = np.array(triangulation.Node(int(edge_vert_local[0] + 1)).Transformed(transform).Coord())
-                    for i, lv in enumerate(local_vertices):
-                        vert_array = np.array(brep_tool.Pnt(lv).Coord())
-                        curr_dist = np.linalg.norm(vert_array - node_array)
-                        if curr_dist < min_dist:
-                            is_last_id = not bool(i)
-                            min_dist = curr_dist
-                    
-                    is_last_id = (not is_last_id) if is_reversed else is_last_id
-                    
-                    id_to_change = 0 if is_last_id else -1
+                vertices_local_index_map = np.zeros(len(vertices_index), dtype=np.int64) - 1
+                new_indices = [-1, 0] if is_reversed else [0, -1]
+                for id, vertex_index in enumerate(vertices_index):
+                    #print('==================')
+                    #print('vert index:', vertex_index)
+                    vertex_local_edge_index = new_indices[id]
+                    #print('node index:', vertex_local_edge_index)
 
-                    #print(id_to_change)
-                    right_tol = brep_tool.Tolerance(local_vertices[id_to_change])
-                    right_pnt = brep_tool.Pnt(local_vertices[id_to_change]).Transformed(transform.Inverted())
-                    current_index = edge_vert_local[id_to_change]
-                    #print(right_pnt.Coord())     
+                    vertex_local_index = edge_vert_local[vertex_local_edge_index]
+                    #print('edge local index:', vertex_local_index)
+                    vertex_global_index = vertices_mesh_data[vertex_index]
+                    #print('vert global index:', vertex_global_index)
+                    #print('edge global index:', edge_vert_global_map[vertex_local_edge_index])
 
-                    face_nodes_match_indices = []
-                    for i in range(1, number_vertices + 1):
-                        if triangulation.Node(i).IsEqual(right_pnt, right_tol) and (i - 1) != current_index:
-                            face_nodes_match_indices.append(i - 1)
-
-                    uv1 = gp_Pnt2d()
-                    uv2 = gp_Pnt2d()
-                    brep_tool.UVPoints(edge, face, uv1, uv2)
-                    uvs = uv1, uv2
-
-                    results = []
-                    for uv in uvs:
-                        local_results = []
-                        for i in range(1, number_vertices + 1):
-                            if triangulation.UVNode(i).IsEqual(uv, 1e-6):
-                                local_results.append(i - 1)
-                        results.append(local_results)
+                    if vertex_global_index == -1:
+                        assert edge_vert_global_map[vertex_local_edge_index] == -1, \
+                            'vertex has no global index but edge already has.' \
+                            f' Edge global vertices: {edge_vert_global_map}'
                         
-                    assert len(face_nodes_match_indices) == 1, \
-                            f'{current_index} {face_nodes_match_indices}'
+                    else:
+                        if edge_vert_global_map[vertex_local_edge_index] != -1:
+                            assert edge_vert_global_map[vertex_local_edge_index] == vertex_global_index and \
+                                   np.allclose(edge_param_global[vertex_local_edge_index], vertices_params[id]), \
+                                   'different global indices between vertex and edge.' \
+                                   f' {edge_vert_global_map[vertex_local_edge_index]} != {vertex_global_index}'
                         
-                    edge_vert_local[id_to_change] = face_nodes_match_indices[0]
+                        edge_vert_global_map[vertex_local_edge_index] = vertex_global_index
+                        edge_param_global[vertex_local_edge_index] = vertices_params[id]
 
-                    if len(edge_vert_local_unique) == 1:
-                        print('Type:', str(GeomAbs_CurveType(BRepAdaptor_Curve(edge).GetType())))
-                        print('Index:',edge_index)
-                        print('Edge Local:',edge_vert_local)
-                        print('Edge Param Local:', edge_param_local)
-                        print('Face Global:', face_vert_global_map[edge_vert_local])
-                        print('----------------------------------------')
-
+                    vertices_local_index_map[id] = vertex_local_index
+  
             else:
-                assert False, f'Edge {edge_index} has {len(vertices_index)} bound vertices'
-
-            
-            vertices_local_index_map = np.zeros(len(vertices_index), dtype=np.int64) - 1
-            vertices_global_index_map = np.zeros(len(vertices_index), dtype=np.int64) - 1        
-            
-            #TODO: maybe this part can be merged in the closeness correction
-            for id, vertex_index in enumerate(vertices_index):
-                param = vertices_params[id]
+                assert False, f'Edge {edge_index} has {len(vertices_index)} bound vertices'       
                 
-                mask = np.isclose(edge_param_local, param, rtol=0.)
-                indices = np.where(mask)[0]
-                
-                assert len(indices) == 1, f'{len(indices)} params close to the same vertex.'
-
-                vertex_local_edge_index = indices[0]
-
-                vertex_local_index = edge_vert_local[vertex_local_edge_index]
-                vertex_global_index = vertices_mesh_data[vertex_index]
-
-                if vertex_global_index == -1:
-                    assert edge_vert_global_map[vertex_local_edge_index] == -1, \
-                           'vertex has no global index but edge already has.' \
-                           f' Edge global vertices: {edge_vert_global_map}'
-                    
-                else:
-                    if edge_vert_global_map[vertex_local_edge_index] != -1:
-                        assert edge_vert_global_map[vertex_local_edge_index] == vertex_global_index, \
-                            'different global indices between vertex and edge.' \
-                            f' {edge_vert_global_map[vertex_local_edge_index]} != {vertex_global_index}'
-                    
-                    edge_vert_global_map[vertex_local_edge_index] = vertex_global_index
-                    edge_param_global[vertex_local_edge_index] = param
-
-                vertices_local_index_map[id] = vertex_local_index
-                vertices_global_index_map[id] = vertex_global_index
 
             edge_mask = edge_vert_global_map != -1 # already mapped edge vertex mask
 
@@ -365,9 +364,13 @@ def computeMeshData(vertices, edges, faces, topology):
 
             vertices_mesh_data[np.asarray(vertices_index)] = face_vert_global_map[np.array(vertices_local_index_map)]    
 
-            edges_mesh_data[edge_index]['vert_indices'] = face_vert_global_map[edge_vert_local].tolist()
-            edges_mesh_data[edge_index]['vert_parameters'] = edge_param_local.tolist()
-   
+            if len(edges_mesh_data[edge_index]['vert_indices']) > 0:
+                edges_mesh_data[edge_index]['vert_indices'][local_edge_map] = face_vert_global_map[edge_vert_local]
+                edges_mesh_data[edge_index]['vert_parameters'][local_edge_map] = edge_param_local
+            else:
+                edges_mesh_data[edge_index]['vert_indices'] = face_vert_global_map[edge_vert_local]
+                edges_mesh_data[edge_index]['vert_parameters'] = edge_param_local
+
         for i in range(1, number_vertices + 1):
             if face_vert_local_map[i - 1] == (i - 1):
                 if face_vert_global_map[i - 1] == -1:
@@ -426,6 +429,12 @@ def computeMeshData(vertices, edges, faces, topology):
     #print('good:', len(faces) - problematics)
     #print('locations:', len(locations))
 
+    for edge_index in range(len(edges_mesh_data)):
+        if type(edges_mesh_data[edge_index]['vert_indices']) is not list:
+            edges_mesh_data[edge_index]['vert_indices'] = edges_mesh_data[edge_index]['vert_indices'].tolist()
+        if type(edges_mesh_data[edge_index]['vert_parameters']) is not list:
+            edges_mesh_data[edge_index]['vert_parameters'] = edges_mesh_data[edge_index]['vert_parameters'].tolist()
+                                    
     return mesh_vertices, mesh_faces, edges_mesh_data, faces_mesh_data
 
 def OCCMeshGeneration(shape):

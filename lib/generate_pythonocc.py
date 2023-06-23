@@ -168,9 +168,9 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
 def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, debug=False) -> dict:
     shape = read_step_file(input_name, verbosity=debug)
 
-    healer = ShapeFix.ShapeFix_Shape(shape)
-    healer.Perform()
-    shape = healer.Shape()
+    #healer = ShapeFix.ShapeFix_Shape(shape)
+    #healer.Perform()
+    #shape = healer.Shape()
 
     # extend_status = ShapeExtend_Status()
     # healer.Status(extend_status)
