@@ -45,7 +45,7 @@ def generateStatistics(features, mesh, only_stats=False):
 
     result['bounding_box'] = mesh_obj.get_min_bound().tolist() + (mesh_obj.get_max_bound() - mesh_obj.get_min_bound()).tolist() 
 
-    if only_stats:
+    if True:
         print("Generating for curves: ")
         for curve in tqdm(features["curves"]):
             if curve is not None:

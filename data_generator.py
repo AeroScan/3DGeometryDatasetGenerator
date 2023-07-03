@@ -130,21 +130,6 @@ def main():
             stats_name = os.path.join(stats_folder_dir, output_name)
             remove_by_filename(stats_name, STATS_FORMATS)
 
-            print(f'\nProcessing file - Model {filename} - [{idx+1}/{len(files)}]:')
-
-            shape, geometries_data, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
-                                                     use_highest_dim=use_highest_dim, \
-                                                        debug=verbose)
-            print("\n[PythonOCC] Done.")
-            if mesh_generator == "gmsh":
-                print('\n[GMSH]:')
-                features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, \
-                                             features=features, mesh_name=mesh_name, \
-                                                shape=shape, use_highest_dim=use_highest_dim, \
-                                                    debug=verbose)
-                print("\n[GMSH] Done.")
-
-            print('\n[Normalization]')
             vertical_up_axis = np.array([0., 0., 1.])
             unit_scale = 1000
 
@@ -163,7 +148,25 @@ def main():
 
                         unit_scale = file_info["unit_scale"] if "unit_scale" \
                                         in file_info.keys() else 1000
+                        
+            scale_to_mm = 1000/unit_scale
+            unit_scale = 1000
 
+            print(f'\nProcessing file - Model {filename} - [{idx+1}/{len(files)}]:')
+
+            shape, geometries_data, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
+                                                            use_highest_dim=use_highest_dim, scale_to_mm=scale_to_mm, \
+                                                            debug=verbose)
+            print("\n[PythonOCC] Done.")
+            if mesh_generator == "gmsh":
+                print('\n[GMSH]:')
+                features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, \
+                                             features=features, mesh_name=mesh_name, \
+                                                shape=shape, use_highest_dim=use_highest_dim, \
+                                                    debug=verbose)
+                print("\n[GMSH] Done.")
+
+            print('\n[Normalization]')
             R = np.eye(3)
             t = np.zeros(3)
             s = 1./unit_scale
@@ -201,7 +204,7 @@ def main():
             print("\n[Normalization] Done.")
 
             print('\n[Generating statistics]')
-            #stats = generateStatistics(features, mesh)
+            stats = generateStatistics(features, mesh)
             print("\n[Statistics] Done.")
 
             print('\n[Writing meshes]')

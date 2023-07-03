@@ -3,8 +3,10 @@ import numpy as np
 
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer
-from OCC.Core.ShapeExtend import ShapeExtend_Status
+from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
+from OCC.Core.gp import gp_Trsf
 import OCC.Core.ShapeFix as ShapeFix
+from OCC.Extend.ShapeFactory import get_aligned_boundingbox
 
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
 from lib.AsGeometryOCCWrapper import CurveFactory, SurfaceFactory
@@ -165,8 +167,14 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
     
     return geometries_data, mesh
 
-def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, debug=False) -> dict:
+def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, scale_to_mm=1, debug=False) -> dict:
     shape = read_step_file(input_name, verbosity=debug)
+
+    scaling_transformation = gp_Trsf()
+    scaling_transformation.SetScaleFactor(scale_to_mm)
+    transform_builder = BRepBuilderAPI_Transform(shape, scaling_transformation)
+
+    shape = transform_builder.Shape()
 
     healer = ShapeFix.ShapeFix_Shape(shape)
     healer.Perform()

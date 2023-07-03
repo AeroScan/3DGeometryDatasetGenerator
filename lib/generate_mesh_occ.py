@@ -120,7 +120,7 @@ def computeMeshData(vertices, edges, faces, topology):
     mesh_vertices = []
     mesh_faces = []
     print('\n[PythonOCC] Generating Mesh Data...')
-    for face_index, face in enumerate(tqdm(faces                                                                                           )):
+    for face_index, face in enumerate(tqdm(faces)):
         #print('----------------------------------------------------')
         #print("FACE_INDEX: ", face_index)
 
@@ -193,10 +193,26 @@ def computeMeshData(vertices, edges, faces, topology):
                 edge_vert_global_map = edges_mesh_data[edge_index]['vert_indices'].copy()
                 edge_param_global = edges_mesh_data[edge_index]['vert_parameters'].copy()
                 
+            vertices_index = edge_vertices_map[edge_index]
+            vertices_params = np.array([brep_tool.Parameter(vertices[vertex_index], edge, face) 
+                                        for vertex_index in vertices_index])
+            vertices_array = np.asarray([brep_tool.Pnt(vertices[vertex_index]).Transformed(transform.Inverted()).Coord() 
+                                        for vertex_index in vertices_index])
+            
+            if face_index == 348828:
+                    print(edge_index, str(GeomAbs_CurveType(BRepAdaptor_Curve(edge).GetType())))
+                    print(edge_vert_local)
+                    print(edge_param_local)
+                    print(edge_vert_global_map)
+                    print(edge_param_global)
+                    print(vertices_index)
+                    print(vertices_mesh_data[vertices_index])
+
             # if there is already global parameters for the edge
             local_edge_map = np.arange(len(edge_vert_local))
             if not is_none:
                 if len(edge_param_local) != len(edge_param_global):
+                    print('Agregating params')
                     # need to merge two edge params
                     merge_params, local_edge_map, global_edge_map = paramsMerge(edge_param_local, edge_param_global)
         
@@ -209,15 +225,12 @@ def computeMeshData(vertices, edges, faces, topology):
                     edge_vert_global_map = edges_mesh_data[edge_index]['vert_indices'][local_edge_map]
                     edge_param_global = edges_mesh_data[edge_index]['vert_parameters'][local_edge_map]
 
-                assert np.all(edge_param_local == edge_param_global), f'{edge_index}: {edge_param_local} != {edge_param_global}'
+                else:
+                    assert np.all(edge_param_local == edge_param_global), f'{edge_index}: {edge_param_local} != {edge_param_global}'
 
             assert len(edge_vert_local) == len(edge_vert_global_map), f'{edge_index} {edge_param_local} {edge_param_global}'
 
-            vertices_index = edge_vertices_map[edge_index]
-            vertices_params = np.array([brep_tool.Parameter(vertices[vertex_index], edge, face) 
-                                        for vertex_index in vertices_index])
-            vertices_array = np.asarray([brep_tool.Pnt(vertices[vertex_index]).Transformed(transform.Inverted()).Coord() 
-                                        for vertex_index in vertices_index])
+            
 
             edge_vert_local_unique, edge_vert_local_counts = np.unique(edge_vert_local, return_counts=True)
             mask_major_2 = edge_vert_local_counts >= 2
@@ -243,7 +256,6 @@ def computeMeshData(vertices, edges, faces, topology):
                 is_reversed = np.allclose(vertices_params, edge_param_local[indices[1]], rtol=0.)
 
                 if is_foward and is_reversed:
-                    print('AAAA')
                     nodes_array = np.asarray([triangulation.Node(int(evl - 1)).Transformed(transform.Inverted()).Coord()
                                               for evl in edge_vert_local[[0, -1]]])
                     
@@ -259,6 +271,7 @@ def computeMeshData(vertices, edges, faces, topology):
                 if len(vertices_index) == 1 and len_diff == 0:
                     #triangulation is not closed but the egde is
                     #changing triangulation to be closed too
+                    #print(f'ERROR HERE {edge_vert_local} {vertices_index}')
                     if is_foward:
                         bound_indices = [0, -1]
                     elif is_reversed:
@@ -268,9 +281,11 @@ def computeMeshData(vertices, edges, faces, topology):
 
                     edge_vert_local[bound_indices[1]] = first_vertex
 
-                    assert face_vert_local_map[last_vertex] == last_vertex or face_vert_local_map[last_vertex] == first_vertex
+                    assert face_vert_local_map[last_vertex] == last_vertex or face_vert_local_map[last_vertex] == face_vert_local_map[first_vertex], \
+                           f'{vertices_array} \n {np.asarray([triangulation.Node(int(i + 1)).Coord() for i in edge_vert_local[[0,-1]]])}'
 
-                    face_vert_local_map[last_vertex] = first_vertex
+                    #face_vert_local_map[last_vertex] = face_vert_local_map[first_vertex]
+                    face_vert_local_map[face_vert_local_map == last_vertex] = face_vert_local_map[first_vertex]
 
 
                 # elif len(vertices_index) == 2 and len_diff == 1:
@@ -375,7 +390,8 @@ def computeMeshData(vertices, edges, faces, topology):
                                                     == edge_vert_global_map[edge_mask][face_mask]), \
                        f'Failed in match global indices from different edges. ' \
                        f'{face_vert_global_map[edge_vert_local[edge_mask]][face_mask]} != ' \
-                       f'{edge_vert_global_map[edge_mask][face_mask]}'
+                       f'{edge_vert_global_map[edge_mask][face_mask]} \n' \
+                       f'{edge_index} {edge_vert_local}'
                                 
                 face_vert_global_map[edge_vert_local[edge_mask]] = edge_vert_global_map[edge_mask]
 
@@ -441,7 +457,6 @@ def computeMeshData(vertices, edges, faces, topology):
                            f'{mesh_vertices[i1_m]} != {np.array(triangulation.Node(i1).Transformed(transform).Coord())} or \n' \
                            f'{mesh_vertices[i2_m]} != {np.array(triangulation.Node(i2).Transformed(transform).Coord())} or \n' \
                            f'{mesh_vertices[i3_m]} != {np.array(triangulation.Node(i3).Transformed(transform).Coord())}'
-                continue
                 
             if face_orientation == 0:
                 verts_of_face = np.array([i1_m, i2_m, i3_m])
@@ -484,7 +499,6 @@ def OCCMeshGeneration(shape):
     parameters.Deflection = 0.01
     parameters.MinSize = 0.01
     parameters.Relative = True
-    parameters.ForceFaceDeflection = True
     parameters.InParallel = True
 
     brep_mesh = BRepMesh_IncrementalMesh(shape, parameters)
