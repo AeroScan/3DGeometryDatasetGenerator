@@ -16,8 +16,7 @@ from lib.tools import (
     loadMeshPLY,
     loadFeatures,
     create_dirs,
-    list_files,
-    transforms2ListOfGpTrsf)
+    list_files)
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.generate_statistics import generateStatistics

@@ -9,7 +9,7 @@ import OCC.Core.ShapeFix as ShapeFix
 from OCC.Extend.ShapeFactory import get_aligned_boundingbox
 
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
-from lib.AsGeometryOCCWrapper import CurveFactory, SurfaceFactory
+from asGeometryOCCWrapper import CurveFactory, SurfaceFactory
 
 MAX_INT = 2**31 - 1
 
