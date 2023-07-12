@@ -16,10 +16,15 @@ from lib.tools import (
     loadMeshPLY,
     loadFeatures,
     create_dirs,
-    list_files)
+    list_files,
+    compareDictsWithTolerance)
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
-from lib.generate_statistics import generateStatistics
+from lib.generate_statistics import generateStatistics, generateStatisticsOld
+
+from asGeometryOCCWrapper.curves import CurveFactory
+from asGeometryOCCWrapper.surfaces import SurfaceFactory
+
 import open3d as o3d
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
@@ -182,47 +187,59 @@ def main():
                 o3d_mesh.vertices = o3d.utility.Vector3dVector(np.asarray(mesh['vertices']))
                 o3d_mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh['faces']))
 
+            del mesh
+            gc.collect()
 
+            # normalizing and adding mesh data
             transforms = [{'rotation': R}, {'translation': t}, {'scale': s}]
             features = {'curves': [], 'surfaces': []}
-            for edge_data in geometries_data['curves']:
-                features['curves'].append(dict(edge_data['geometry'].applyTransformsAndReturn(transforms).toDict(), **(edge_data['mesh_data'])))
-            for face_data in geometries_data['surfaces']:
-                surface = face_data['geometry']
-                surface.applyTransforms(transforms)
+            for edge_idx in range(len(geometries_data['curves'])):
+                geometries_data['curves'][edge_idx]['geometry'].applyTransforms(transforms)
 
-                mesh_data = face_data['mesh_data']
+                mesh_data = geometries_data['curves'][edge_idx]['mesh_data']
+                geometries_data['curves'][edge_idx]['geometry'].setMeshByGlobal(o3d_mesh, mesh_data)
 
-                surface.setMeshByGlobal(o3d_mesh, mesh_data)
+                del geometries_data['curves'][edge_idx]['mesh_data']
 
-                #surface.validateMesh(dtol=1e-2, atol=89)
+            for face_idx in range(len(geometries_data['surfaces'])):
+                geometries_data['surfaces'][face_idx]['geometry'].applyTransforms(transforms)
 
-                features['surfaces'].append(dict(surface.toDict()))
+                mesh_data = geometries_data['surfaces'][face_idx]['mesh_data']
+                geometries_data['surfaces'][face_idx]['geometry'].setMeshByGlobal(o3d_mesh, mesh_data)
 
+                del geometries_data['surfaces'][face_idx]['mesh_data']
 
             print("\n[Normalization] Done.")
 
             print('\n[Generating statistics]')
-            stats = generateStatistics(features, mesh)
+            stats = generateStatistics(geometries_data, o3d_mesh)
             print("\n[Statistics] Done.")
 
             print('\n[Writing meshes]')
-            writeMeshPLY(mesh_name, mesh)
+            writeMeshPLY(mesh_name, o3d_mesh)
             print('\n[Writing meshes] Done.')
 
             print('\n[Writing Features]')
+             # creating features dict
+            features = {'curves': [], 'surfaces': []}
+            for edge_data in geometries_data['curves']:
+                if edge_data['geometry'] is not None:
+                    features['curves'].append(dict(edge_data['geometry'].toDict()))
+            for face_data in geometries_data['surfaces']:
+                if face_data['geometry'] is not None:
+                    features['surfaces'].append(dict(face_data['geometry'].toDict()))
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
             print("\n[Writing Features] Done.")
 
             print('\n[Writing Statistics]')
-            #writeJSON(stats_name, stats)
+            writeJSON(stats_name, stats)
             print("\n[Writing Statistics] Done.")
 
             print('\n[Generator] Process done.')
 
             #del stats
             del features
-            del mesh
+            del o3d_mesh
             gc.collect()
     else:
         print("Reading features list...")
@@ -241,8 +258,18 @@ def main():
             features_path = os.path.join(features_folder_dir, feature_name)
             features_data = loadFeatures(features_path, features_file_type)
 
+            geometries = {'curves': [], 'surfaces': []}
+            for curve_data in features_data['curves']:
+                curve = CurveFactory.fromDict(curve_data)
+                curve.setMeshByGlobal(mesh)
+                geometries['curves'].append({'geometry': curve})
+            for surface_data in features_data['surfaces']:
+                surface = SurfaceFactory.fromDict(surface_data)
+                surface.setMeshByGlobal(mesh)
+                geometries['surfaces'].append({'geometry': surface})
+
             print("\nGenerating statistics...")
-            stats = generateStatistics(features_data, mesh, only_stats=only_stats)
+            stats = generateStatistics(geometries, mesh)
 
             print("Writing stats in statistic file...")
             writeJSON(stats_name, stats)

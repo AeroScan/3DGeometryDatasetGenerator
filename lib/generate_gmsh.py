@@ -2,9 +2,6 @@ import gmsh
 
 import numpy as np
 
-from lib.tools import float2str
-from lib.features_factory import FeaturesFactory
-
 from tqdm import tqdm
 
 FIRST_NODE_TAG = 0

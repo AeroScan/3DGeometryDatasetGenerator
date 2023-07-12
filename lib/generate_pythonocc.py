@@ -6,7 +6,6 @@ from OCC.Extend.TopologyUtils import TopologyExplorer
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.gp import gp_Trsf
 import OCC.Core.ShapeFix as ShapeFix
-from OCC.Extend.ShapeFactory import get_aligned_boundingbox
 
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
 from asGeometryOCCWrapper import CurveFactory, SurfaceFactory
