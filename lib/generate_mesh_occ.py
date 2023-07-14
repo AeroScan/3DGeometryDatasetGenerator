@@ -9,6 +9,8 @@ from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
 from OCC.Core.BRepTools import breptools_Compare
 from OCC.Core.gp import gp_Pnt, gp_Pnt2d
 import OCC.Core.ShapeFix as ShapeFix
+from OCC.Core.ShapeAnalysis import ShapeAnalysis_Surface
+from asGeometryOCCWrapper.surfaces import SurfaceFactory
 
 from tqdm import tqdm
 
@@ -176,19 +178,14 @@ def computeMeshData(vertices, edges, faces, topology):
                 print(f'WARNING 2: degenerated edge ({edge_index}), canceling face ({face_index})')
                 break
 
-            is_none = False
             if len(edges_mesh_data[edge_index]['vert_indices']) == 0:
-                is_none = True
                 edge_vert_global_map = np.zeros(len(edge_vert_local), dtype=np.int64) - 1
                 edge_param_global = np.zeros(len(edge_vert_local), dtype=np.float64) - 1
             else:
                 edge_vert_global_map = edges_mesh_data[edge_index]['vert_indices'].copy()
                 edge_param_global = edges_mesh_data[edge_index]['vert_parameters'].copy()
 
-            edge_vert_local_unique, edge_vert_local_counts = np.unique(edge_vert_local, return_counts=True)
-            mask_major_2 = edge_vert_local_counts >= 2
-            len_diff = np.count_nonzero(mask_major_2)
-
+            edge_vert_local_unique = np.unique(edge_vert_local)
             '''
                 Assuming 'nodes' as mesh vertices and 'vertices' as curves vertices:
                 - a curve is "closed" if it has just one vertex
@@ -215,13 +212,15 @@ def computeMeshData(vertices, edges, faces, topology):
             
             bound_indices = [-1, 0] if is_reversed else [0, -1]
 
-            vertex_nodes = edge_vert_local[bound_indices[len(vertices_index):]]
+            vertex_nodes = edge_vert_local[bound_indices[:len(vertices_index)]]
             current_vertex = face_vertex_node_map[vertex_nodes]
             diff_mask = current_vertex != vertices_index
             if np.any(np.logical_and(diff_mask, current_vertex != -1)):
                 has_degenerated_edge = True
                 print(f'WARNING 3: degenerated edge ({edge_index}), canceling face ({face_index})')
                 break
+            else:
+                face_vertex_node_map[vertex_nodes] = vertices_index
 
             ed = {
                 'e': edge,
@@ -252,6 +251,7 @@ def computeMeshData(vertices, edges, faces, topology):
             edge_vert_global_map = ed['evgm']
             edge_param_global = ed['epg']
             bound_indices = ed['bi']
+
 
             if len(vertices_index) == 1 and edge_vert_local[0] != edge_vert_local[-1]:
                 #triangulation is not closed but the egde is
@@ -333,7 +333,7 @@ def computeMeshData(vertices, edges, faces, topology):
                        f'Failed in match global indices from different edges. ' \
                        f'{face_vert_global_map[edge_vert_local[edge_mask]][face_mask]} != ' \
                        f'{edge_vert_global_map[edge_mask][face_mask]} \n' \
-                       f'{edge_index} {edge_vert_local}'
+                       f'{face_index} {edge_index} {edge_vert_local}'
                                 
                 face_vert_global_map[edge_vert_local[edge_mask]] = edge_vert_global_map[edge_mask]
 
