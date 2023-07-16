@@ -16,11 +16,16 @@ from lib.tools import (
     loadMeshPLY,
     loadFeatures,
     create_dirs,
-    list_files)
+    list_files,
+    compareDictsWithTolerance)
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
-from lib.features_factory import FeaturesFactory
-from lib.generate_statistics import generateStatistics
+from lib.generate_statistics import generateStatistics, generateStatisticsOld
+
+from asGeometryOCCWrapper.curves import CurveFactory
+from asGeometryOCCWrapper.surfaces import SurfaceFactory
+
+import open3d as o3d
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.ply', '.PLY']
@@ -129,23 +134,6 @@ def main():
             stats_name = os.path.join(stats_folder_dir, output_name)
             remove_by_filename(stats_name, STATS_FORMATS)
 
-            
-
-            print(f'\nProcessing file - Model {filename} - [{idx+1}/{len(files)}]:')
-
-            shape, features, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
-                                                     use_highest_dim=use_highest_dim, \
-                                                        debug=verbose)
-            print("\n[PythonOCC] Done.")
-            if mesh_generator == "gmsh":
-                print('\n[GMSH]:')
-                features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, \
-                                             features=features, mesh_name=mesh_name, \
-                                                shape=shape, use_highest_dim=use_highest_dim, \
-                                                    debug=verbose)
-                print("\n[GMSH] Done.")
-
-            print('\n[Normalization]')
             vertical_up_axis = np.array([0., 0., 1.])
             unit_scale = 1000
 
@@ -164,34 +152,82 @@ def main():
 
                         unit_scale = file_info["unit_scale"] if "unit_scale" \
                                         in file_info.keys() else 1000
+                        
+            scale_to_mm = 1000/unit_scale
+            unit_scale = 1000
 
-            vertices = mesh["vertices"]
+            print(f'\nProcessing file - Model {filename} - [{idx+1}/{len(files)}]:')
 
-            R = rotation_matrix_from_vectors(vertical_up_axis)
+            shape, geometries_data, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
+                                                            use_highest_dim=use_highest_dim, scale_to_mm=scale_to_mm, \
+                                                            debug=verbose)
+            print("\n[PythonOCC] Done.")
+            if mesh_generator == "gmsh":
+                print('\n[GMSH]:')
+                features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, \
+                                             features=features, mesh_name=mesh_name, \
+                                                shape=shape, use_highest_dim=use_highest_dim, \
+                                                    debug=verbose)
+                print("\n[GMSH] Done.")
 
-            vertices = (R @ vertices.T).T
-
-            t = computeTranslationVector(vertices)
-            vertices += t
-
+            print('\n[Normalization]')
+            R = np.eye(3)
+            t = np.zeros(3)
             s = 1./unit_scale
-            vertices *= s
+            if len(mesh["vertices"]) > 0:
+                R = rotation_matrix_from_vectors(vertical_up_axis)
+                mesh["vertices"] = (R @ mesh["vertices"].T).T
+                t = computeTranslationVector(mesh["vertices"])
+                mesh["vertices"] += t
+                mesh["vertices"] *= s
 
-            mesh["vertices"] = vertices
+            #TODO: need to use o3d mesh in whole code
+            o3d_mesh = o3d.geometry.TriangleMesh()
+            if len(mesh["vertices"]) > 0:
+                o3d_mesh.vertices = o3d.utility.Vector3dVector(np.asarray(mesh['vertices']))
+                o3d_mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh['faces']))
 
-            FeaturesFactory.normalizeShape(features, R=R, t=t, s=s)
+            del mesh
+            gc.collect()
+
+            # normalizing and adding mesh data
+            transforms = [{'rotation': R}, {'translation': t}, {'scale': s}]
+            features = {'curves': [], 'surfaces': []}
+            for edge_idx in range(len(geometries_data['curves'])):
+                geometries_data['curves'][edge_idx]['geometry'].applyTransforms(transforms)
+
+                mesh_data = geometries_data['curves'][edge_idx]['mesh_data']
+                geometries_data['curves'][edge_idx]['geometry'].setMeshByGlobal(o3d_mesh, mesh_data)
+
+                del geometries_data['curves'][edge_idx]['mesh_data']
+
+            for face_idx in range(len(geometries_data['surfaces'])):
+                geometries_data['surfaces'][face_idx]['geometry'].applyTransforms(transforms)
+
+                mesh_data = geometries_data['surfaces'][face_idx]['mesh_data']
+                geometries_data['surfaces'][face_idx]['geometry'].setMeshByGlobal(o3d_mesh, mesh_data)
+
+                del geometries_data['surfaces'][face_idx]['mesh_data']
+
             print("\n[Normalization] Done.")
 
             print('\n[Generating statistics]')
-            stats = generateStatistics(features, mesh)
+            stats = generateStatistics(geometries_data, o3d_mesh)
             print("\n[Statistics] Done.")
 
             print('\n[Writing meshes]')
-            writeMeshPLY(mesh_name, mesh)
+            writeMeshPLY(mesh_name, o3d_mesh)
             print('\n[Writing meshes] Done.')
 
             print('\n[Writing Features]')
-            features = FeaturesFactory.getListOfDictFromPrimitive(features)
+             # creating features dict
+            features = {'curves': [], 'surfaces': []}
+            for edge_data in geometries_data['curves']:
+                if edge_data['geometry'] is not None:
+                    features['curves'].append(dict(edge_data['geometry'].toDict()))
+            for face_data in geometries_data['surfaces']:
+                if face_data['geometry'] is not None:
+                    features['surfaces'].append(dict(face_data['geometry'].toDict()))
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
             print("\n[Writing Features] Done.")
 
@@ -201,9 +237,9 @@ def main():
 
             print('\n[Generator] Process done.')
 
-            del stats
+            #del stats
             del features
-            del mesh
+            del o3d_mesh
             gc.collect()
     else:
         print("Reading features list...")
@@ -222,8 +258,18 @@ def main():
             features_path = os.path.join(features_folder_dir, feature_name)
             features_data = loadFeatures(features_path, features_file_type)
 
+            geometries = {'curves': [], 'surfaces': []}
+            for curve_data in features_data['curves']:
+                curve = CurveFactory.fromDict(curve_data)
+                curve.setMeshByGlobal(mesh)
+                geometries['curves'].append({'geometry': curve})
+            for surface_data in features_data['surfaces']:
+                surface = SurfaceFactory.fromDict(surface_data)
+                surface.setMeshByGlobal(mesh)
+                geometries['surfaces'].append({'geometry': surface})
+
             print("\nGenerating statistics...")
-            stats = generateStatistics(features_data, mesh, only_stats=only_stats)
+            stats = generateStatistics(geometries, mesh)
 
             print("Writing stats in statistic file...")
             writeJSON(stats_name, stats)

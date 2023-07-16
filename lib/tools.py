@@ -6,6 +6,8 @@ import yaml
 import open3d as o3d
 from pathlib import Path
 
+from OCC.Core.gp import gp_Trsf, gp_Vec, gp_Quaternion, gp_Mat
+
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.OBJ', '.obj']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
@@ -76,9 +78,49 @@ def generateFeaturesYAML(features: dict) -> str:
             value.pop(0)
     return result
 
-# Convert the gpXYZ (gmsh data) to list
-def gpXYZ2List(gp):
-    return [gp.X(), gp.Y(), gp.Z()]
+def transforms2ListOfGpTrsf(R=np.eye(3,3), t=np.zeros(3), s=1.):
+    transforms = [gp_Trsf(), gp_Trsf(), gp_Trsf()]
+    transforms[0].SetRotation(gp_Quaternion(gp_Mat(*(R.flatten()))))
+    transforms[1].SetTranslation(gp_Vec(*t))
+    transforms[2].SetScaleFactor(s)
+
+    return transforms
+
+def compareDictsWithTolerance(dict1, dict2, tolerance=1e-6):
+    """Compares two dictionaries with a tolerance for floating-point values."""
+    if len(dict1) != len(dict2):
+        return False
+
+    for key in dict1.keys():
+        if key not in dict2:
+            return False
+
+        value1 = dict1[key]
+        value2 = dict2[key]
+
+        if isinstance(value1, dict) and isinstance(value2, dict):
+            if not compareDictsWithTolerance(value1, value2, tolerance):
+                return False
+        elif isinstance(value1, list) and isinstance(value2, list):
+            if len(value1) != len(value2):
+                return False
+
+            for item1, item2 in zip(value1, value2):
+                if isinstance(item1, dict) and isinstance(item2, dict):
+                    if not compareDictsWithTolerance(item1, item2, tolerance):
+                        return False
+                elif isinstance(item1, float) and isinstance(item2, float):
+                    if abs(item1 - item2) > tolerance:
+                        return False
+                elif item1 != item2:
+                    return False
+        elif isinstance(value1, float) and isinstance(value2, float):
+            if abs(value1 - value2) > tolerance:
+                return False
+        elif value1 != value2:
+            return False
+
+    return True
 
 # Write features file
 def writeYAML(features_name: str, features: dict):
@@ -150,17 +192,11 @@ def filterFeaturesData(features_data, curve_types, surface_types):
         else:
             i+=1 
 
-def writeMeshPLY(filename, mesh_dict):
-    mesh = o3d.geometry.TriangleMesh()
-    mesh.vertices = o3d.utility.Vector3dVector(np.asarray(mesh_dict['vertices']))
-    mesh.triangles = o3d.utility.Vector3iVector(np.asarray(mesh_dict['faces']))
+def writeMeshPLY(filename, mesh):
     o3d.io.write_triangle_mesh(filename + '.ply', mesh, print_progress=True, compressed=True)
 
 def loadMeshPLY(filename):
-    mesh = o3d.io.read_triangle_mesh(str(filename) + '.ply', print_progress=True)
-    v, f = np.asarray(mesh.vertices), np.asarray(mesh.triangles)
-    mesh = {'vertices': v, 'faces': f}
-    return mesh
+    return o3d.io.read_triangle_mesh(str(filename) + '.ply', print_progress=True)
 
 def list_files(input_dir: str, formats: list, return_str=False) -> list:
     files = []
