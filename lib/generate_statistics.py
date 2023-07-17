@@ -108,8 +108,6 @@ def generateStatistics(geometries_data, mesh):
                 curves_dict[tp]['number_void_curves'] += 1
 
     number_void_curves = sum([curves_dict[tp]['number_void_curves'] for tp in curves_dict.keys()])
-    result['number_void_curves'] = number_void_curves
-    result['curves'] = curves_dict
 
     print("Generating for surfaces: ")
     for surface in tqdm(geometries_data['surfaces']):
@@ -133,6 +131,9 @@ def generateStatistics(geometries_data, mesh):
     total_area_of_surfaces = sum([surfaces_dict[tp]['area'] for tp in surfaces_dict.keys()])
     number_void_surfaces = sum([surfaces_dict[tp]['number_void_surfaces'] for tp in surfaces_dict.keys()])
     surfaces_dict['area'] = total_area_of_surfaces
-    result['surfaces'] = surfaces_dict
+    
+    result['number_void_curves'] = number_void_curves
     result['number_void_surfaces'] = number_void_surfaces
+    result['curves'] = curves_dict
+    result['surfaces'] = surfaces_dict
     return result

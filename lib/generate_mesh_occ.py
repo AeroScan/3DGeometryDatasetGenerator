@@ -272,7 +272,6 @@ def computeMeshData(vertices, edges, faces, topology):
             local_edge_map = np.arange(len(edge_vert_local))
 
             if len(edge_param_local) != len(edge_param_global):
-                print('Agregating params')
                 # need to merge two edge params
                 merge_params, local_edge_map, global_edge_map = paramsMerge(edge_param_local, edge_param_global)
     
