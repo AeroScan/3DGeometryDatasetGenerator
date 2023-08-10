@@ -18,9 +18,10 @@ from lib.tools import (
     create_dirs,
     list_files,
     compareDictsWithTolerance)
+from lib.logger import Logger
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
-from lib.generate_statistics import generateStatistics, generateStatisticsOld
+from lib.generate_statistics import generateStatistics
 
 from asGeometryOCCWrapper.curves import CurveFactory
 from asGeometryOCCWrapper.surfaces import SurfaceFactory
@@ -41,6 +42,9 @@ def parse_opt():
     parser.add_argument('--use_highest_dim', action='store_true', help='Boolean flag to indicate whether to use the highest dimension of the input CAD as reference or not')
     parser.add_argument('--delete_old_data', action='store_true', help='Boolean flag indicating whether to delete old data in the output directory')
     parser.add_argument('--verbose', action='store_true', help='Boolean flag indicating whether to run the code in debug mode.')
+    parser.add_argument('--log_folder', type=str, default="", help="Path to the folder where the logs will be saved.")
+    parser.add_argument('--log_file', type=str, default="", help="Name of the log file. Default: log_\{timestamp\}.txt")
+    parser.add_argument('--log_level', type=str, default="debug", help="Level fo the log. Possible levels: debug, info, warn, error.")
 
     # Mesh parser general
     mesh_parser = parser.add_argument_group("Mesh arguments")
@@ -74,6 +78,9 @@ def main():
     meta_path = args.meta_path
     delete_old_data = args.delete_old_data
     verbose = args.verbose
+    log_folder = args.log_folder
+    log_file = args.log_file
+    log_level = args.log_level
     # <--- General arguments
 
     # ---> Mesh arguments
@@ -94,6 +101,8 @@ def main():
     stats_folder = args.stats_folder
     only_stats = args.only_stats
     # <--- Stats arguments
+
+    logger = Logger(log_file, log_folder, log_level, verbose)
 
     # ---> Directories verifications
     files = get_files_from_input_path(input_path)
@@ -142,7 +151,7 @@ def main():
                 meta_file = os.path.join(meta_path, meta_filename)
                 if os.path.isfile(meta_file):
                     with open(meta_file, "r") as meta_file_object:
-                        print("\n[Normalization] Using meta_file")
+                        logger.log("\n[Normalization] Using meta_file", "info")
                         file_info = yaml.load(meta_file_object, Loader=yaml.FullLoader)
 
                         vertical_up_axis = np.array(file_info["vertical_up_axis"]) if \
@@ -156,21 +165,21 @@ def main():
             scale_to_mm = 1000/unit_scale
             unit_scale = 1000
 
-            print(f'\nProcessing file - Model {filename} - [{idx+1}/{len(files)}]:')
+            logger.log(f'\nProcessing file - Model {filename} - [{idx+1}/{len(files)}]:', "info")
 
             shape, geometries_data, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
                                                             use_highest_dim=use_highest_dim, scale_to_mm=scale_to_mm, \
                                                             debug=verbose)
-            print("\n[PythonOCC] Done.")
+            logger.log("\n[PythonOCC] Done.", "info")
             if mesh_generator == "gmsh":
-                print('\n[GMSH]:')
+                logger.log('\n[GMSH]:', "info")
                 features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, \
                                              features=features, mesh_name=mesh_name, \
                                                 shape=shape, use_highest_dim=use_highest_dim, \
                                                     debug=verbose)
-                print("\n[GMSH] Done.")
+                logger.log("\n[GMSH] Done.", "info")
 
-            print('\n[Normalization]')
+            logger.log('\n[Normalization]', "info")
             R = np.eye(3)
             t = np.zeros(3)
             s = 1./unit_scale
@@ -209,17 +218,17 @@ def main():
 
                 del geometries_data['surfaces'][face_idx]['mesh_data']
 
-            print("\n[Normalization] Done.")
+            logger.log("\n[Normalization] Done.", "info")
 
-            print('\n[Generating statistics]')
+            logger.log('\n[Generating statistics]', "info")
             stats = generateStatistics(geometries_data, o3d_mesh)
-            print("\n[Statistics] Done.")
+            logger.log("\n[Statistics] Done.", "info")
 
-            print('\n[Writing meshes]')
+            logger.log('\n[Writing meshes]', "info")
             writeMeshPLY(mesh_name, o3d_mesh)
-            print('\n[Writing meshes] Done.')
+            logger.log('\n[Writing meshes] Done.', "info")
 
-            print('\n[Writing Features]')
+            logger.log('\n[Writing Features]', "info")
              # creating features dict
             features = {'curves': [], 'surfaces': []}
             for edge_data in geometries_data['curves']:
@@ -229,24 +238,24 @@ def main():
                 if face_data['geometry'] is not None:
                     features['surfaces'].append(dict(face_data['geometry'].toDict()))
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
-            print("\n[Writing Features] Done.")
+            logger.log("\n[Writing Features] Done.", "info")
 
-            print('\n[Writing Statistics]')
+            logger.log('\n[Writing Statistics]', "info")
             writeJSON(stats_name, stats)
-            print("\n[Writing Statistics] Done.")
+            logger.log("\n[Writing Statistics] Done.", "info")
 
-            print('\n[Generator] Process done.')
+            logger.log('\n[Generator] Process done.', "info")
 
             #del stats
             del features
             del o3d_mesh
             gc.collect()
     else:
-        print("Reading features list...")
+        logger.log("Reading features list...", "info")
         features = list(set(features_files) - set(statistics_files)) if not delete_old_data else \
                                                                     features_files
         for idx, feature_name in enumerate(features):
-            print(f"\nProcessing file - Model {feature_name} - [{idx+1}/{len(features)}]:")
+            logger.log(f"\nProcessing file - Model {feature_name} - [{idx+1}/{len(features)}]:", "info")
 
             stats_name = os.path.join(stats_folder_dir, feature_name)
             remove_by_filename(stats_name, STATS_FORMATS)
@@ -268,15 +277,15 @@ def main():
                 surface.setMeshByGlobal(mesh)
                 geometries['surfaces'].append({'geometry': surface})
 
-            print("\nGenerating statistics...")
+            logger.log("\nGenerating statistics...", "info")
             stats = generateStatistics(geometries, mesh)
 
-            print("Writing stats in statistic file...")
+            logger.log("Writing stats in statistic file...", "info")
             writeJSON(stats_name, stats)
 
             del mesh, features_data, stats
             gc.collect()
-        print(f"\nDone. {len(features)} were processed.")
+        logger.log(f"\nDone. {len(features)} were processed.", "info")
     # <--- Main loop
 
 if __name__ == '__main__':
