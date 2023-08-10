@@ -12,6 +12,10 @@ CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.OBJ', '.obj']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
 
+def get_project_root() -> Path:
+    """Returns the path to project root."""
+    return Path(__file__).parent.parent
+
 # Convert a float to string
 def float2str(number, limit = 10) -> str:
     if abs(number) >= 10**limit:
