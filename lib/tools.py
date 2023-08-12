@@ -1,4 +1,5 @@
 import os
+import time
 import numpy as np
 import pickle
 import json
@@ -8,9 +9,19 @@ from pathlib import Path
 
 from OCC.Core.gp import gp_Trsf, gp_Vec, gp_Quaternion, gp_Mat
 
+
+
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.OBJ', '.obj']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
+
+def get_project_root() -> Path:
+    """Returns the path to project root."""
+    return Path(__file__).parent.parent
+
+def get_current_timestamp() -> float:
+    """Returns the current timestamp."""
+    return time.time()
 
 # Convert a float to string
 def float2str(number, limit = 10) -> str:
@@ -143,7 +154,7 @@ PKL_NAMES  = ['pkl']
 def writeFeatures(features_name: str, features: dict, tp: str):
     for feature in features['surfaces']:
         if feature['face_indices'] is None:
-            print(feature)
+            continue
     if tp.lower() in YAML_NAMES:
         writeYAML(f'{features_name}', features)
     elif tp.lower() in PKL_NAMES:

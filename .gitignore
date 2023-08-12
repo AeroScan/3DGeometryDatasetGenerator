@@ -2,3 +2,4 @@ data
 result
 __pycache__
 files_unprocessed.txt
+logs/*
