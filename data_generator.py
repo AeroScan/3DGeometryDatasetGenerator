@@ -18,7 +18,7 @@ from lib.tools import (
     create_dirs,
     list_files,
     compareDictsWithTolerance)
-from lib import Logger
+from lib.logger import Logger
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.generate_statistics import generateStatistics
@@ -151,7 +151,7 @@ def main():
                 meta_file = os.path.join(meta_path, meta_filename)
                 if os.path.isfile(meta_file):
                     with open(meta_file, "r") as meta_file_object:
-                        logger.log("\n[Normalization] Using meta_file", "info")
+                        logger.log("[Normalization] Using meta_file", "info")
                         file_info = yaml.load(meta_file_object, Loader=yaml.FullLoader)
 
                         vertical_up_axis = np.array(file_info["vertical_up_axis"]) if \
@@ -164,22 +164,21 @@ def main():
                         
             scale_to_mm = 1000/unit_scale
             unit_scale = 1000
-
-            logger.log(f'\nProcessing file - Model {filename} - [{idx+1}/{len(files)}]:', "info")
+            logger.log(f'Processing file - Model {filename} - [{idx+1}/{len(files)}]:', "info")
 
             shape, geometries_data, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
                                                             use_highest_dim=use_highest_dim, scale_to_mm=scale_to_mm, \
                                                             debug=verbose)
-            logger.log("\n[PythonOCC] Done.", "info")
+            logger.log("[PythonOCC] Done.", "info")
             if mesh_generator == "gmsh":
-                logger.log('\n[GMSH]:', "info")
+                logger.log('[GMSH]:', "info")
                 features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, \
                                              features=features, mesh_name=mesh_name, \
                                                 shape=shape, use_highest_dim=use_highest_dim, \
                                                     debug=verbose)
-                logger.log("\n[GMSH] Done.", "info")
+                logger.log("[GMSH] Done.", "info")
 
-            logger.log('\n[Normalization]', "info")
+            logger.log('[Normalization]', "info")
             R = np.eye(3)
             t = np.zeros(3)
             s = 1./unit_scale
@@ -218,17 +217,17 @@ def main():
 
                 del geometries_data['surfaces'][face_idx]['mesh_data']
 
-            logger.log("\n[Normalization] Done.", "info")
+            logger.log("[Normalization] Done.", "info")
 
-            logger.log('\n[Generating statistics]', "info")
+            logger.log('[Generating statistics]', "info")
             stats = generateStatistics(geometries_data, o3d_mesh)
-            logger.log("\n[Statistics] Done.", "info")
+            logger.log("[Statistics] Done.", "info")
 
-            logger.log('\n[Writing meshes]', "info")
+            logger.log('[Writing meshes]', "info")
             writeMeshPLY(mesh_name, o3d_mesh)
-            logger.log('\n[Writing meshes] Done.', "info")
+            logger.log('[Writing meshes] Done.', "info")
 
-            logger.log('\n[Writing Features]', "info")
+            logger.log('[Writing Features]', "info")
              # creating features dict
             features = {'curves': [], 'surfaces': []}
             for edge_data in geometries_data['curves']:
@@ -238,13 +237,13 @@ def main():
                 if face_data['geometry'] is not None:
                     features['surfaces'].append(dict(face_data['geometry'].toDict()))
             writeFeatures(features_name=features_name, features=features, tp=features_file_type)
-            logger.log("\n[Writing Features] Done.", "info")
+            logger.log("[Writing Features] Done.", "info")
 
-            logger.log('\n[Writing Statistics]', "info")
+            logger.log('[Writing Statistics]', "info")
             writeJSON(stats_name, stats)
-            logger.log("\n[Writing Statistics] Done.", "info")
+            logger.log("[Writing Statistics] Done.", "info")
 
-            logger.log('\n[Generator] Process done.', "info")
+            logger.log('[Generator] Process done.', "info")
 
             #del stats
             del features
@@ -255,7 +254,7 @@ def main():
         features = list(set(features_files) - set(statistics_files)) if not delete_old_data else \
                                                                     features_files
         for idx, feature_name in enumerate(features):
-            logger.log(f"\nProcessing file - Model {feature_name} - [{idx+1}/{len(features)}]:", "info")
+            logger.log(f"Processing file - Model {feature_name} - [{idx+1}/{len(features)}]:", "info")
 
             stats_name = os.path.join(stats_folder_dir, feature_name)
             remove_by_filename(stats_name, STATS_FORMATS)
@@ -277,7 +276,7 @@ def main():
                 surface.setMeshByGlobal(mesh)
                 geometries['surfaces'].append({'geometry': surface})
 
-            logger.log("\nGenerating statistics...", "info")
+            logger.log("Generating statistics...", "info")
             stats = generateStatistics(geometries, mesh)
 
             logger.log("Writing stats in statistic file...", "info")
@@ -285,7 +284,7 @@ def main():
 
             del mesh, features_data, stats
             gc.collect()
-        logger.log(f"\nDone. {len(features)} were processed.", "info")
+        logger.log(f"Done. {len(features)} were processed.", "info")
     # <--- Main loop
 
 if __name__ == '__main__':

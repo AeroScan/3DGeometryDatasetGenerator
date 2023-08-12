@@ -1,7 +1,9 @@
 import numpy as np
 from tqdm import tqdm
 import open3d as o3d
+from .logger import Logger
 
+logger = Logger()
 
 def generate_area_from_surface(surface, vertices: np.array, faces: np.array) -> float:
     """ This function returns the area from the received surface """
@@ -46,7 +48,7 @@ def generateStatisticsOld(features, mesh, only_stats=False):
 
     result['bounding_box'] = mesh_obj.get_min_bound().tolist() + (mesh_obj.get_max_bound() - mesh_obj.get_min_bound()).tolist() 
 
-    print("Generating for curves: ")
+    logger.log("Generating for curves: ", "info")
     for curve in tqdm(features["curves"]):
         if curve is not None:
             tp = curve["type"]
@@ -58,7 +60,7 @@ def generateStatisticsOld(features, mesh, only_stats=False):
     result['number_void_curves'] = 0
     surfaces_dict['area'] = 0.0
     total_area_of_surfaces = 0.0
-    print("Generating for surfaces: ")
+    logger.log("Generating for surfaces: ", "info")
     for surface in tqdm(features['surfaces']):
         if surface is not None:
             tp = surface["type"]
@@ -88,7 +90,7 @@ def generateStatistics(geometries_data, mesh):
     curves_dict = {}
     surfaces_dict = {}
 
-    print("Generating for curves: ")
+    logger.log("Generating for curves: ", "info")
     for curve in tqdm(geometries_data["curves"]):
         if curve['geometry'] is not None:
             tp = curve['geometry'].getType()
@@ -109,7 +111,7 @@ def generateStatistics(geometries_data, mesh):
 
     number_void_curves = sum([curves_dict[tp]['number_void_curves'] for tp in curves_dict.keys()])
 
-    print("Generating for surfaces: ")
+    logger.log("Generating for surfaces: ", "info")
     for surface in tqdm(geometries_data['surfaces']):
         if surface['geometry'] is not None:
             tp = surface['geometry'].getType()

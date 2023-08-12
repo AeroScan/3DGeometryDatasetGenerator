@@ -9,6 +9,8 @@ from pathlib import Path
 
 from OCC.Core.gp import gp_Trsf, gp_Vec, gp_Quaternion, gp_Mat
 
+
+
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.OBJ', '.obj']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
@@ -152,7 +154,7 @@ PKL_NAMES  = ['pkl']
 def writeFeatures(features_name: str, features: dict, tp: str):
     for feature in features['surfaces']:
         if feature['face_indices'] is None:
-            print(feature)
+            continue
     if tp.lower() in YAML_NAMES:
         writeYAML(f'{features_name}', features)
     elif tp.lower() in PKL_NAMES:
