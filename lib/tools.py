@@ -1,4 +1,5 @@
 import os
+import time
 import numpy as np
 import pickle
 import json
@@ -15,6 +16,10 @@ FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
 def get_project_root() -> Path:
     """Returns the path to project root."""
     return Path(__file__).parent.parent
+
+def get_current_timestamp() -> float:
+    """Returns the current timestamp."""
+    return time.time()
 
 # Convert a float to string
 def float2str(number, limit = 10) -> str:

@@ -18,7 +18,7 @@ from lib.tools import (
     create_dirs,
     list_files,
     compareDictsWithTolerance)
-from lib.logger import Logger
+from lib import Logger
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
 from lib.generate_statistics import generateStatistics
