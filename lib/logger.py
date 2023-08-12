@@ -10,6 +10,12 @@ class Logger:
                  "info": logging.INFO,
                  "warn": logging.WARN,
                  "error": logging.ERROR}
+    
+    _self = None
+    def __new__(cls, filename: str = "", foldername: str = "", level: str = "error", stdout: bool = False):
+        if cls._self is None:
+            cls._self = super(Logger, cls).__new__(cls)
+        return cls._self
 
     def __init__(self, filename: str = "", foldername: str = "", level: str = "error", stdout: bool = False):
         if not len(foldername):

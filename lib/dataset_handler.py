@@ -3,6 +3,12 @@ import logging
 
 class DatasetHandler(logging.Handler):
 
+    _self = None
+    def __new__(cls, filename, foldername):
+        if cls._self is None:
+            cls._self = super().__new__(cls)
+        return cls._self
+
     def __init__(self, filename: str, foldername: str):
         super().__init__()
         self.filename = os.path.join(foldername, filename)
