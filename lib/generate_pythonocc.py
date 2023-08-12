@@ -97,7 +97,7 @@ def addFacesAndAssociatedEdgesToDict(faces, topology, faces_dict, edges_dict, ve
     return faces_dict, edges_dict, vertices_dict
 
 def processHighestDim(topology, generate_mesh):
-    logger.log('[PythonOCC] Using Highest Dim Only, trying with Solids...', "info")
+    logger.log('[Generate PythonOCC] Using Highest Dim Only, trying with Solids...', "info")
     faces_dict = {}
     edges_dict = {}
 
@@ -107,17 +107,17 @@ def processHighestDim(topology, generate_mesh):
         done = True
 
     if not done:
-        logger.log('[PythonOCC] There are no Solids, using Faces as highest dim...', "info")
+        logger.log('[Generate PythonOCC] There are no Solids, using Faces as highest dim...', "info")
         faces_dict, edges_dict, vertices_dict = addFacesAndAssociatedEdgesToDict(topology.faces(), topology, faces_dict, edges_dict)
         done = (faces_dict != {})
 
         if not done == 0:
-            logger.log('[PythonOCC] There are no Faces, using Curves as highest dim...', "info")
+            logger.log('[Generate PythonOCC] There are no Faces, using Curves as highest dim...', "info")
             edges_dict, vertices_dict = addEdgesAndAssociatedVerticesToDict(topology.edges(), edges_dict) 
             done = (edges_dict != {})
 
             if not done == 0:
-                logger.log('[PythonOCC] There are no Entities to use...', "info")
+                logger.log('[Generate PythonOCC] There are no Entities to use...', "info")
     
     vertices = []
     for key in vertices_dict:
@@ -137,7 +137,7 @@ def processHighestDim(topology, generate_mesh):
     
 
 def processNoHighestDim(topology, generate_mesh):
-    logger.log('[PythonOCC] Using all the Shapes', "info")
+    logger.log('[Generate PythonOCC] Using all the Shapes', "info")
 
     vertices = [v for v in topology.vertices()]
     edges = [e for e in topology.edges()]
@@ -149,7 +149,7 @@ def processNoHighestDim(topology, generate_mesh):
 
 # Generate features by dimensions
 def process(shape, generate_mesh=True, use_highest_dim=True):
-    logger.log('[PythonOCC] Topology Exploration to Generate Features by Dimension', "info")
+    logger.log('[Generate PythonOCC] Topology Exploration to Generate Features by Dimension', "info")
 
     topology = TopologyExplorer(shape)
 

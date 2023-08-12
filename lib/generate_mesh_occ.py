@@ -98,7 +98,7 @@ def addEntityToMap(index, entity, map):
 def computeMeshData(vertices, edges, faces, topology):
     vertices_mesh_data = []
     vertices_map = {}
-    logger.log('[PythonOCC] Mapping Vertices...', "info")
+    logger.log('[Generate Mesh OCC] Mapping Vertices...', "info")
     for i, vertex in enumerate(tqdm(vertices)):
         vertices_mesh_data.append(-1)
         addEntityToMap(i, vertex, vertices_map)
@@ -107,7 +107,7 @@ def computeMeshData(vertices, edges, faces, topology):
     edges_mesh_data = []
     edge_vertices_map = []
     edges_map = {}
-    logger.log('[PythonOCC] Mapping Edges...', "info")
+    logger.log('[Generate Mesh OCC] Mapping Edges...', "info")
     for i, edge in enumerate(tqdm(edges)):
         edges_mesh_data.append({'vert_indices': [], 'vert_parameters': []})
         addEntityToMap(i, edge, edges_map)
@@ -117,7 +117,7 @@ def computeMeshData(vertices, edges, faces, topology):
     faces_mesh_data = []
     face_edges_map = []
     faces_map = {}
-    logger.log('[PythonOCC] Mapping Faces...', "info")
+    logger.log('[Generate Mesh OCC] Mapping Faces...', "info")
     for i, face in enumerate(tqdm(faces)):
         faces_mesh_data.append({'vert_indices': [], 'vert_parameters': [], 'face_indices': []})
         addEntityToMap(i, face, faces_map)
@@ -125,7 +125,7 @@ def computeMeshData(vertices, edges, faces, topology):
         face_edges_map.append(edges_indices)
     mesh_vertices = []
     mesh_faces = []
-    logger.log('[PythonOCC] Generating Mesh Data...', "info")
+    logger.log('[Generate Mesh OCC] Generating Mesh Data...', "info")
     for face_index, face in enumerate(tqdm(faces)):
 
         face_orientation = face.Orientation()
@@ -136,7 +136,7 @@ def computeMeshData(vertices, edges, faces, topology):
         transform = location.Transformation()
 
         if triangulation is None:
-            logger.log("[PythonOCC] The triangulation is None", "warn")
+            logger.log("[Generate Mesh OCC] The triangulation is None", "warn")
             continue
 
         number_vertices = triangulation.NbNodes()
@@ -162,7 +162,7 @@ def computeMeshData(vertices, edges, faces, topology):
 
             polygon = brep_tool.PolygonOnTriangulation(edge, triangulation, location) # projecting edge in the face triangulation
             if polygon is None:
-                logger.log("[PythonOCC] The polygon is None", "warn")
+                logger.log("[Generate Mesh OCC] The polygon is None", "warn")
                 continue
 
             edge_vert_local = np.asarray(polygon.Nodes(), dtype=np.int64) - 1 # map from mesh edge indices to face mesh indices
@@ -171,13 +171,13 @@ def computeMeshData(vertices, edges, faces, topology):
             edge_vert_local_unique = np.unique(edge_vert_local)
             if (len(edge_vert_local) -  len(edge_vert_local_unique)) > 1:
                 has_degenerated_edge = True
-                logger.log(f'WARNING 1: degenerated edge ({edge_index}), canceling face ({face_index})', "warn")
+                logger.log(f'[Generate Mesh OCC] degenerated edge ({edge_index}), canceling face ({face_index})', "warn")
                 break
 
             elif (len(edge_vert_local) - len(edge_vert_local_unique)) == 1 and  \
                  (len(edge_vert_local) == 2 or edge_vert_local[0] != edge_vert_local[-1] or len(vertices_index) == 2):
                 has_degenerated_edge = True
-                logger.log(f'WARNING 2: degenerated edge ({edge_index}), canceling face ({face_index})', "warn")
+                logger.log(f'[Generate Mesh OCC] degenerated edge ({edge_index}), canceling face ({face_index})', "warn")
                 break
 
             if len(edges_mesh_data[edge_index]['vert_indices']) == 0:
@@ -209,7 +209,7 @@ def computeMeshData(vertices, edges, faces, topology):
                 is_reversed = np.allclose(vertices_array, nodes_array[indices[1]], rtol=0.)
 
                 if is_foward and is_reversed:
-                    logger.log('is_foward and is_reversed', "error")
+                    logger.log('[Generate Mesh OCC] is_foward and is_reversed', "error")
                     continue
             
             bound_indices = [-1, 0] if is_reversed else [0, -1]
@@ -219,7 +219,7 @@ def computeMeshData(vertices, edges, faces, topology):
             diff_mask = current_vertex != vertices_index
             if np.any(np.logical_and(diff_mask, current_vertex != -1)):
                 has_degenerated_edge = True
-                logger.log(f'WARNING 3: degenerated edge ({edge_index}), canceling face ({face_index})', "warn")
+                logger.log(f'[Generate Mesh OCC] degenerated edge ({edge_index}), canceling face ({face_index})', "warn")
                 break
             else:
                 face_vertex_node_map[vertex_nodes] = vertices_index
@@ -390,7 +390,7 @@ def computeMeshData(vertices, edges, faces, topology):
                     if not (np.allclose(mesh_vertices[i1_m], np.array(triangulation.Node(i1).Transformed(transform).Coord()), rtol=0.) and \
                            np.allclose(mesh_vertices[i2_m], np.array(triangulation.Node(i2).Transformed(transform).Coord()), rtol=0.) and \
                            np.allclose(mesh_vertices[i3_m], np.array(triangulation.Node(i3).Transformed(transform).Coord()), rtol=0.)):
-                        logger.log(f'Vertices remapping problem.\n' \
+                        logger.log(f'[Generate Mesh OCC] Vertices remapping problem.\n' \
                               f'{mesh_vertices[i1_m]} != {np.array(triangulation.Node(i1).Transformed(transform).Coord())} or \n' \
                               f'{mesh_vertices[i2_m]} != {np.array(triangulation.Node(i2).Transformed(transform).Coord())} or \n' \
                               f'{mesh_vertices[i3_m]} != {np.array(triangulation.Node(i3).Transformed(transform).Coord())}', "error")
@@ -423,7 +423,7 @@ def computeMeshData(vertices, edges, faces, topology):
     return mesh_vertices, mesh_faces, edges_mesh_data, faces_mesh_data
 
 def OCCMeshGeneration(shape):
-    logger.log('[PythonOCC] Mesh Generation...', "info")
+    logger.log('[Generate Mesh OCC] Mesh Generation...', "info")
     parameters = IMeshTools_Parameters()
 
     #Ref: https://dev.opencascade.org/doc/refman/html/struct_i_mesh_tools___parameters.html#a3027dc569da3d3e3fcd76e0615befb27

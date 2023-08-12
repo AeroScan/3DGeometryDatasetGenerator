@@ -20,15 +20,18 @@ class Logger:
     def __init__(self, filename: str = "", foldername: str = "", level: str = "error", stdout: bool = False):
         if not len(foldername):
             foldername = os.path.join(get_project_root(), "logs")
-            os.makedirs(foldername, exist_ok=True)
+        os.makedirs(foldername, exist_ok=True)
         if not len(filename):
-            filename = f"log_{get_current_timestamp()}.txt"
+            filename = f"log_{get_current_timestamp()}"
+        else:
+            if os.path.isfile(os.path.join(foldername, filename)):
+                filename += "_" + str(get_current_timestamp())
 
         self.logger = logging.getLogger()
         self.logger.setLevel(Logger.LOG_LEVEL[level.lower()])
 
         formatter = logging.Formatter("'%(asctime)s - %(levelname)s - %(message)s")
-        handler = DatasetHandler(filename, foldername)
+        handler = DatasetHandler(filename+".txt", foldername)
         handler.setFormatter(formatter)
 
         if stdout:

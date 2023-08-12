@@ -48,7 +48,7 @@ def generateStatisticsOld(features, mesh, only_stats=False):
 
     result['bounding_box'] = mesh_obj.get_min_bound().tolist() + (mesh_obj.get_max_bound() - mesh_obj.get_min_bound()).tolist() 
 
-    logger.log("Generating for curves: ", "info")
+    logger.log("[Generate statistics] Generating for curves: ", "info")
     for curve in tqdm(features["curves"]):
         if curve is not None:
             tp = curve["type"]
@@ -60,7 +60,7 @@ def generateStatisticsOld(features, mesh, only_stats=False):
     result['number_void_curves'] = 0
     surfaces_dict['area'] = 0.0
     total_area_of_surfaces = 0.0
-    logger.log("Generating for surfaces: ", "info")
+    logger.log("[Generate statistics] Generating for surfaces: ", "info")
     for surface in tqdm(features['surfaces']):
         if surface is not None:
             tp = surface["type"]
@@ -90,7 +90,7 @@ def generateStatistics(geometries_data, mesh):
     curves_dict = {}
     surfaces_dict = {}
 
-    logger.log("Generating for curves: ", "info")
+    logger.log("[Generate statistics] Generating for curves: ", "info")
     for curve in tqdm(geometries_data["curves"]):
         if curve['geometry'] is not None:
             tp = curve['geometry'].getType()
@@ -111,7 +111,7 @@ def generateStatistics(geometries_data, mesh):
 
     number_void_curves = sum([curves_dict[tp]['number_void_curves'] for tp in curves_dict.keys()])
 
-    logger.log("Generating for surfaces: ", "info")
+    logger.log("[Generate statistics] Generating for surfaces: ", "info")
     for surface in tqdm(geometries_data['surfaces']):
         if surface['geometry'] is not None:
             tp = surface['geometry'].getType()
