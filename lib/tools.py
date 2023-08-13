@@ -8,12 +8,28 @@ import open3d as o3d
 from pathlib import Path
 
 from OCC.Core.gp import gp_Trsf, gp_Vec, gp_Quaternion, gp_Mat
-
-
+from OCC.Core.Bnd import Bnd_Box
+from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
+from OCC.Core.BRepBndLib import brepbndlib_Add
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.OBJ', '.obj']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
+
+def get_boundingbox(shape, tolerance=1e-6, use_mesh=True):
+    bbox = Bnd_Box()
+    bbox.SetGap(tolerance)
+    if use_mesh:
+        mesh = BRepMesh_IncrementalMesh()
+        mesh.SetParallelDefault(True)
+        # mesh.SetParallel(True)
+        mesh.SetShape(shape)
+        mesh.Perform()
+        assert mesh.IsDone()
+    brepbndlib_Add(shape, bbox, use_mesh)
+
+    xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+    return [xmin, ymin, zmin, xmax, ymax, zmax, xmax-xmin, ymax-ymin, zmax-zmin]
 
 def get_project_root() -> Path:
     """Returns the path to project root."""

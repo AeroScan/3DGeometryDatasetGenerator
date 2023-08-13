@@ -17,7 +17,8 @@ from lib.tools import (
     loadFeatures,
     create_dirs,
     list_files,
-    compareDictsWithTolerance)
+    compareDictsWithTolerance,
+    get_boundingbox)
 from lib.logger import Logger
 from lib.generate_gmsh import processGMSH
 from lib.generate_pythonocc import processPythonOCC
@@ -170,10 +171,14 @@ def main():
                                                             use_highest_dim=use_highest_dim, scale_to_mm=scale_to_mm, \
                                                             debug=False)
             if mesh_generator == "gmsh":
+                bbox = get_boundingbox(shape, use_mesh=True)
+                diag = np.sqrt(bbox[6]**2 + bbox[7]**2 + bbox[8]**2)
+                max_length = diag * 1e-5
+
                 features, mesh = processGMSH(input_name=file, mesh_size=mesh_size, \
                                              features=features, mesh_name=mesh_name, \
                                                 shape=shape, use_highest_dim=use_highest_dim, \
-                                                    debug=False)
+                                                    debug=False, max_length=max_length)
 
             logger.log('[Data Generator] Normalizing', "info")
             R = np.eye(3)

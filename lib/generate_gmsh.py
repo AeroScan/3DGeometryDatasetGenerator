@@ -105,10 +105,11 @@ def mergeFeaturesOCCandGMSH(features: dict, entities):
     return features
 
 # Configure the GMSH
-def setupGMSH(mesh_size: float, use_debug=True):
+def setupGMSH(mesh_size: float, use_debug=True, max_length=0):
 
-    gmsh.option.setNumber("Mesh.MeshSizeMin", 1)
-    gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
+    # gmsh.option.setNumber("Mesh.MeshSizeMin", 1)
+    # gmsh.option.setNumber("Mesh.MeshSizeMax", mesh_size)
+    gmsh.option.setNumber("Mesh.CharacteristicLengthMax", max_length)
     
     gmsh.option.setNumber("General.ExpertMode", 1)
     
@@ -178,7 +179,7 @@ def generateMesh():
 #     f.write(obj_content)
 
 # Main function
-def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: str, shape = None, use_highest_dim=True, debug=False):
+def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: str, shape = None, use_highest_dim=True, debug=False, max_length=0):
     global FIRST_NODE_TAG, FIRST_ELEM_TAG
     try:
         gmsh.initialize()
@@ -191,7 +192,7 @@ def processGMSH(input_name: str, mesh_size: float, features: dict, mesh_name: st
         
         gmsh.model.occ.synchronize()
 
-        setupGMSH(mesh_size=mesh_size, use_debug=debug)
+        setupGMSH(mesh_size=mesh_size, use_debug=debug, max_length=max_length)
 
         gmsh.model.mesh.generate(2)
 
