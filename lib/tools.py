@@ -11,6 +11,7 @@ from OCC.Core.gp import gp_Trsf, gp_Vec, gp_Quaternion, gp_Mat
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
 from OCC.Core.BRepBndLib import brepbndlib_Add
+from OCC.Core.IMeshTools import IMeshTools_Parameters
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.OBJ', '.obj']
@@ -20,7 +21,14 @@ def get_boundingbox(shape, tolerance=1e-6, use_mesh=True):
     bbox = Bnd_Box()
     bbox.SetGap(tolerance)
     if use_mesh:
-        mesh = BRepMesh_IncrementalMesh()
+        parameters = IMeshTools_Parameters()
+        parameters.MeshAlgo = -1
+        parameters.Angle = 0.1
+        parameters.Deflection = 0.01
+        parameters.MinSize = 0.01
+        parameters.Relative = True
+        parameters.InParallel = True
+        mesh = BRepMesh_IncrementalMesh(theParameters=parameters)
         mesh.SetParallelDefault(True)
         # mesh.SetParallel(True)
         mesh.SetShape(shape)
