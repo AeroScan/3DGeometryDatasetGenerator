@@ -1,4 +1,6 @@
 import os
+from turtle import setup
+from typing import List
 import numpy as np
 import pickle
 import json
@@ -6,11 +8,34 @@ import yaml
 import open3d as o3d
 from pathlib import Path
 
+from OCC.Extend.DataExchange import read_step_file_with_names_colors
 from OCC.Core.gp import gp_Trsf, gp_Vec, gp_Quaternion, gp_Mat
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.OBJ', '.obj']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
+
+
+def load_file_with_semantic_data(input_file: str, json_file: str) -> list:
+    setup_file = loadJSON(json_file)["classes"]
+    classes = [obj["class"] for obj in setup_file]
+    
+    output = {}
+    output = read_step_file_with_names_colors(input_file)
+    
+    shapes = []
+    
+    for shp, name_color_list in output.items():
+        shape = shp
+        name = name_color_list[0]
+        color = name_color_list[1]
+        
+        if name not in classes:
+            continue
+        shapes.append((shape, name, color))
+    
+    return shapes
+        
 
 # Convert a float to string
 def float2str(number, limit = 10) -> str:

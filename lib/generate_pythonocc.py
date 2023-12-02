@@ -2,12 +2,13 @@ from tqdm import tqdm
 import numpy as np
 
 from OCC.Extend.DataExchange import read_step_file
-from OCC.Extend.TopologyUtils import TopologyExplorer
+from OCC.Extend.TopologyUtils import TopologyExplorer, list_of_shapes_to_compound
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.gp import gp_Trsf
 import OCC.Core.ShapeFix as ShapeFix
 
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
+from lib.tools import load_file_with_semantic_data
 from asGeometryOCCWrapper import CurveFactory, SurfaceFactory
 
 MAX_INT = 2**31 - 1
@@ -167,7 +168,18 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
     return geometries_data, mesh
 
 def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, scale_to_mm=1, debug=False) -> dict:
-    shape = read_step_file(input_name, verbosity=debug)
+    shape = None
+    if True: # To change by a new parameter
+        shapes_list = load_file_with_semantic_data(input_name, "/home/user/Workspace/furg/tcc/CADAnnotatorTool/config/setup.json")
+        shapes = []
+        for shp in shapes_list:
+            shapes.append(shp[0])
+
+        shape, result = list_of_shapes_to_compound(shapes)
+        if not result:
+            print("Warning: all shapes were not added to the compound")
+    else:
+        shape = read_step_file(input_name, verbosity=debug)
 
     scaling_transformation = gp_Trsf()
     scaling_transformation.SetScaleFactor(scale_to_mm)
