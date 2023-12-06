@@ -7,8 +7,8 @@ from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.gp import gp_Trsf
 import OCC.Core.ShapeFix as ShapeFix
 
-from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData
-from lib.tools import load_file_with_semantic_data
+from lib.generate_mesh_occ import OCCMeshGeneration, addEntityToMap, computeMeshData, searchEntityInMap
+from lib.tools import load_file_with_semantic_data, writeJSON
 from asGeometryOCCWrapper import CurveFactory, SurfaceFactory
 
 MAX_INT = 2**31 - 1
@@ -36,7 +36,7 @@ def processEdgesAndFaces(vertices, edges, faces, topology, generate_mesh):
     edges_mesh_data = [{} for _ in edges]
     faces_mesh_data = [{} for _ in faces]        
     if generate_mesh:
-        mesh['vertices'], mesh['faces'], edges_mesh_data, faces_mesh_data = computeMeshData(vertices, edges, faces, topology)
+        mesh['vertices'], mesh['faces'], edges_mesh_data, faces_mesh_data, faces_map = computeMeshData(vertices, edges, faces, topology)
 
     geometries_data = {'curves': [], 'surfaces': []}
     for i in range(len(edges)):
@@ -48,7 +48,7 @@ def processEdgesAndFaces(vertices, edges, faces, topology, generate_mesh):
         if geometry is not None:
             geometries_data['surfaces'].append({'geometry': geometry, 'mesh_data': faces_mesh_data[i]})
 
-    return geometries_data, mesh
+    return geometries_data, mesh, faces_mesh_data, faces_map
 
 # def addEdgesToDict(edges, edges_dict):
 #     for edge in edges:
@@ -129,7 +129,7 @@ def processHighestDim(topology, generate_mesh):
     for key in faces_dict:
         faces += faces_dict[key]
 
-    geometries_data, mesh = processEdgesAndFaces(vertices, edges, faces, topology, generate_mesh)
+    geometries_data, mesh, _, _ = processEdgesAndFaces(vertices, edges, faces, topology, generate_mesh)
 
     return geometries_data, mesh
     
@@ -141,9 +141,9 @@ def processNoHighestDim(topology, generate_mesh):
     edges = [e for e in topology.edges()]
     faces = [f for f in topology.faces()]
 
-    geometries_data, mesh = processEdgesAndFaces(vertices, edges, faces, topology, generate_mesh)
+    geometries_data, mesh, faces_mesh_data, faces_map = processEdgesAndFaces(vertices, edges, faces, topology, generate_mesh)
 
-    return geometries_data, mesh
+    return geometries_data, mesh, faces_mesh_data, faces_map
 
 # Generate features by dimensions
 def process(shape, generate_mesh=True, use_highest_dim=True):
@@ -159,37 +159,48 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
     if use_highest_dim:
         geometries_data, mesh = processHighestDim(topology, generate_mesh)
     else:
-        geometries_data, mesh = processNoHighestDim(topology, generate_mesh)
+        geometries_data, mesh, faces_mesh_data, faces_map = processNoHighestDim(topology, generate_mesh)
 
     if mesh != {}:
         mesh['vertices'] = np.asarray(mesh['vertices'])
         mesh['faces'] = np.asarray(mesh['faces'])
     
-    return geometries_data, mesh
+    return geometries_data, mesh, faces_mesh_data, faces_map
 
-def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, scale_to_mm=1, debug=False) -> dict:
+def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, scale_to_mm=1, debug=False):
     shape = None
+    semantic_data = []
     if True: # To change by a new parameter
-        shapes_list = load_file_with_semantic_data(input_name, "/home/user/Workspace/furg/tcc/CADAnnotatorTool/config/setup.json")
+        shapes_list = load_file_with_semantic_data(input_name, "/home/user/Workspace/furg/tcc/CADAnnotatorTool/config/setup.json") # TODO: load json file from arguments
+        
         shapes = []
-        for shp in shapes_list:
-            shapes.append(shp[0])
-
+        for _shp, _name, _color in shapes_list:
+            shapes.append(_shp)
+            if (_name):
+                # faces_map = process_semantic(_shp)
+                # if _name in semantic_data.keys():
+                #     semantic_data[_name].append(_shp)
+                # else:
+                #     semantic_data[_name] = [_shp]
+                semantic_data.append((_name, _shp))
+        # for k, v in semantic_data:
+        #     print("******************new item******************")
+        #     print(k, v)
         shape, result = list_of_shapes_to_compound(shapes)
         if not result:
-            print("Warning: all shapes were not added to the compound")
+            print("Warning: all shapes were not added to the compound") # TODO: check this warning
     else:
         shape = read_step_file(input_name, verbosity=debug)
 
-    scaling_transformation = gp_Trsf()
-    scaling_transformation.SetScaleFactor(scale_to_mm)
-    transform_builder = BRepBuilderAPI_Transform(shape, scaling_transformation)
+    # scaling_transformation = gp_Trsf()
+    # scaling_transformation.SetScaleFactor(scale_to_mm)
+    # transform_builder = BRepBuilderAPI_Transform(shape, scaling_transformation)
 
-    shape = transform_builder.Shape()
+    # shape = transform_builder.Shape()
 
-    healer = ShapeFix.ShapeFix_Shape(shape)
-    healer.Perform()
-    shape = healer.Shape()
+    # healer = ShapeFix.ShapeFix_Shape(shape)
+    # healer.Perform()
+    # shape = healer.Shape()
 
     # extend_status = ShapeExtend_Status()
     # healer.Status(extend_status)
@@ -199,6 +210,44 @@ def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, 
     # else:
     #     print("Shape healing failed.")
 
-    geometries_data, mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
+    geometries_data, mesh, faces_mesh_data, faces_map_mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
+
+    if semantic_data and faces_mesh_data:
+        semantic_data_dict = {}
+        semantic_data_dict["semantic"] = []
+        for produto in semantic_data:
+            """ produto list:
+            ('Tank', <class 'TopoDS_Compound'>)
+            ('Pipe', <class 'TopoDS_Solid'>)
+            ('Pipe', <class 'TopoDS_Solid'>)
+            ('Valve', <class 'TopoDS_Compound'>)
+            ('Valve', <class 'TopoDS_Compound'>)
+            """
+            _name, _shape = produto
+            topology = TopologyExplorer(_shape)
+            faces = [f for f in topology.faces()]
+            """faces list:
+            <class 'TopoDS_Face'>, <class 'TopoDS_Face'>, <class 'TopoDS_Face'>, ...
+            """
+            for face in faces:
+                face_index = searchEntityInMap(face, faces_map_mesh)
+                if face_index == -1:
+                    print("Warning: Face do not found in mesh!") # TODO: Check this
+                    continue
+
+                data = {
+                    "label": _name,
+                    "vert_indices": faces_mesh_data[face_index]["vert_indices"],
+                    "vert_parameters": faces_mesh_data[face_index]["vert_parameters"],
+                    "face_indices": faces_mesh_data[face_index]["face_indices"]
+                }
+                semantic_data_dict["semantic"].append(data)                    
+            
+            # for h_c in faces_map.keys():
+            #     list_of_faces_mesh_from_hc = searchEntityInMap()
+            #     print(list_of_faces_mesh_from_hc)
+            #     exit()
+        
+        writeJSON("./semantic", semantic_data_dict)
     
     return shape, geometries_data, mesh

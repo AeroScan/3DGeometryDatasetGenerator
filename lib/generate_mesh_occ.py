@@ -423,7 +423,7 @@ def computeMeshData(vertices, edges, faces, topology):
         if type(edges_mesh_data[edge_index]['vert_parameters']) is not list:
             edges_mesh_data[edge_index]['vert_parameters'] = edges_mesh_data[edge_index]['vert_parameters'].tolist()
                                     
-    return mesh_vertices, mesh_faces, edges_mesh_data, faces_mesh_data
+    return mesh_vertices, mesh_faces, edges_mesh_data, faces_mesh_data, faces_map
 
 def OCCMeshGeneration(shape):
     print('\n[PythonOCC] Mesh Generation...')

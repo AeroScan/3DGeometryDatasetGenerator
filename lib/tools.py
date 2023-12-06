@@ -29,9 +29,7 @@ def load_file_with_semantic_data(input_file: str, json_file: str) -> list:
         shape = shp
         name = name_color_list[0]
         color = name_color_list[1]
-        
-        if name not in classes:
-            continue
+
         shapes.append((shape, name, color))
     
     return shapes
