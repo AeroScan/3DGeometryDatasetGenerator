@@ -10,16 +10,39 @@ from pathlib import Path
 
 from OCC.Extend.DataExchange import read_step_file_with_names_colors
 from OCC.Core.gp import gp_Trsf, gp_Vec, gp_Quaternion, gp_Mat
+from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
+from OCC.Core.gp import gp_Trsf
+import OCC.Core.ShapeFix as ShapeFix
+from OCC.Core.ShapeExtend import ShapeExtend_Status
 
 CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.OBJ', '.obj']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
 
 
-def load_file_with_semantic_data(input_file: str, json_file: str) -> list:
-    setup_file = loadJSON(json_file)["classes"]
-    classes = [obj["class"] for obj in setup_file]
-    
+def heal_shape(shape, scale_to_mm):
+    print("entrou")
+    scaling_transformation = gp_Trsf()
+    scaling_transformation.SetScaleFactor(scale_to_mm)
+    transform_builder = BRepBuilderAPI_Transform(shape, scaling_transformation)
+
+    shape = transform_builder.Shape()
+
+    healer = ShapeFix.ShapeFix_Shape(shape)
+    healer.Perform()
+    shape = healer.Shape()
+
+    extend_status = ShapeExtend_Status(0)
+    healer.Status(extend_status)
+
+    if extend_status == ShapeExtend_Status.ShapeExtend_OK:
+        print("Shape healing successful.")
+    else:
+        print("Shape healing failed.")
+
+    return shape
+
+def load_file_with_semantic_data(input_file: str) -> list:
     output = {}
     output = read_step_file_with_names_colors(input_file)
     

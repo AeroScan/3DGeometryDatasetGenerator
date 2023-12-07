@@ -3,12 +3,9 @@ import numpy as np
 
 from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer, list_of_shapes_to_compound
-from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
-from OCC.Core.gp import gp_Trsf
-import OCC.Core.ShapeFix as ShapeFix
 
-from lib.generate_mesh_occ import OCCMeshGeneration, addEntityToMap, computeMeshData, searchEntityInMap
-from lib.tools import generateSemanticYAML, load_file_with_semantic_data, writeJSON, writeYAML
+from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData, searchEntityInMap
+from lib.tools import heal_shape, load_file_with_semantic_data, writeYAML
 from asGeometryOCCWrapper import CurveFactory, SurfaceFactory
 
 MAX_INT = 2**31 - 1
@@ -167,48 +164,32 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
     
     return geometries_data, mesh, faces_mesh_data, faces_map
 
-def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, scale_to_mm=1, debug=False):
+def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, scale_to_mm=1, debug=False, generate_semantic: bool = True, labels: list = []):
     shape = None
     semantic_data = []
-    if True: # To change by a new parameter
-        shapes_list = load_file_with_semantic_data(input_name, "/home/user/Workspace/furg/tcc/CADAnnotatorTool/config/setup.json") # TODO: load json file from arguments
+    if generate_semantic: # To change by a new parameter
+        if not labels:
+            print("No labels found. Using default names from the file.")
+        shapes_list = load_file_with_semantic_data(input_name)
         
         shapes = []
         for _shp, _name, _color in shapes_list:
+            # healed_shape = heal_shape(_shp, scale_to_mm)
             shapes.append(_shp)
-            if (_name):
-                # faces_map = process_semantic(_shp)
-                # if _name in semantic_data.keys():
-                #     semantic_data[_name].append(_shp)
-                # else:
-                #     semantic_data[_name] = [_shp]
-                semantic_data.append((_name, _shp))
-        # for k, v in semantic_data:
-        #     print("******************new item******************")
-        #     print(k, v)
+
+            if labels:
+                if _name.lower() in labels:
+                    semantic_data.append((_name, _shp))
+            else:
+                if _name:
+                    semantic_data.append((_name, _shp))
+
         shape, result = list_of_shapes_to_compound(shapes)
         if not result:
             print("Warning: all shapes were not added to the compound") # TODO: check this warning
     else:
         shape = read_step_file(input_name, verbosity=debug)
-
-    # scaling_transformation = gp_Trsf()
-    # scaling_transformation.SetScaleFactor(scale_to_mm)
-    # transform_builder = BRepBuilderAPI_Transform(shape, scaling_transformation)
-
-    # shape = transform_builder.Shape()
-
-    # healer = ShapeFix.ShapeFix_Shape(shape)
-    # healer.Perform()
-    # shape = healer.Shape()
-
-    # extend_status = ShapeExtend_Status()
-    # healer.Status(extend_status)
-
-    # if extend_status == ShapeExtend_Status.ShapeExtend_OK:
-    #     print("Shape healing successful.")
-    # else:
-    #     print("Shape healing failed.")
+        shape = heal_shape(shape, scale_to_mm)
 
     geometries_data, mesh, faces_mesh_data, faces_map_mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
 
