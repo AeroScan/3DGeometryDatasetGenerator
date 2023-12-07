@@ -8,7 +8,7 @@ from OCC.Core.gp import gp_Trsf
 import OCC.Core.ShapeFix as ShapeFix
 
 from lib.generate_mesh_occ import OCCMeshGeneration, addEntityToMap, computeMeshData, searchEntityInMap
-from lib.tools import load_file_with_semantic_data, writeJSON
+from lib.tools import generateSemanticYAML, load_file_with_semantic_data, writeJSON, writeYAML
 from asGeometryOCCWrapper import CurveFactory, SurfaceFactory
 
 MAX_INT = 2**31 - 1
@@ -229,25 +229,26 @@ def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, 
             """faces list:
             <class 'TopoDS_Face'>, <class 'TopoDS_Face'>, <class 'TopoDS_Face'>, ...
             """
+            vert_indices    = []
+            vert_parameters = []
+            face_indices    = []
             for face in faces:
                 face_index = searchEntityInMap(face, faces_map_mesh)
                 if face_index == -1:
                     print("Warning: Face do not found in mesh!") # TODO: Check this
                     continue
-
-                data = {
-                    "label": _name,
-                    "vert_indices": faces_mesh_data[face_index]["vert_indices"],
-                    "vert_parameters": faces_mesh_data[face_index]["vert_parameters"],
-                    "face_indices": faces_mesh_data[face_index]["face_indices"]
+                vert_indices += faces_mesh_data[face_index]["vert_indices"]
+                vert_parameters += faces_mesh_data[face_index]["vert_parameters"]
+                face_indices += faces_mesh_data[face_index]["face_indices"]
+               
+            semantic_data_dict["semantic"].append((
+                _name,
+                {
+                    "vert_indices": list(vert_indices),
+                    "vert_parameters": list(vert_parameters),
+                    "face_indices": list(face_indices)
                 }
-                semantic_data_dict["semantic"].append(data)                    
-            
-            # for h_c in faces_map.keys():
-            #     list_of_faces_mesh_from_hc = searchEntityInMap()
-            #     print(list_of_faces_mesh_from_hc)
-            #     exit()
-        
-        writeJSON("./semantic", semantic_data_dict)
+            ))
+        writeYAML("./semantic", semantic_data_dict, semantic=True)
     
     return shape, geometries_data, mesh

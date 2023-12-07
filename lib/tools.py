@@ -69,6 +69,28 @@ def list2str(l: list, prefix, LINE_SIZE = 90) -> str:
         string += prefix + l[last_end + 2:len(l)]
     return string
 
+def generateSemanticYAML(semantic_data: dict):
+    yaml_str = ""
+    semantic_data_list = semantic_data["semantic"]
+    for instance_name, instance_dict in semantic_data_list:
+        yaml_str += instance_name + ":\n"
+        for key, value in instance_dict.items():
+            yaml_str += "  - " + key + ": "
+            if type(value).__module__ == np.__name__:
+                value = value.tolist()
+            if type(value) != list:
+                yaml_str += str(value) + "\n"
+            else:
+                if len(value) == 0:
+                    yaml_str += "[]\n"
+                elif type(value[0]) != list:
+                    yaml_str += list2str(value, "    ") + "\n"
+                else:
+                    yaml_str += "\n"
+                    for elem in value:
+                        yaml_str += "    - " + list2str(elem, "    ") + "\n"
+    return yaml_str
+
 # Convert a dict to string
 def generateFeaturesYAML(features: dict) -> str:
     result = ''
@@ -146,10 +168,15 @@ def compareDictsWithTolerance(dict1, dict2, tolerance=1e-6):
     return True
 
 # Write features file
-def writeYAML(features_name: str, features: dict):
-    with open(features_name+".yaml", 'w') as f:
-        features_yaml = generateFeaturesYAML(features)
-        f.write(features_yaml)
+def writeYAML(features_name: str, features: dict, semantic: bool = False):
+    if not semantic:
+        with open(features_name+".yaml", 'w') as f:
+            features_yaml = generateFeaturesYAML(features)
+            f.write(features_yaml)
+    else:
+        with open(features_name+".yaml", "w") as f:
+            semantic_yaml = generateSemanticYAML(features)
+            f.write(semantic_yaml)
 
 def writeJSON(features_name: str, features: dict):
     with open(features_name+".json", 'w') as f:
