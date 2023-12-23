@@ -5,7 +5,7 @@ from OCC.Extend.DataExchange import read_step_file
 from OCC.Extend.TopologyUtils import TopologyExplorer, list_of_shapes_to_compound
 
 from lib.generate_mesh_occ import OCCMeshGeneration, computeMeshData, searchEntityInMap
-from lib.tools import heal_shape, load_file_with_semantic_data, writeYAML
+from lib.tools import heal_shape, load_file_with_semantic_data, writeJSON, writeYAML
 from asGeometryOCCWrapper import CurveFactory, SurfaceFactory
 
 MAX_INT = 2**31 - 1
@@ -164,7 +164,7 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
     
     return geometries_data, mesh, faces_mesh_data, faces_map
 
-def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, scale_to_mm=1, debug=False, generate_semantic: bool = True, labels: list = []):
+def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, scale_to_mm=1, debug=False, generate_semantic: bool = True, labels: list = [], semantic_name: str = './semantic'):
     shape = None
     semantic_data = []
     if generate_semantic: # To change by a new parameter
@@ -218,18 +218,27 @@ def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, 
                 if face_index == -1:
                     print("Warning: Face do not found in mesh!") # TODO: Check this
                     continue
-                vert_indices += faces_mesh_data[face_index]["vert_indices"]
-                vert_parameters += faces_mesh_data[face_index]["vert_parameters"]
-                face_indices += faces_mesh_data[face_index]["face_indices"]
+                semantic_data_dict["semantic"].append(
+                    {
+                        "label": _name,
+                        "vert_indices": faces_mesh_data[face_index]["vert_indices"],
+                        "vert_parameters": faces_mesh_data[face_index]["vert_parameters"],
+                        "face_indices": faces_mesh_data[face_index]["face_indices"]
+                    }
+                )
+                # vert_indices += faces_mesh_data[face_index]["vert_indices"]
+                # vert_parameters += faces_mesh_data[face_index]["vert_parameters"]
+                # face_indices += faces_mesh_data[face_index]["face_indices"]
                
-            semantic_data_dict["semantic"].append((
-                _name,
-                {
-                    "vert_indices": list(vert_indices),
-                    "vert_parameters": list(vert_parameters),
-                    "face_indices": list(face_indices)
-                }
-            ))
-        writeYAML("./semantic", semantic_data_dict, semantic=True)
+            # semantic_data_dict["semantic"].append((
+            #     _name,
+            #     {
+            #         "vert_indices": list(vert_indices),
+            #         "vert_parameters": list(vert_parameters),
+            #         "face_indices": list(face_indices)
+            #     }
+            # ))
+        # writeYAML(semantic_name, semantic_data_dict, semantic=True)
+        writeJSON(semantic_name, semantic_data_dict)
     
     return shape, geometries_data, mesh

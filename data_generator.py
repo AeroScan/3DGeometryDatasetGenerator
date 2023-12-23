@@ -31,6 +31,7 @@ CAD_FORMATS = ['.step', '.stp', '.STEP']
 MESH_FORMATS = ['.ply', '.PLY']
 FEATURES_FORMATS = ['.pkl', '.PKL', '.yml', '.yaml', '.YAML', '.json', '.JSON']
 STATS_FORMATS = [".json", ".JSON"]
+SEMANTIC_FORMATS = [".yaml", ".YAML"]
 
 def parse_opt():
     """ Function to organize all the possible arguments """
@@ -60,6 +61,10 @@ def parse_opt():
     stats_parser = parser.add_argument_group("Stats arguments")
     stats_parser.add_argument('--stats_folder', type=str, default="stats", help='Path to the folder where statistics will be saved')
     stats_parser.add_argument('--only_stats', action='store_true', help='Boolean flag indicating whether to only generate statistics without processing the data.')
+
+    # Semantic parser general
+    semantic_parser = parser.add_argument_group("Semantic arguments")
+    semantic_parser.add_argument('--semantic_folder', type=str, default='semantic', help='Path to the folder where semantic data will be saved')
 
     return parser.parse_args()
 
@@ -95,13 +100,18 @@ def main():
     only_stats = args.only_stats
     # <--- Stats arguments
 
+    # ---> Semantic arguments
+    semantic_folder = args.semantic_folder
+    # <--- Semantic arguments
+
     # ---> Directories verifications
     files = get_files_from_input_path(input_path)
     
     mesh_folder_dir = os.path.join(output_path, mesh_folder)
     features_folder_dir = os.path.join(output_path, features_folder)
     stats_folder_dir = os.path.join(output_path, stats_folder)
-    create_dirs(output_path, mesh_folder_dir, features_folder_dir, stats_folder_dir)
+    semantic_folder_dir = os.path.join(output_path, semantic_folder)
+    create_dirs(output_path, mesh_folder_dir, features_folder_dir, stats_folder_dir, semantic_folder_dir)
 
     mesh_files = list_files(mesh_folder_dir, MESH_FORMATS, return_str=True)
     mesh_files = [mesh_file[(mesh_file.rfind('/') + 1):mesh_file.rindex('.')] for mesh_file in mesh_files]
@@ -109,6 +119,8 @@ def main():
     features_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in features_files]
     statistics_files = list_files(stats_folder_dir, STATS_FORMATS, return_str=True)
     statistics_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in statistics_files]
+    semantic_files = list_files(semantic_folder_dir, SEMANTIC_FORMATS, return_str=True)
+    semantic_files = [f[(f.rfind('/') + 1):f.rindex('.')] for f in semantic_files]
 
     i = 0
     while i < len(files):
@@ -133,6 +145,8 @@ def main():
             remove_by_filename(mesh_name, MESH_FORMATS)
             stats_name = os.path.join(stats_folder_dir, output_name)
             remove_by_filename(stats_name, STATS_FORMATS)
+            semantic_name = os.path.join(semantic_folder_dir, output_name)
+            remove_by_filename(semantic_name, SEMANTIC_FORMATS)
 
             vertical_up_axis = np.array([0., 0., 1.])
             unit_scale = 1000
@@ -160,7 +174,7 @@ def main():
 
             shape, geometries_data, mesh = processPythonOCC(file, generate_mesh=(mesh_generator=="occ"), \
                                                             use_highest_dim=use_highest_dim, scale_to_mm=scale_to_mm, \
-                                                            debug=verbose)
+                                                            debug=verbose, semantic_name=semantic_name)
             print("\n[PythonOCC] Done.")
             if mesh_generator == "gmsh":
                 print('\n[GMSH]:')
