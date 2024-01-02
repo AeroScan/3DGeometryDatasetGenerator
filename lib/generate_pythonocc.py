@@ -137,6 +137,7 @@ def processNoHighestDim(topology, generate_mesh):
     vertices = [v for v in topology.vertices()]
     edges = [e for e in topology.edges()]
     faces = [f for f in topology.faces()]
+    print(f"FACES: {len(faces)}")
 
     geometries_data, mesh, faces_mesh_data, faces_map = processEdgesAndFaces(vertices, edges, faces, topology, generate_mesh)
 
@@ -164,7 +165,7 @@ def process(shape, generate_mesh=True, use_highest_dim=True):
     
     return geometries_data, mesh, faces_mesh_data, faces_map
 
-def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, scale_to_mm=1, debug=False, generate_semantic: bool = True, labels: list = [], semantic_name: str = './semantic'):
+def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, scale_to_mm=1, debug=False, generate_semantic: bool = True, labels: list = ["tank", "pipe", "silo", "instrumentation", "floor", "wall", "structure"], semantic_name: str = './semantic'):
     shape = None
     semantic_data = []
     if generate_semantic: # To change by a new parameter
@@ -189,13 +190,16 @@ def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, 
             print("Warning: all shapes were not added to the compound") # TODO: check this warning
     else:
         shape = read_step_file(input_name, verbosity=debug)
-        shape = heal_shape(shape, scale_to_mm)
+        # shape = heal_shape(shape, scale_to_mm)
 
     geometries_data, mesh, faces_mesh_data, faces_map_mesh = process(shape, generate_mesh=generate_mesh, use_highest_dim=use_highest_dim)
 
     if semantic_data and faces_mesh_data:
+        print("Processing semantic data...")
         semantic_data_dict = {}
         semantic_data_dict["semantic"] = []
+        faces_with_labels = []
+        face_counter = 0
         for produto in semantic_data:
             """ produto list:
             ('Tank', <class 'TopoDS_Compound'>)
@@ -206,39 +210,69 @@ def processPythonOCC(input_name: str, generate_mesh=True, use_highest_dim=True, 
             """
             _name, _shape = produto
             topology = TopologyExplorer(_shape)
-            faces = [f for f in topology.faces()]
+            faces = [f for f in tqdm(topology.faces())] # 744 faces
             """faces list:
             <class 'TopoDS_Face'>, <class 'TopoDS_Face'>, <class 'TopoDS_Face'>, ...
             """
-            vert_indices    = []
+            vert_indices = []
             vert_parameters = []
-            face_indices    = []
+            face_indices = []
             for face in faces:
                 face_index = searchEntityInMap(face, faces_map_mesh)
                 if face_index == -1:
                     print("Warning: Face do not found in mesh!") # TODO: Check this
                     continue
-                semantic_data_dict["semantic"].append(
-                    {
-                        "label": _name,
-                        "vert_indices": faces_mesh_data[face_index]["vert_indices"],
-                        "vert_parameters": faces_mesh_data[face_index]["vert_parameters"],
-                        "face_indices": faces_mesh_data[face_index]["face_indices"]
-                    }
-                )
-                # vert_indices += faces_mesh_data[face_index]["vert_indices"]
-                # vert_parameters += faces_mesh_data[face_index]["vert_parameters"]
-                # face_indices += faces_mesh_data[face_index]["face_indices"]
-               
-            # semantic_data_dict["semantic"].append((
-            #     _name,
-            #     {
-            #         "vert_indices": list(vert_indices),
-            #         "vert_parameters": list(vert_parameters),
-            #         "face_indices": list(face_indices)
-            #     }
-            # ))
-        # writeYAML(semantic_name, semantic_data_dict, semantic=True)
+                face_counter += len(faces_mesh_data[face_index]["face_indices"])
+                faces_with_labels.append(face_index)
+
+                vert_indices += faces_mesh_data[face_index]["vert_indices"]
+                vert_parameters += faces_mesh_data[face_index]["vert_parameters"]
+                face_indices += faces_mesh_data[face_index]["face_indices"]
+            semantic_data_dict["semantic"].append(
+                {
+                    "label": _name,
+                    "vert_indices": np.unique(np.asarray(vert_indices)).tolist(),
+                    "vert_parameters": np.unique(np.asarray(vert_parameters)).tolist(),
+                    "face_indices": np.unique(np.asarray(face_indices)).tolist(),
+                }
+            )
+
+        print(f"COUNTER_FACES: {face_counter}")
+        face_counter = 0
+        topology = TopologyExplorer(shape)
+        faces = [f for f in topology.faces()] # 1531
+        print(f">> FACES_OUT: {len(faces)}")
+
+        count = 0
+        vert_indices = []
+        vert_parameters = []
+        face_indices = []
+        for face in faces:
+            face_index = searchEntityInMap(face, faces_map_mesh)
+
+            if face_index == -1:
+                print("WARNING HERE")
+
+            if face_index not in faces_with_labels:
+                count += 1
+                face_counter += len(faces_mesh_data[face_index]["face_indices"])
+
+                vert_indices += faces_mesh_data[face_index]["vert_indices"]
+                vert_parameters += faces_mesh_data[face_index]["vert_parameters"]
+                face_indices += faces_mesh_data[face_index]["face_indices"]
+    
+        semantic_data_dict["semantic"].append(
+            {
+                "label": "unlabeled",
+                "vert_indices": np.unique(np.asarray(vert_indices)).tolist(),
+                "vert_parameters": np.unique(np.asarray(vert_parameters)).tolist(),
+                "face_indices": np.unique(np.asarray(face_indices)).tolist()
+            }
+        )
+        print(f">> semantic list: {len(semantic_data_dict['semantic'])}")
+        print(f"COUNTER_FACES: {face_counter}")
+
         writeJSON(semantic_name, semantic_data_dict)
+        print("Done.\n")
     
     return shape, geometries_data, mesh

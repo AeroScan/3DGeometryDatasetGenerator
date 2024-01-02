@@ -1,0 +1,3 @@
+'2023-12-23 18:17:16,997 - INFO - [Data Generator] Processing file - Model 10000LtsTankassy_labeled.stp - [1/1]:
+'2023-12-23 18:17:19,859 - INFO - [Generate PythonOCC] Topology Exploration to Generate Features by Dimension
+'2023-12-23 18:17:19,860 - INFO - [Generate PythonOCC] Using all the Shapes
